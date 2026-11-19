@@ -1,0 +1,1314 @@
+{
+  "phases": [
+    {
+      "number": 0,
+      "name": "Phase 0 — Walking skeleton",
+      "release": "v0.0.1",
+      "description": "A thin, deployed thread through every layer: repo and CI, AWS account, every CDK stack, Cognito sign-in, one API call that reads DSQL, the custom domain, backups. Ends deployed to dev and prod."
+    },
+    {
+      "number": 1,
+      "name": "Phase 1 — Foundation",
+      "release": "v0.1.0",
+      "description": "Sign-up (solo or partner), invites, sign-in, roles, the app shell, setup wizard steps 1, 2, 4, 5 and 9, and the JSON export."
+    },
+    {
+      "number": 2,
+      "name": "Phase 2 — Bills and paychecks",
+      "release": "v0.2.0",
+      "description": "The \"within means\" core: openMonth, bills, cards, paychecks, other income, money in/out. Real use in prod starts here, alongside the Google Sheet for one month."
+    },
+    {
+      "number": 3,
+      "name": "Phase 3 — Investments and money moves",
+      "release": "v0.3.0",
+      "description": "Holdings, options, dividends, splits, weekly money moves with carry-over, reinvest suggestions, bills covered."
+    },
+    {
+      "number": 4,
+      "name": "Phase 4 — Dashboard, accounts and months",
+      "release": "v0.4.0",
+      "description": "The dashboard with This week, the Accounts page with forecast and reconcile, the Start-a-new-month flow, locking and Unlock."
+    },
+    {
+      "number": 5,
+      "name": "Phase 5 — Year in review",
+      "release": "v0.5.0",
+      "description": "Year in review with projections, and the in-browser PDF."
+    },
+    {
+      "number": 6,
+      "name": "Phase 6 — Phone polish and empty states",
+      "release": "v1.0.0",
+      "description": "The phone-only flows, bottom sheets, remaining empty states and the accessibility audit."
+    }
+  ],
+  "tickets": [
+    {
+      "id": "P0-01",
+      "phase": 0,
+      "title": "Monorepo scaffold and quality gates",
+      "refs": "§12",
+      "goal": "pnpm workspace with `packages/domain`, `db`, `api`, `web`, `infra`; strict TypeScript; ESLint + Prettier; Vitest with per-package coverage thresholds; dependency-cruiser rules.",
+      "tests": [
+        "A placeholder domain test fails, then passes (proves the red→green loop works)",
+        "dependency-cruiser fails when any package other than `db` imports `pg` or the DSQL connector",
+        "dependency-cruiser fails when `domain` imports anything from `db`, `api`, `web`, `infra` or any AWS SDK"
+      ],
+      "done": [
+        "`pnpm test`, `pnpm lint`, `pnpm typecheck` and `pnpm coverage` work from the repo root",
+        "Coverage thresholds set: domain 100/100, db and api 95/90, web 85/80",
+        "Node 24 pinned in `.nvmrc` and `engines`; README has the local setup steps",
+        "`design/` snapshot filled: export the 16 artboards from the Claude Design canvas into `design/` (see `design/README.md`)"
+      ],
+      "blocked": [],
+      "console": []
+    },
+    {
+      "id": "P0-02",
+      "phase": 0,
+      "title": "Domain foundations: money, dates, week(), clock",
+      "refs": "§4, §5.1, §7 Formatting, §12",
+      "goal": "The building blocks every rule uses: integer-cents money, `formatMoney`, `Temporal.PlainDate` helpers, `ym` helpers, `week()`, and an injectable `Clock`.",
+      "tests": [
+        "T1: `week()` for Nov 1, 7, 8, 21, 22, 30 → 1, 1, 2, 3, 4, 4",
+        "`formatMoney(123456)` → `$1,234.56`; `formatMoney(-92300, {whole:true})` → `−$923` with a true minus sign",
+        "`today(clock, 'America/New_York')` at 2026-12-01T02:00Z → 2026-11-30",
+        "`addMonths('2026-12', 1)` → `2027-01`; `monthOf(date)`, `daysInMonth` cover Feb in leap and non-leap years",
+        "Money helpers reject non-integer cents"
+      ],
+      "done": [
+        "A lint rule forbids `Date` in `packages/domain` and float math on `*_cents` identifiers"
+      ],
+      "blocked": [
+        "P0-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P0-03",
+      "phase": 0,
+      "title": "CI: PR checks and branch protection",
+      "refs": "§12",
+      "goal": "GitHub Actions workflow on every PR: install with cache, lint, typecheck, unit tests with coverage gates, dependency-cruiser, CDK synth. Stryker mutation run only when `packages/domain` changes.",
+      "tests": [
+        "A PR that drops domain coverage below 100% fails the check (verify once with a throwaway PR)",
+        "Stryker job fails below a 90% mutation score"
+      ],
+      "done": [
+        "Branch protection on `main`: PR required, checks required, no direct pushes",
+        "`concurrency` cancels superseded runs on the same PR",
+        "GitHub Actions spending limit set to $0 (manual step in GitHub billing settings)"
+      ],
+      "blocked": [
+        "P0-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P0-04",
+      "phase": 0,
+      "title": "AWS account baseline (manual, guided)",
+      "refs": "§12",
+      "goal": "Set up the AWS account safely before any infrastructure exists.",
+      "tests": [
+        "`aws sts get-caller-identity` with the admin profile returns the expected account"
+      ],
+      "done": [
+        "Root user has MFA; daily work uses an admin user or IAM Identity Center user with MFA, never root",
+        "AWS Budget with a $1 alert to your email",
+        "Note the Free plan credit expiry date in `docs/runbooks/aws-account.md`; switch to the Paid plan before it",
+        "AWS CLI v2 installed and signed in (`aws login` or SSO profile `withinmeans`)",
+        "`cdk bootstrap aws://<account>/us-east-1` run once"
+      ],
+      "blocked": [
+        "P0-01"
+      ],
+      "console": [
+        "Billing → Free Tier page: find your remaining credits and expiry date",
+        "IAM: find your admin user and confirm MFA is on",
+        "Budgets: find the $1 budget and its alert",
+        "CloudFormation: find the `CDKToolkit` stack that bootstrap created"
+      ]
+    },
+    {
+      "id": "P0-05",
+      "phase": 0,
+      "title": "GitHub OIDC deploy role",
+      "refs": "§12",
+      "goal": "A CDK `CiStack` that lets GitHub Actions deploy without stored AWS keys.",
+      "tests": [
+        "CDK assertion: the role trusts only `token.actions.githubusercontent.com` with `sub` limited to `repo:doroshenk/withinmeans:*`",
+        "CDK assertion: the role can assume only the CDK bootstrap roles"
+      ],
+      "done": [
+        "A workflow run can call `aws sts get-caller-identity` using the role"
+      ],
+      "blocked": [
+        "P0-04"
+      ],
+      "console": [
+        "IAM → Identity providers: find the GitHub OIDC provider",
+        "IAM → Roles: open the deploy role and read its trust policy"
+      ]
+    },
+    {
+      "id": "P0-06",
+      "phase": 0,
+      "title": "Database package: migrations, linter, test harness",
+      "refs": "§4, §8, §12",
+      "goal": "`packages/db` with Kysely, a forward-only migration runner, the DSQL migration linter, a Postgres 16 Testcontainers harness, the retry wrapper, and the `HouseholdContext` repository pattern.",
+      "tests": [
+        "Migration linter rejects: `SERIAL`/`BIGSERIAL`/`IDENTITY`, `CREATE SEQUENCE`, `CREATE TRIGGER`, non-SQL functions, `TRUNCATE`, temp tables, and a migration mixing DDL with DML",
+        "Migration linter accepts the first real migration",
+        "Retry wrapper retries a transaction on DSQL's serialization/OCC error code and gives up after N tries",
+        "Isolation suite template: household A cannot read, update or delete household B's row for the first repository (`households.getMine`)",
+        "A repository write with `role: 'view'` throws `Forbidden`"
+      ],
+      "done": [
+        "Docker Desktop required locally; documented in README",
+        "Each test file gets a fresh schema"
+      ],
+      "blocked": [
+        "P0-02"
+      ],
+      "console": []
+    },
+    {
+      "id": "P0-07",
+      "phase": 0,
+      "title": "Data stack: Aurora DSQL cluster and conformance run",
+      "refs": "§12",
+      "goal": "CDK `DataStack` per stage creates a single-Region DSQL cluster; the migration runner connects with the official DSQL Node connector (IAM auth tokens).",
+      "tests": [
+        "CDK assertion: one DSQL cluster per stage with deletion protection on in prod",
+        "Conformance job: runs migrations and the repository suite against the dev cluster in a throwaway schema, then drops it"
+      ],
+      "done": [
+        "`pnpm migrate --stage dev` works from your laptop"
+      ],
+      "blocked": [
+        "P0-05",
+        "P0-06"
+      ],
+      "console": [
+        "Aurora DSQL console: find the dev cluster, its endpoint and the query editor",
+        "Run `select * from household` in the query editor",
+        "CloudWatch → Metrics → AuroraDSQL: find the DPU usage graph (this is your free-tier meter)"
+      ]
+    },
+    {
+      "id": "P0-08",
+      "phase": 0,
+      "title": "Auth stack: Cognito user pool",
+      "refs": "§3, §12",
+      "goal": "CDK `AuthStack` per stage: Cognito user pool on the Essentials tier, email sign-in, 8-character password policy, a public app client for the SPA, refresh tokens for \"keep me signed in\".",
+      "tests": [
+        "CDK assertion: user pool feature plan is Essentials; password minimum length 8; self sign-up allowed; email is the username",
+        "CDK assertion: the app client has no secret and allows SRP auth and refresh tokens"
+      ],
+      "done": [],
+      "blocked": [
+        "P0-05"
+      ],
+      "console": [
+        "Cognito → User pools: find the dev pool, its app client, and the password policy",
+        "After P0-11, find your own test user in the Users list"
+      ]
+    },
+    {
+      "id": "P0-09",
+      "phase": 0,
+      "title": "API stack: tRPC Lambda with auth and safe logging",
+      "refs": "§8, §12",
+      "goal": "CDK `ApiStack`: one Node 24 Lambda running tRPC behind an HTTP API. The context verifies the Cognito JWT with `aws-jwt-verify`, loads the Membership and builds `HouseholdContext`. First procedure: `me`.",
+      "tests": [
+        "`me` with no token → UNAUTHORIZED; with a valid token but no membership → returns user with no household",
+        "`me` returns the user's name and household name from the database",
+        "Logger drops any field ending in `_cents` and any request/response body",
+        "CDK assertion: the Lambda's role can connect to the stage's DSQL cluster only"
+      ],
+      "done": [
+        "Unhandled errors return a generic message; details go to CloudWatch without amounts"
+      ],
+      "blocked": [
+        "P0-07",
+        "P0-08"
+      ],
+      "console": [
+        "Lambda: open the API function, find its CloudWatch log group, and read one request log",
+        "API Gateway: find the HTTP API and its routes"
+      ]
+    },
+    {
+      "id": "P0-10",
+      "phase": 0,
+      "title": "Web stack: S3, CloudFront, certificate and domain",
+      "refs": "§12",
+      "goal": "CDK `WebStack`: private S3 bucket with Origin Access Control, CloudFront with SPA fallback, `/api/*` routed to the HTTP API, an ACM certificate for `within.doroshenk.com` / `dev.within.doroshenk.com`.",
+      "tests": [
+        "CDK assertion: the bucket blocks all public access and is readable only by the distribution",
+        "CDK assertion: `/api/*` behavior has caching disabled and forwards the Authorization header",
+        "CDK assertion: the distribution's alternate domain matches the stage"
+      ],
+      "done": [
+        "Network Solutions checklist done: certificate validation CNAME, then `within` and `dev.within` CNAMEs to the distribution domains (CDK prints the values)",
+        "HTTPS works at both addresses"
+      ],
+      "blocked": [
+        "P0-05"
+      ],
+      "console": [
+        "Certificate Manager (us-east-1): watch the certificate go from Pending to Issued",
+        "CloudFront: find the distribution, its origins and its behaviors",
+        "S3: open the bucket and confirm \"Block all public access\" is on"
+      ]
+    },
+    {
+      "id": "P0-11",
+      "phase": 0,
+      "title": "Web app skeleton: tokens, sign-up, sign-in, hello",
+      "refs": "§3, §7, §12",
+      "goal": "Vite + React app with design tokens in `theme/tokens.ts`, DM Sans and Fraunces, a minimal sign-up and sign-in against Cognito, and a page that calls `me` and shows \"Hello {name}\". PWA manifest and icons.",
+      "tests": [
+        "Tokens test: every §7 hex value is present and named",
+        "Sign-in form shows Cognito errors with `role=\"alert\"`",
+        "Hello page renders the name returned by `me` (mocked tRPC client)"
+      ],
+      "done": [
+        "Layout works at 1440px and 390px"
+      ],
+      "blocked": [
+        "P0-09",
+        "P0-10"
+      ],
+      "console": []
+    },
+    {
+      "id": "P0-12",
+      "phase": 0,
+      "title": "Backups and restore drill",
+      "refs": "§8, §12",
+      "goal": "AWS Backup plan for the DSQL cluster: daily, 14-day retention, plus an on-demand job the prod deploy calls.",
+      "tests": [
+        "CDK assertion: backup plan exists with daily rule and 14-day retention, selecting the stage's cluster"
+      ],
+      "done": [
+        "Restore drill done once on dev: restore to a new cluster, check a row, delete the restored cluster",
+        "`docs/runbooks/restore.md` written from the drill"
+      ],
+      "blocked": [
+        "P0-07"
+      ],
+      "console": [
+        "AWS Backup: find the plan, the vault and the first recovery point"
+      ]
+    },
+    {
+      "id": "P0-13",
+      "phase": 0,
+      "title": "Deploy pipeline: dev on merge, prod on tag",
+      "refs": "§12",
+      "goal": "Workflows: merge to `main` → deploy all dev stacks, run migrations, run the DSQL conformance job, run Playwright smoke against `dev.within.doroshenk.com`. Tag `v*` → deploy prod.",
+      "tests": [
+        "Playwright smoke: sign in with a dev test user and see \"Hello\""
+      ],
+      "done": [
+        "A prod deploy takes an on-demand AWS Backup before running migrations (wired in P0-12)",
+        "Release `v0.0.1` deployed to prod and you can sign in at `within.doroshenk.com`"
+      ],
+      "blocked": [
+        "P0-03",
+        "P0-11",
+        "P0-12"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-01",
+      "phase": 1,
+      "title": "Core schema: household, users, months, categories, accounts",
+      "refs": "§4",
+      "goal": "Migrations and repositories for Household, User, Membership, Invite, Month, Category, Account, BalanceSnapshot and RecurringBill (needed by setup step 5).",
+      "tests": [
+        "Isolation suite covers every new repository function (A can't see or change B)",
+        "Category names are unique per household ignoring case",
+        "`view` role is rejected on every write function",
+        "Migration linter passes on all migrations"
+      ],
+      "done": [],
+      "blocked": [
+        "P0-13"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-02",
+      "phase": 1,
+      "title": "Sign-up: solo or with a partner",
+      "refs": "§3 Creating an account",
+      "goal": "API and screens for steps 1–2 and 4 of sign-up: choose mode, create login (Cognito), create Household and owner Membership in one transaction, household time zone from the browser.",
+      "tests": [
+        "Solo sign-up creates a `solo` household with one owner membership",
+        "Partner sign-up requires a household name",
+        "Password strength meter has 4 steps; under 8 characters is rejected",
+        "T20: a solo account never shows a partner invite option anywhere"
+      ],
+      "done": [
+        "Matches `SignIn.dc.html` / `Setup.dc.html` sign-up artboards at 1440 and 390"
+      ],
+      "blocked": [
+        "P1-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-03",
+      "phase": 1,
+      "title": "Partner invite and SES email",
+      "refs": "§3 Invite your partner",
+      "goal": "Invite step: name, email, access, note; token with 7-day expiry; email sent through SES from `no-reply@within.doroshenk.com`; Done screen with pending status and Resend.",
+      "tests": [
+        "T19: an invite to the user's own email is rejected with \"Use your partner's own email…\"",
+        "Invite token expires after 7 days; Resend issues a new token and invalidates the old one",
+        "There is no \"invite later\" path: the partner flow cannot finish without sending",
+        "Email sender is called with the accept URL and never with amounts"
+      ],
+      "done": [
+        "CDK: SES domain identity for `within.doroshenk.com` with DKIM; Network Solutions checklist for the 3 DKIM CNAMEs and `_dmarc.within` TXT",
+        "Both your and your partner's addresses verified in SES (sandbox is fine)"
+      ],
+      "blocked": [
+        "P1-02"
+      ],
+      "console": [
+        "SES: find the domain identity and see DKIM status \"Successful\"",
+        "SES: find the verified email addresses"
+      ]
+    },
+    {
+      "id": "P1-04",
+      "phase": 1,
+      "title": "Accept invite",
+      "refs": "§3 The partner accepting an invite",
+      "goal": "Accept screen shows inviter, household, note and access; the partner creates their own Cognito login and gets a Membership with the invited role.",
+      "tests": [
+        "Expired or used token shows an error and creates nothing",
+        "Accepting creates exactly one Membership with the invite's role and sets `accepted_at`",
+        "The partner then sees the same household data via `me`"
+      ],
+      "done": [],
+      "blocked": [
+        "P1-03"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-05",
+      "phase": 1,
+      "title": "Sign in, keep me signed in, forgot password",
+      "refs": "§3 Sign in",
+      "goal": "Sign-in screen per design; \"Keep me signed in\" controls refresh-token storage; \"Forgot password?\" uses Cognito's reset flow.",
+      "tests": [
+        "Without \"keep me signed in\", tokens are kept for the browser session only",
+        "Forgot-password flow handles code sent, wrong code and success",
+        "Signed-out users are redirected to sign-in from every app route"
+      ],
+      "done": [
+        "Passkeys left for later (Cognito Essentials supports them)"
+      ],
+      "blocked": [
+        "P1-02"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-06",
+      "phase": 1,
+      "title": "Roles in the UI and API",
+      "refs": "§3 Permissions",
+      "goal": "A `useCan()` hook hides create/edit/delete controls for view-only members; every write procedure checks role on the server too.",
+      "tests": [
+        "T21 (so far): a view-only member sees no write controls, and every write procedure returns FORBIDDEN",
+        "Owner always has full access"
+      ],
+      "done": [
+        "Every later ticket with a write procedure adds itself to the T21 test table"
+      ],
+      "blocked": [
+        "P1-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-07",
+      "phase": 1,
+      "title": "App shell: sidebar, tab bar, month navigator, Add button",
+      "refs": "§6 intro, §6.15",
+      "goal": "The responsive shell: desktop sidebar with nav links, \"+ Add\" placeholder and the money-moves card placeholder; phone tab bar with More; the reusable month navigator with status chip.",
+      "tests": [
+        "Month navigator moves between months and shows open / closed / not started chips",
+        "Tab bar appears below 768px and the sidebar above it",
+        "Every icon button has an aria-label; focus rings visible"
+      ],
+      "done": [
+        "Matches the shell in `Main.dc.html` and `Phone.dc.html`"
+      ],
+      "blocked": [
+        "P0-11"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-08",
+      "phase": 1,
+      "title": "Setup wizard framework",
+      "refs": "§3 First-time setup wizard",
+      "goal": "Stepper with 9 steps, save on continue, resume where you left off, jump to any step, optional steps skippable, unbuilt steps show \"coming soon\".",
+      "tests": [
+        "Leaving and returning resumes at the last unfinished step",
+        "Skipped optional steps show as skipped in the stepper and in Review"
+      ],
+      "done": [],
+      "blocked": [
+        "P1-07",
+        "P1-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-09",
+      "phase": 1,
+      "title": "Setup step 1: first month (openMonth v1)",
+      "refs": "§3 step 1, §5.11",
+      "goal": "Choose this month or next; calls the first version of `openMonth(ym)` which creates the Month row (bills and paychecks are added in P2-01/P2-03).",
+      "tests": [
+        "`openMonth` is idempotent: calling it twice creates one Month",
+        "\"This month\" sets `first_month` to the current household month; \"next month\" to the following one"
+      ],
+      "done": [],
+      "blocked": [
+        "P1-08"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-10",
+      "phase": 1,
+      "title": "Setup step 2: bank accounts and cushion",
+      "refs": "§3 step 2",
+      "goal": "Add accounts (name, type, balance today → first BalanceSnapshot) and the checking cushion.",
+      "tests": [
+        "At least one account is required; every account needs a name and a balance",
+        "The first checking account becomes `is_primary_checking`"
+      ],
+      "done": [],
+      "blocked": [
+        "P1-08"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-11",
+      "phase": 1,
+      "title": "Setup step 4: bill categories",
+      "refs": "§3 step 4",
+      "goal": "Seven default categories, one-tap suggestions, rename, recolor by tapping the swatch, delete with move.",
+      "tests": [
+        "T18: deleting \"Home\" used by 1 bill moves the bill to the first remaining category and shows a message",
+        "Renaming a category renames it on every bill that uses it",
+        "Duplicate names are rejected ignoring case; at least one category required"
+      ],
+      "done": [],
+      "blocked": [
+        "P1-08"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-12",
+      "phase": 1,
+      "title": "Setup step 5: recurring bills",
+      "refs": "§3 step 5",
+      "goal": "Add recurring bills (name, estimate, due day 1–28, category, autopay), suggestions crossed out when used, total per month and share of take-home.",
+      "tests": [
+        "Estimate must be > 0; due day 1–28 only",
+        "Total per month sums the estimates; share of take-home shows \"—\" until paychecks exist"
+      ],
+      "done": [],
+      "blocked": [
+        "P1-11"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-13",
+      "phase": 1,
+      "title": "Setup step 9: review and finish",
+      "refs": "§3 step 9",
+      "goal": "Review lists each step with Edit, Add now or Finish this; finishing goes to the dashboard (a placeholder until Phase 4).",
+      "tests": [
+        "Review reflects saved, skipped and coming-soon steps correctly"
+      ],
+      "done": [],
+      "blocked": [
+        "P1-09",
+        "P1-10",
+        "P1-12"
+      ],
+      "console": []
+    },
+    {
+      "id": "P1-14",
+      "phase": 1,
+      "title": "JSON export and nightly backup export",
+      "refs": "§8 Privacy, §12",
+      "goal": "\"Download my data\" returns the household's full JSON export; a scheduled Lambda writes every household's export to a private, versioned, encrypted S3 bucket with 90-day expiry.",
+      "tests": [
+        "Export includes every household-scoped table: a test compares the export's keys with the schema's table list and fails if one is missing",
+        "Export for household A contains nothing from household B",
+        "CDK assertion: bucket is private, versioned, encrypted, with a 90-day expiration rule; schedule runs daily"
+      ],
+      "done": [
+        "Every later ticket that adds a table must add it to the export (the test enforces it)"
+      ],
+      "blocked": [
+        "P1-01"
+      ],
+      "console": [
+        "EventBridge Scheduler: find the nightly schedule",
+        "S3: find last night's export object and its versions"
+      ]
+    },
+    {
+      "id": "P2-01",
+      "phase": 2,
+      "title": "openMonth: generate bills",
+      "refs": "§4 Bill, §5.11",
+      "goal": "Extend `openMonth(ym)` to create one Bill per active recurring bill (at its estimate and due date) in the same transaction, with retry.",
+      "tests": [
+        "Recurring bills with `start_ym > ym` or `end_ym < ym` are skipped",
+        "Running `openMonth` twice creates no duplicate bills",
+        "Ending a recurring bill never deletes past months' Bills"
+      ],
+      "done": [],
+      "blocked": [
+        "P1-13"
+      ],
+      "console": []
+    },
+    {
+      "id": "P2-02",
+      "phase": 2,
+      "title": "Paydays domain",
+      "refs": "§5.9",
+      "goal": "Pure functions for expected paydays per month: biweekly from the anchor, weekly, semimonthly (1st and 15th or next business day, configurable days), monthly.",
+      "tests": [
+        "Biweekly anchored Fri Nov 6, 2026 → Nov 6 and Nov 20; December → Dec 4 and Dec 18 (T24 dates)",
+        "Biweekly months with 3 paydays are detected (the \"3 paydays\" note)",
+        "Semimonthly moves a weekend payday to the next business day",
+        "Monthly uses the anchor's day of month"
+      ],
+      "done": [],
+      "blocked": [
+        "P0-02"
+      ],
+      "console": []
+    },
+    {
+      "id": "P2-03",
+      "phase": 2,
+      "title": "Pay schedules and paychecks",
+      "refs": "§4, §5.9",
+      "goal": "Schema, repositories and procedures for PaySchedule and Paycheck; `openMonth` generates expected paychecks; mark received; stop and restart a schedule.",
+      "tests": [
+        "T3: marking Nov 20 received at $3,248.60 replaces the expected amount (never adds both)",
+        "Stopping a schedule removes future expected paychecks and keeps past ones",
+        "Unique `(schedule_id, expected_date)` prevents duplicates"
+      ],
+      "done": [],
+      "blocked": [
+        "P2-01",
+        "P2-02"
+      ],
+      "console": []
+    },
+    {
+      "id": "P2-04",
+      "phase": 2,
+      "title": "Other (one-time) income",
+      "refs": "§4 OtherIncome",
+      "goal": "Schema, repository, procedures and the one-time income list and form.",
+      "tests": [
+        "Other income counts in the month of its date"
+      ],
+      "done": [],
+      "blocked": [
+        "P1-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P2-05",
+      "phase": 2,
+      "title": "Money in, money out, kept, status",
+      "refs": "§5.6",
+      "goal": "Domain functions `moneyIn`, `moneyOut`, `kept`, `spentPct`, `status` (checking moves are 0 until Phase 3).",
+      "tests": [
+        "T2: November paychecks + other income with Nov 20 still expected = $7,031.38",
+        "T12: 85% → Within means, 86% → Tight, 100% → Tight, 101% → Over",
+        "T11 (partial): March 2026 money out $7,480 vs money in → status Over",
+        "Cards with no statement count $0 and are reported as missing"
+      ],
+      "done": [],
+      "blocked": [
+        "P2-03",
+        "P2-04"
+      ],
+      "console": []
+    },
+    {
+      "id": "P2-06",
+      "phase": 2,
+      "title": "Bills & cash flow page",
+      "refs": "§6.2",
+      "goal": "Month navigator, tiles, weeks 1–4 with bill rows (paid toggle, edit, delete with confirm), one-time bill form, by category, paychecks card, \"How {month} adds up\", and the temporary \"Open {month}\" button.",
+      "tests": [
+        "Bills group into the right week by due date",
+        "Paid toggle sets `actual_cents` and `paid_at`; the tiles update",
+        "\"Open {month}\" calls `openMonth` and is hidden once the month is open",
+        "Main empty state shows when the month has no bills"
+      ],
+      "done": [
+        "Matches `Bills.dc.html` at 1440 and 390"
+      ],
+      "blocked": [
+        "P2-05"
+      ],
+      "console": []
+    },
+    {
+      "id": "P2-07",
+      "phase": 2,
+      "title": "Credit cards and statements",
+      "refs": "§5.10, §3 step 6",
+      "goal": "CreditCard and CardStatement schema; statement rules; the credit card balances form on Bills; setup step 6.",
+      "tests": [
+        "Planned payment > statement is rejected; minimum > statement is rejected",
+        "T17: statement $1,471.60 paid $1,284.17 → next month's row shows \"carries $187.43\"",
+        "Planned payment defaults from the usual plan (full / minimum / varies)",
+        "No card number field exists anywhere"
+      ],
+      "done": [],
+      "blocked": [
+        "P2-06"
+      ],
+      "console": []
+    },
+    {
+      "id": "P2-08",
+      "phase": 2,
+      "title": "Recurring bills page and categories manager",
+      "refs": "§6.3",
+      "goal": "Bill list with add/edit/delete, end and restart, and the categories manager.",
+      "tests": [
+        "Ending a bill keeps its history and stops it from future `openMonth` runs; restarting brings it back",
+        "Category delete requires choosing where its bills move"
+      ],
+      "done": [
+        "Matches `Recurring.dc.html`"
+      ],
+      "blocked": [
+        "P2-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P2-09",
+      "phase": 2,
+      "title": "Paychecks page and setup step 3",
+      "refs": "§6.4, §3 step 3",
+      "goal": "Schedules, this month's paydays with mark received, one-time income, month navigator; setup step 3 with monthly estimate, 3-paydays note and next 3 paydays.",
+      "tests": [
+        "Setup step 3 shows the next 3 paydays from the domain function",
+        "Take-home must be > 0 and the date valid"
+      ],
+      "done": [
+        "Matches `Paychecks.dc.html`"
+      ],
+      "blocked": [
+        "P2-03",
+        "P2-04"
+      ],
+      "console": []
+    },
+    {
+      "id": "P2-10",
+      "phase": 2,
+      "title": "Quick Add: bill, other income, paycheck, card balance",
+      "refs": "§5.14, §6.9",
+      "goal": "The Quick Add modal with its first four types, reusing each page's form and procedure, and the \"landed in week / month / page\" confirmation.",
+      "tests": [
+        "Each Quick Add type saves exactly the same record as its page form",
+        "Confirmation names the right week and month and uses `role=\"status\"`"
+      ],
+      "done": [
+        "Matches `QuickAdd.dc.html`"
+      ],
+      "blocked": [
+        "P2-06",
+        "P2-07",
+        "P2-09"
+      ],
+      "console": []
+    },
+    {
+      "id": "P2-11",
+      "phase": 2,
+      "title": "Dev seed script (§10 data, part 1)",
+      "refs": "§10",
+      "goal": "`pnpm seed:dev` loads \"Our household\", John and a partner, the 12 recurring bills, Main job, November paychecks and other income. Refuses to run unless the stage is `dev`.",
+      "tests": [
+        "Seed refuses with a non-dev stage",
+        "Seeded November reproduces T2 through the real repositories"
+      ],
+      "done": [],
+      "blocked": [
+        "P2-05"
+      ],
+      "console": []
+    },
+    {
+      "id": "P2-12",
+      "phase": 2,
+      "title": "Release v0.2.0: real data rules",
+      "refs": "§12",
+      "goal": "Before real data goes in: release checklist, migration rules in `CLAUDE.md`, prod pipeline backup-before-migrate verified, side-by-side comparison sheet for one month.",
+      "tests": [
+        "Prod pipeline fails if the pre-migration backup job fails"
+      ],
+      "done": [
+        "`docs/runbooks/release.md` written",
+        "You complete setup in prod with your real data and start the side-by-side month"
+      ],
+      "blocked": [
+        "P2-10",
+        "P2-11"
+      ],
+      "console": []
+    },
+    {
+      "id": "P3-01",
+      "phase": 3,
+      "title": "Holdings, prices and share trades",
+      "refs": "§4, §5.8 brokerage, §3 step 7",
+      "goal": "Holding and ShareTrade schema; brokerage value and cash domain; `PriceSource` interface with the manual source; holdings table on Accounts; setup step 7.",
+      "tests": [
+        "Brokerage value = Σ shares × price + brokerage cash",
+        "A buy changes shares and cash in one transaction; a buy above available cash shows a warning",
+        "Ticker 1–6 letters, stored upper case; shares up to 6 decimals"
+      ],
+      "done": [],
+      "blocked": [
+        "P2-12"
+      ],
+      "console": []
+    },
+    {
+      "id": "P3-02",
+      "phase": 3,
+      "title": "Options trades and lifecycle",
+      "refs": "§5.3",
+      "goal": "OptionTrade schema and the expired / closed / rolled / assigned actions.",
+      "tests": [
+        "T14: AMD put, premium $246 opened Nov 10, bought back $96 on Nov 18 → week 2 options +$246, week 3 −$96",
+        "Rolling closes the old trade at a cost and opens a linked new trade whose premium counts in its own week",
+        "T15: assigned leaves holdings unchanged and returns a \"record the shares\" prompt"
+      ],
+      "done": [],
+      "blocked": [
+        "P3-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P3-03",
+      "phase": 3,
+      "title": "Dividend payments and the daily week grid",
+      "refs": "§5.3, §6.6",
+      "goal": "DividendPayment schema; single-payment entry; the Mon–Fri grid for daily payers where saving replaces that week's days.",
+      "tests": [
+        "Saving a week grid replaces only that ticker's payments in that week",
+        "A daily payer's payments count as `weekly` income"
+      ],
+      "done": [],
+      "blocked": [
+        "P3-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P3-04",
+      "phase": 3,
+      "title": "Investment income by week and type",
+      "refs": "§5.3",
+      "goal": "Domain function returning income per week per type for a month, from options, dividends and buy-backs.",
+      "tests": [
+        "November seed totals: options $960.00, weekly/daily $278.73, monthly $674.45 (total $1,913.18)",
+        "When buy-backs exceed premiums in a week, options show negative and that week's new move amounts are $0"
+      ],
+      "done": [],
+      "blocked": [
+        "P3-02",
+        "P3-03"
+      ],
+      "console": []
+    },
+    {
+      "id": "P3-05",
+      "phase": 3,
+      "title": "Splits, Allocation settings and setup step 8",
+      "refs": "§5.2, §6.7, §3 step 8",
+      "goal": "SplitSetting schema, `splitsFor(ym, type)`, \"Apply from\", the Allocation settings page and setup step 8 presets.",
+      "tests": [
+        "T13: splits saved in 2025-07 changing weekly checking 30% → 25% → Jan–Jun 2025 use 30%, Jul onward 25%",
+        "Each type's four percentages must total 100; the remainder shows live",
+        "Presets Balanced / Build savings / Reinvest more match §3"
+      ],
+      "done": [
+        "Matches `Settings.dc.html`"
+      ],
+      "blocked": [
+        "P2-12"
+      ],
+      "console": []
+    },
+    {
+      "id": "P3-06",
+      "phase": 3,
+      "title": "Money moves math",
+      "refs": "§5.4",
+      "goal": "Domain: new, available, moved, carry-out per week and bucket, with the rounding rule.",
+      "tests": [
+        "T4: November week 3 available = savings $71.76, checking $50.93, reinvest weekly $14.20, reinvest monthly $140.25 (total $277.14)",
+        "T7: moving $13.85 of $14.20 carries $0.35 into week 4",
+        "Rounding leftover cent goes to the bucket with the largest share",
+        "Moving more than available is rejected"
+      ],
+      "done": [],
+      "blocked": [
+        "P3-04",
+        "P3-05"
+      ],
+      "console": []
+    },
+    {
+      "id": "P3-07",
+      "phase": 3,
+      "title": "Reinvest buy suggestions",
+      "refs": "§5.5",
+      "goal": "Domain: variety, then volume, then upgrade.",
+      "tests": [
+        "T5: reinvest weekly $14.20 → \"Buy 1 YMAX = $13.85 · $0.35 stays\"",
+        "T6: reinvest monthly $140.25 → \"Buy 1 JEPQ, 1 BTCI, 1 EGGY, 4 CONY = $134.07 · $6.18 stays (4 of 4 tickers · 7 shares)\"",
+        "No affordable ticker → \"Not enough for a share; carries over\"; zero-price holdings ignored"
+      ],
+      "done": [],
+      "blocked": [
+        "P3-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P3-08",
+      "phase": 3,
+      "title": "Recording money moves",
+      "refs": "§5.4",
+      "goal": "MoneyMove schema and procedures: check off (moved = available), \"Moved a different amount\", uncheck, and \"Use\" from a suggestion, each in one transaction.",
+      "tests": [
+        "T16: \"Use\" sets the move amount and leaves `Holding.shares` unchanged",
+        "Unchecking deletes the moved amount",
+        "Unique `(ym, week, bucket)` per household"
+      ],
+      "done": [],
+      "blocked": [
+        "P3-06",
+        "P3-07"
+      ],
+      "console": []
+    },
+    {
+      "id": "P3-09",
+      "phase": 3,
+      "title": "Investment income page and sidebar money-moves card",
+      "refs": "§6.6, §5.4",
+      "goal": "Tabs (Options, Weekly & daily, Monthly), money moves week cards with carry-in and carry-out, prices panel with \"updated n days ago\", and the sidebar \"This week's money moves\" card.",
+      "tests": [
+        "Sidebar card shows \"{done} of 4 done · ${total} ready to move\" for the current week",
+        "Current week's card starts open"
+      ],
+      "done": [
+        "Matches `Income.dc.html`"
+      ],
+      "blocked": [
+        "P3-08"
+      ],
+      "console": []
+    },
+    {
+      "id": "P3-10",
+      "phase": 3,
+      "title": "Checking moves in money in, and bills covered",
+      "refs": "§5.6, §5.7",
+      "goal": "Money in now includes actual checking moves; the bills-covered ladder and planned projection.",
+      "tests": [
+        "T8: Nov checking moved $358.05 → money in $7,389.43; money out $5,639.57; kept $1,749.86; 76%; Within means",
+        "T9: $358.05 covers 6 of 12 bills fully; Phone partial $89.05 of $95; 13% of $2,750",
+        "T10: planned checking share for November = $396.57",
+        "T11: March 2026 moved to checking $357.00 → money in $6,557; kept −$923; Over (114%)"
+      ],
+      "done": [],
+      "blocked": [
+        "P3-08"
+      ],
+      "console": []
+    },
+    {
+      "id": "P3-11",
+      "phase": 3,
+      "title": "Quick Add: dividend, options, account balance, buy/sell",
+      "refs": "§5.14",
+      "goal": "The remaining four Quick Add types.",
+      "tests": [
+        "Each type saves the same record as its page form and reports where it landed"
+      ],
+      "done": [],
+      "blocked": [
+        "P3-09",
+        "P2-10"
+      ],
+      "console": []
+    },
+    {
+      "id": "P3-12",
+      "phase": 3,
+      "title": "Dev seed script (part 2) and release v0.3.0",
+      "refs": "§10",
+      "goal": "Seed holdings, November investment income, October carry-in and splits; release `v0.3.0` and start the side-by-side month for money moves.",
+      "tests": [
+        "Seeded data reproduces T4–T10 through the real API"
+      ],
+      "done": [],
+      "blocked": [
+        "P3-10",
+        "P3-11"
+      ],
+      "console": []
+    },
+    {
+      "id": "P4-01",
+      "phase": 4,
+      "title": "Year totals domain",
+      "refs": "§5.6, §6.1",
+      "goal": "Year aggregates: totals, verdict banner text, savings rate, month-by-month table rows, changes vs previous month.",
+      "tests": [
+        "Verdict text matches the §5.6 template for a seeded year",
+        "Year totals equal the sum of the months"
+      ],
+      "done": [],
+      "blocked": [
+        "P3-12"
+      ],
+      "console": []
+    },
+    {
+      "id": "P4-02",
+      "phase": 4,
+      "title": "Dashboard page",
+      "refs": "§6.1",
+      "goal": "Header with year switcher, verdict banner, year tiles, month view, money in vs out chart, bills paid by investments, investment income by type, where it went, month-by-month table.",
+      "tests": [
+        "Clicking a month in the chart selects it in the month view",
+        "Next year shows its empty state; charts have text equivalents"
+      ],
+      "done": [
+        "Matches `Main.dc.html` at 1440 and 390"
+      ],
+      "blocked": [
+        "P4-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P4-03",
+      "phase": 4,
+      "title": "Accounts page and Update balance reconcile",
+      "refs": "§5.8, §6.5",
+      "goal": "Account tiles, Update balance with the expected-vs-entered gap and its two choices, add account.",
+      "tests": [
+        "A −$14.80 gap offers logging a one-time bill or accepting the new balance",
+        "Expected balance = last snapshot + recorded flows since"
+      ],
+      "done": [
+        "Matches `Accounts.dc.html`"
+      ],
+      "blocked": [
+        "P3-12"
+      ],
+      "console": []
+    },
+    {
+      "id": "P4-04",
+      "phase": 4,
+      "title": "Checking forecast",
+      "refs": "§5.8",
+      "goal": "Domain forecast to month end + 2 weeks, lowest point vs cushion, late-paycheck what-if; chart on Accounts and the forecast line on the dashboard.",
+      "tests": [
+        "Lowest point and the \"above / below your cushion\" text are correct for a seeded case",
+        "The late-paycheck toggle shifts only the next payday by 7 days"
+      ],
+      "done": [],
+      "blocked": [
+        "P4-03"
+      ],
+      "console": []
+    },
+    {
+      "id": "P4-05",
+      "phase": 4,
+      "title": "This week: dueSoon()",
+      "refs": "§5.13",
+      "goal": "Pure `dueSoon(household, today)` and the This week panel with Mark paid, Mark received, Open and Enter balance actions.",
+      "tests": [
+        "With today Wed Nov 18, 2026 and the seed, the list contains the Nov 20 paycheck and the bills due Nov 18–25",
+        "A card 3+ days past its usual statement date with no statement appears as missing",
+        "Checking or savings not updated for more than 7 days appears as \"Balances out of date\"",
+        "Empty list shows \"Nothing due this week\""
+      ],
+      "done": [],
+      "blocked": [
+        "P4-02",
+        "P4-04"
+      ],
+      "console": []
+    },
+    {
+      "id": "P4-06",
+      "phase": 4,
+      "title": "Start a new month flow",
+      "refs": "§5.11, §6.8",
+      "goal": "The 4-step flow: wrap up, what carries over, preview, start. Start closes this month and calls `openMonth` for the next, writing CarryIn. Removes the temporary \"Open {month}\" button.",
+      "tests": [
+        "T24: Start December closes and locks November; CarryIn(Dec) equals November's week-4 carry-out per bucket; December bills and paychecks (Dec 4, Dec 18) are generated",
+        "Wrap-up choices (mark paid, move to next month, drop) apply in the same transaction"
+      ],
+      "done": [
+        "Matches `StartMonth.dc.html`"
+      ],
+      "blocked": [
+        "P4-02"
+      ],
+      "console": []
+    },
+    {
+      "id": "P4-07",
+      "phase": 4,
+      "title": "Closed months, Unlock and carry recalculation",
+      "refs": "§5.11",
+      "goal": "Closed months are read-only everywhere; Unlock on Bills reopens one month; carry-ins recalculate when an unlocked month is edited and locked again.",
+      "tests": [
+        "Every write procedure rejects changes to a closed month",
+        "Editing an unlocked month and re-locking updates the next month's CarryIn"
+      ],
+      "done": [],
+      "blocked": [
+        "P4-06"
+      ],
+      "console": []
+    },
+    {
+      "id": "P4-08",
+      "phase": 4,
+      "title": "Future month preview",
+      "refs": "§5.11",
+      "goal": "A not-started month shows \"Not started\" and a preview from recurring bills and schedules, without creating rows.",
+      "tests": [
+        "Previewing a future month writes nothing to the database"
+      ],
+      "done": [],
+      "blocked": [
+        "P4-06"
+      ],
+      "console": []
+    },
+    {
+      "id": "P5-01",
+      "phase": 5,
+      "title": "Year in review domain and projections",
+      "refs": "§5.12",
+      "goal": "Pure functions for every Year in review section, with projected future months using a constant 3-month window.",
+      "tests": [
+        "T22: 2026 with December projected → 11 of 12 within means; kept $13,034; money in $81,773; investment income $21,818",
+        "T23: 2025 → August Over (−$200); 11 of 12 within means; kept $9,293",
+        "Highlights pick the best and toughest months correctly"
+      ],
+      "done": [],
+      "blocked": [
+        "P4-07"
+      ],
+      "console": []
+    },
+    {
+      "id": "P5-02",
+      "phase": 5,
+      "title": "Year in review page",
+      "refs": "§5.12, §6.11",
+      "goal": "All sections from §5.12 with projected months dashed and marked \"projected\".",
+      "tests": [
+        "Clicking a month in the kept chart shows its details",
+        "Current year shows as a preview"
+      ],
+      "done": [
+        "Matches `YearEnd.dc.html`"
+      ],
+      "blocked": [
+        "P5-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P5-03",
+      "phase": 5,
+      "title": "Download PDF in the browser",
+      "refs": "§5.12",
+      "goal": "A tested PDF content model and `@react-pdf/renderer` output with the app's fonts and colors; the current year is watermarked \"Preview\".",
+      "tests": [
+        "Content model for 2025 contains every section with the T23 numbers",
+        "Playwright: clicking Download PDF produces a file whose text includes the year and \"Preview\" for the current year"
+      ],
+      "done": [],
+      "blocked": [
+        "P5-02"
+      ],
+      "console": []
+    },
+    {
+      "id": "P6-01",
+      "phase": 6,
+      "title": "Phone Home",
+      "refs": "§6.15 (1)",
+      "goal": "Month verdict with in / out / kept and spent bar, forecast line, This week with inline actions.",
+      "tests": [
+        "At 390px, Home shows the verdict and This week actions work"
+      ],
+      "done": [
+        "Matches `Phone.dc.html`"
+      ],
+      "blocked": [
+        "P5-03"
+      ],
+      "console": []
+    },
+    {
+      "id": "P6-02",
+      "phase": 6,
+      "title": "Phone paycheck \"It landed\" sheet",
+      "refs": "§6.15 (2)",
+      "goal": "Bottom sheet with large amount, date and Mark received; afterwards the new money-in total, difference from expected, and Undo.",
+      "tests": [
+        "Undo restores the expected paycheck exactly"
+      ],
+      "done": [],
+      "blocked": [
+        "P6-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P6-03",
+      "phase": 6,
+      "title": "Phone Log income",
+      "refs": "§6.15 (3)",
+      "goal": "Type tabs, ticker chips, Mon–Fri grid, large amount field, \"Same as Tue\" chips, live split preview; options flow to strike and expiration.",
+      "tests": [
+        "\"Same as Tue\" copies Tuesday's amount into the chosen day",
+        "Live split preview uses `splitsFor` for the entry's month"
+      ],
+      "done": [],
+      "blocked": [
+        "P6-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P6-04",
+      "phase": 6,
+      "title": "Phone Money moves",
+      "refs": "§6.15 (4)",
+      "goal": "Amount left to move with progress bar, 4 checkable moves with suggestions and \"Moved a different amount\".",
+      "tests": [
+        "Checking a move on phone records the same MoneyMove as desktop"
+      ],
+      "done": [],
+      "blocked": [
+        "P6-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P6-05",
+      "phase": 6,
+      "title": "Bottom-sheet forms",
+      "refs": "§6.15",
+      "goal": "Every form opens as a bottom sheet on phone with numeric keyboards.",
+      "tests": [
+        "Every money input has `inputmode=\"decimal\"`"
+      ],
+      "done": [],
+      "blocked": [
+        "P6-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P6-06",
+      "phase": 6,
+      "title": "Empty-state previews, section states, first-month checklist",
+      "refs": "§6.14",
+      "goal": "Faded dashed previews with $0.00, every section state, and the dashboard's \"Your first month\" checklist.",
+      "tests": [
+        "No page shows a blank number or an endless spinner with an empty household",
+        "Checklist items tick off as each first action happens"
+      ],
+      "done": [
+        "Matches `EmptyStates.dc.html`"
+      ],
+      "blocked": [
+        "P6-01"
+      ],
+      "console": []
+    },
+    {
+      "id": "P6-07",
+      "phase": 6,
+      "title": "Accessibility audit and PWA polish",
+      "refs": "§7 Accessibility, §8",
+      "goal": "axe checks in Playwright on every page at both widths, contrast and touch-target fixes, install prompt and icons.",
+      "tests": [
+        "axe reports no serious or critical issues on any page",
+        "Touch targets are at least 44px"
+      ],
+      "done": [
+        "Release `v1.0.0`"
+      ],
+      "blocked": [
+        "P6-02",
+        "P6-03",
+        "P6-04",
+        "P6-05",
+        "P6-06"
+      ],
+      "console": []
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm test)",
+      "Bash(pnpm coverage *)",
+      "Bash(pnpm coverage)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm --filter * test *)",
+      "Bash(pnpm --filter infra cdk synth *)",
+      "Bash(pnpm --filter infra cdk diff *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(gh issue view *)",
+      "Bash(gh issue list *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr checks *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/.env)",
+      "Read(./**/.env.*)",
+      "Bash(*cdk deploy*prod*)",
+      "Bash(*cdk destroy*prod*)",
+      "Bash(*stage=prod*)",
+      "Bash(*--stage prod*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(aws * delete*)",
+      "Bash(aws * remove*)",
+      "Bash(aws * terminate*)"
+    ]
+  }
+}
