@@ -40,3 +40,7 @@ export function formatMoney(value: Cents, options: { whole?: boolean } = {}): st
   const sign = value < 0 && !isZero ? MINUS : '';
   return `${sign}$${dollars}${shownCents}`;
 }
+
+export function throwawayUntested(cents: Cents): Cents {
+  return cents > 0 ? cents : 0;
+}
