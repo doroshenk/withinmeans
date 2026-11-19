@@ -8,5 +8,8 @@
     "test": "vitest run --passWithNoTests",
     "coverage": "vitest run --coverage --passWithNoTests",
     "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "temporal-polyfill": "^1.0.8"
   }
 }
