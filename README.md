@@ -16,7 +16,7 @@ pnpm typecheck
 pnpm coverage    # per-package coverage gates
 ```
 
-Docker Desktop must be running once repository tests arrive (Testcontainers, from P0-07 onward).
+Docker Desktop must be running once repository tests arrive (Testcontainers, from P0-06 onward).
 
 ## Layout
 

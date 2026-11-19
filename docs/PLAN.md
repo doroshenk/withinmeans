@@ -233,6 +233,13 @@ A thin, deployed thread through every layer: repo and CI, AWS account, every CDK
 - [ ] `concurrency` cancels superseded runs on the same PR
 - [ ] GitHub Actions spending limit set to $0 (manual step in GitHub billing settings)
 
+**Carried over from P0-01 and P0-02:**
+
+- CI must run exactly what `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm coverage` run locally (the root scripts include dependency-cruiser and the `tooling/` rule tests).
+- **Stryker is not set up yet.** This ticket adds it (domain only, ≥ 90%). `packages/domain` is already at 100% lines and branches.
+- CI runs on Linux with LF checkouts (`.gitattributes` pins LF); Prettier is checked in `pnpm lint`.
+- Use the `pnpm` version from `packageManager` in the root `package.json` (pnpm 10), e.g. `pnpm/action-setup`, and Node from `.nvmrc`.
+
 
 #### P0-04 · AWS account baseline (manual, guided)
 
@@ -1342,10 +1349,10 @@ The phone-only flows, bottom sheets, remaining empty states and the accessibilit
 
 1. **Install the tools:**
    - Git for Windows (Claude Code on Windows uses its Bash)
-   - Node.js 24 LTS, then `corepack enable` (turns on pnpm)
+   - Node.js 24 LTS, then `corepack enable` (turns on pnpm; if it fails with EPERM, run `npm install -g pnpm@10` instead)
    - Docker Desktop, with the WSL 2 backend (needed for the Postgres test containers)
    - AWS CLI v2
-   - GitHub CLI, then `gh auth login`
+   - GitHub CLI, then `gh auth login` and `gh auth setup-git` (without the second, `git push` / `git fetch` can fail with "could not read Username")
    - VS Code
 2. **Install the Claude Code extension:** in VS Code press `Ctrl+Shift+X`, search **Claude Code** (publisher Anthropic), click Install, then open it from the Spark icon and sign in with your Claude account. For `claude` in the integrated terminal as well, install the standalone CLI.
 3. **Recommended extensions:** ESLint, Prettier, Vitest, Playwright Test for VS Code, GitHub Pull Requests, Docker.
@@ -1418,3 +1425,19 @@ Prod is deployed only by the tag workflow.
 - "What's the next unblocked ticket?" Claude checks open issues and their *Blocked by* lines with `gh`.
 - "Review this branch against the ticket and `CLAUDE.md` before I open the PR."
 - "Show me the coverage report for `packages/domain` and any surviving Stryker mutants."
+
+### 10.8 Lessons learned (add to this as tickets land)
+
+Short, practical notes so later tickets don't repeat a mistake. Repo conventions live in `CLAUDE.md`; this is the "what bit us" log.
+
+| Ticket | Lesson |
+|---|---|
+| P0-01 | The `gh` CLI wasn't installed and `git` had no credentials: install `gh`, then `gh auth login` and `gh auth setup-git`. `corepack enable` needs an admin shell; `npm install -g pnpm@10` works without one. |
+| P0-01 | dependency-cruiser rules match on file paths, so rule fixtures must live under `packages/<pkg>/src` (here `tooling/depcruise/fixtures/packages/<pkg>/src`) or the rules never fire. Check a rule test fails when the rule is empty (red) before trusting it. |
+| P0-01 | typescript-eslint doesn't support TypeScript 7 yet; TypeScript is pinned to `~5.9`. |
+| P0-02 | Node 24 has no native `Temporal`; `temporal-polyfill` is the domain's runtime dependency. |
+| P0-02 | With `core.autocrlf=true`, merged files arrived with CRLF and `prettier --check` failed. `.gitattributes` now forces LF. |
+| P0-02 | A red test must fail on an assertion, not an import error: add throwing stubs first, then tests. |
+| P0-02 | Don't run `git stash` (or any state-changing git command) as a side check mid-ticket; it shelved the uncommitted work (recovered with `git stash pop`). |
+| Process | The plan suggests *Rebase and merge*; P0-01 and P0-02 were merged with merge commits, which also keep the `test:` then `feat:` commits visible. Either is fine; just stay consistent. |
+| Process | A hook message "jq not found — SAM template validation skipped" comes from the AWS serverless plugin and can be ignored: this repo uses CDK, not SAM. |
