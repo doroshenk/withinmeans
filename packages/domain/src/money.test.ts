@@ -93,3 +93,12 @@ describe('error messages name the offending argument (mutation-killing)', () => 
     expect(() => subCents(1, 0.5)).toThrow(/^b must be/);
   });
 });
+
+describe('throwaway weak test', () => {
+  it('executes every branch but asserts nothing', async () => {
+    const { throwawayWeak } = await import('./money');
+    for (const args of [[20, 5, 1], [1, 1, 1], [-50, 1, 1], [9, 1, 0]] as const) {
+      throwawayWeak(...args);
+    }
+  });
+});

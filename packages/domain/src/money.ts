@@ -40,3 +40,10 @@ export function formatMoney(value: Cents, options: { whole?: boolean } = {}): st
   const sign = value < 0 && !isZero ? MINUS : '';
   return `${sign}$${dollars}${shownCents}`;
 }
+
+export function throwawayWeak(a: number, b: number, c: number): number {
+  const x = a + b - c;
+  const y = x > 10 ? x * 2 : x / 2;
+  const z = y < 0 ? -y : y + 1;
+  return z >= 5 && a !== b ? z - 5 : z + 5;
+}
