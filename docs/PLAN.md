@@ -32,7 +32,7 @@
 | Backups | Daily AWS Backup (14 days) + nightly JSON export to S3 (90 days) + a restore drill; no amounts in logs |
 | Phone | Responsive from day one; Phase 6 adds phone-only flows |
 | Real data | Prod real use from `v0.2.0`, side by side with the Google Sheet for one month |
-| Design | Artboards snapshotted into `design/`; tokens in code; side-by-side review per screen PR |
+| Design | PNG snapshot of the screens in `design/`; tokens in code; side-by-side review per screen PR |
 | Planning | This plan + GitHub Issues + `CLAUDE.md` + decision records in `docs/adr/` |
 
 ---
@@ -64,7 +64,7 @@ withinmeans/
   docs/PLAN.md              this plan
   docs/adr/                 decision records (0001-aurora-dsql.md …)
   docs/runbooks/            aws-account.md, restore.md, release.md
-  design/                   pinned snapshot of the Claude Design artboards
+  design/                   PNG snapshot of the Claude Design screens
   packages/
     domain/                 every §5 rule as pure functions + Zod schemas. No DB, no AWS, no Date
     db/                     Kysely, migrations, migration linter, repositories, isolation suite
@@ -136,7 +136,6 @@ These can't be automated by CDK. Each is part of a ticket's checklist.
 | When | Where | Step |
 |---|---|---|
 | Before P0-01 | Terminal at the repo root | `node scripts/install-tooling.mjs`, commit and push, then `node scripts/create-issues.mjs` (§10.1) |
-| P0-01 | Claude Design canvas | Export the 16 artboards into `design/` |
 | P0-03 | GitHub → Settings → Billing | Set the Actions spending limit to $0 |
 | P0-03 | GitHub → repo → Settings → Branches | Protect `main` (PR required, checks required) |
 | P0-04 | AWS console | Root MFA, admin user with MFA, $1 budget, note the credit expiry |
@@ -193,7 +192,7 @@ A thin, deployed thread through every layer: repo and CI, AWS account, every CDK
 - [ ] `pnpm test`, `pnpm lint`, `pnpm typecheck` and `pnpm coverage` work from the repo root
 - [ ] Coverage thresholds set: domain 100/100, db and api 95/90, web 85/80
 - [ ] Node 24 pinned in `.nvmrc` and `engines`; README has the local setup steps
-- [ ] `design/` snapshot filled: export the 16 artboards from the Claude Design canvas into `design/` (see `design/README.md`)
+- [ ] `design/` holds the PNG snapshot of the 15 screens (done Nov 19, 2026; see `design/README.md`)
 
 
 #### P0-02 · Domain foundations: money, dates, week(), clock
@@ -487,7 +486,7 @@ Sign-up (solo or partner), invites, sign-in, roles, the app shell, setup wizard 
 
 **Also done when:**
 
-- [ ] Matches `SignIn.dc.html` / `Setup.dc.html` sign-up artboards at 1440 and 390
+- [ ] Matches `design/SignIn.png` / `design/Setup.png` sign-up artboards at 1440 and 390
 
 
 #### P1-03 · Partner invite and SES email
@@ -579,7 +578,7 @@ Sign-up (solo or partner), invites, sign-in, roles, the app shell, setup wizard 
 
 **Also done when:**
 
-- [ ] Matches the shell in `Main.dc.html` and `Phone.dc.html`
+- [ ] Matches the shell in `design/Main.png` and `design/Phone.png`
 
 
 #### P1-08 · Setup wizard framework
@@ -774,7 +773,7 @@ The "within means" core: openMonth, bills, cards, paychecks, other income, money
 
 **Also done when:**
 
-- [ ] Matches `Bills.dc.html` at 1440 and 390
+- [ ] Matches `design/Bills.png` at 1440 and 390
 
 
 #### P2-07 · Credit cards and statements
@@ -806,7 +805,7 @@ The "within means" core: openMonth, bills, cards, paychecks, other income, money
 
 **Also done when:**
 
-- [ ] Matches `Recurring.dc.html`
+- [ ] Matches `design/Recurring.png`
 
 
 #### P2-09 · Paychecks page and setup step 3
@@ -823,7 +822,7 @@ The "within means" core: openMonth, bills, cards, paychecks, other income, money
 
 **Also done when:**
 
-- [ ] Matches `Paychecks.dc.html`
+- [ ] Matches `design/Paychecks.png`
 
 
 #### P2-10 · Quick Add: bill, other income, paycheck, card balance
@@ -840,7 +839,7 @@ The "within means" core: openMonth, bills, cards, paychecks, other income, money
 
 **Also done when:**
 
-- [ ] Matches `QuickAdd.dc.html`
+- [ ] Matches `design/QuickAdd.png`
 
 
 #### P2-11 · Dev seed script (§10 data, part 1)
@@ -947,7 +946,7 @@ Holdings, options, dividends, splits, weekly money moves with carry-over, reinve
 
 **Also done when:**
 
-- [ ] Matches `Settings.dc.html`
+- [ ] Matches `design/Settings.png`
 
 
 #### P3-06 · Money moves math
@@ -1007,7 +1006,7 @@ Holdings, options, dividends, splits, weekly money moves with carry-over, reinve
 
 **Also done when:**
 
-- [ ] Matches `Income.dc.html`
+- [ ] Matches `design/Income.png`
 
 
 #### P3-10 · Checking moves in money in, and bills covered
@@ -1081,7 +1080,7 @@ The dashboard with This week, the Accounts page with forecast and reconcile, the
 
 **Also done when:**
 
-- [ ] Matches `Main.dc.html` at 1440 and 390
+- [ ] Matches `design/Main.png` at 1440 and 390
 
 
 #### P4-03 · Accounts page and Update balance reconcile
@@ -1098,7 +1097,7 @@ The dashboard with This week, the Accounts page with forecast and reconcile, the
 
 **Also done when:**
 
-- [ ] Matches `Accounts.dc.html`
+- [ ] Matches `design/Accounts.png`
 
 
 #### P4-04 · Checking forecast
@@ -1143,7 +1142,7 @@ The dashboard with This week, the Accounts page with forecast and reconcile, the
 
 **Also done when:**
 
-- [ ] Matches `StartMonth.dc.html`
+- [ ] Matches `design/StartMonth.png`
 
 
 #### P4-07 · Closed months, Unlock and carry recalculation
@@ -1204,7 +1203,7 @@ Year in review with projections, and the in-browser PDF.
 
 **Also done when:**
 
-- [ ] Matches `YearEnd.dc.html`
+- [ ] Matches `design/YearEnd.png`
 
 
 #### P5-03 · Download PDF in the browser
@@ -1238,7 +1237,7 @@ The phone-only flows, bottom sheets, remaining empty states and the accessibilit
 
 **Also done when:**
 
-- [ ] Matches `Phone.dc.html`
+- [ ] Matches `design/Phone.png`
 
 
 #### P6-02 · Phone paycheck "It landed" sheet
@@ -1304,7 +1303,7 @@ The phone-only flows, bottom sheets, remaining empty states and the accessibilit
 
 **Also done when:**
 
-- [ ] Matches `EmptyStates.dc.html`
+- [ ] Matches `design/EmptyStates.png`
 
 
 #### P6-07 · Accessibility audit and PWA polish
@@ -1368,7 +1367,7 @@ One ticket = one conversation = one branch = one PR. Fresh conversations keep Cl
 3. **Review the plan.** It opens as a Markdown document; add inline comments where something's wrong, then approve. This is the cheapest moment to steer.
 4. **Red.** Claude writes the ticket's tests first, runs them, shows them failing and commits them as `test: …`. **Read the test names against the ticket.** This is your most important review: if the tests are right, the code will be right.
 5. **Green.** Claude implements until the tests pass and the coverage gates hold, then commits `feat: …`, and refactors if useful.
-6. **Look at screens yourself.** For UI tickets, ask Claude to start the dev server (`pnpm dev`). Open the page and the matching `design/*.dc.html` side by side at full width, then narrow the window to phone width.
+6. **Look at screens yourself.** For UI tickets, ask Claude to start the dev server (`pnpm dev`). Open the page and the matching `design/*.png` side by side at full width, then narrow the window to phone width.
 7. **Open the PR.** Say "create a PR for this ticket". Claude uses `gh` and fills in the template, and CI runs. Merge with **Rebase and merge** so the `test:` → `feat:` commits stay visible on `main`.
 8. **After merge,** watch the dev deploy in GitHub Actions. For infra tickets, do the console checklist and ask Claude to explain anything you see there.
 
@@ -1376,7 +1375,7 @@ One ticket = one conversation = one branch = one PR. Fresh conversations keep Cl
 
 | Feature | How | Use it for |
 |---|---|---|
-| @-mentions | Type `@` then a file name, e.g. `@docs/SPEC.md`, `@design/Bills.dc.html` | Pointing Claude at the exact spec section or artboard |
+| @-mentions | Type `@` then a file name, e.g. `@docs/SPEC.md`, `@design/Bills.png` | Pointing Claude at the exact spec section or artboard |
 | Selection reference | Select code, press `Alt+K` | "Why does this line round this way?" |
 | Terminal output | `@terminal:<name>` | Feeding it a failing test run or a CDK error without copy-paste |
 | Plan mode | `/plan` or the mode indicator at the bottom of the prompt box | Any change bigger than a one-liner |

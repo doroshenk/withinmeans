@@ -59,7 +59,7 @@
         "`pnpm test`, `pnpm lint`, `pnpm typecheck` and `pnpm coverage` work from the repo root",
         "Coverage thresholds set: domain 100/100, db and api 95/90, web 85/80",
         "Node 24 pinned in `.nvmrc` and `engines`; README has the local setup steps",
-        "`design/` snapshot filled: export the 16 artboards from the Claude Design canvas into `design/` (see `design/README.md`)"
+        "`design/` holds the PNG snapshot of the 15 screens (done Nov 19, 2026; see `design/README.md`)"
       ],
       "blocked": [],
       "console": []
@@ -355,7 +355,7 @@
         "T20: a solo account never shows a partner invite option anywhere"
       ],
       "done": [
-        "Matches `SignIn.dc.html` / `Setup.dc.html` sign-up artboards at 1440 and 390"
+        "Matches `design/SignIn.png` / `design/Setup.png` sign-up artboards at 1440 and 390"
       ],
       "blocked": [
         "P1-01"
@@ -452,7 +452,7 @@
         "Every icon button has an aria-label; focus rings visible"
       ],
       "done": [
-        "Matches the shell in `Main.dc.html` and `Phone.dc.html`"
+        "Matches the shell in `design/Main.png` and `design/Phone.png`"
       ],
       "blocked": [
         "P0-11"
@@ -680,7 +680,7 @@
         "Main empty state shows when the month has no bills"
       ],
       "done": [
-        "Matches `Bills.dc.html` at 1440 and 390"
+        "Matches `design/Bills.png` at 1440 and 390"
       ],
       "blocked": [
         "P2-05"
@@ -716,7 +716,7 @@
         "Category delete requires choosing where its bills move"
       ],
       "done": [
-        "Matches `Recurring.dc.html`"
+        "Matches `design/Recurring.png`"
       ],
       "blocked": [
         "P2-01"
@@ -734,7 +734,7 @@
         "Take-home must be > 0 and the date valid"
       ],
       "done": [
-        "Matches `Paychecks.dc.html`"
+        "Matches `design/Paychecks.png`"
       ],
       "blocked": [
         "P2-03",
@@ -753,7 +753,7 @@
         "Confirmation names the right week and month and uses `role=\"status\"`"
       ],
       "done": [
-        "Matches `QuickAdd.dc.html`"
+        "Matches `design/QuickAdd.png`"
       ],
       "blocked": [
         "P2-06",
@@ -876,7 +876,7 @@
         "Presets Balanced / Build savings / Reinvest more match §3"
       ],
       "done": [
-        "Matches `Settings.dc.html`"
+        "Matches `design/Settings.png`"
       ],
       "blocked": [
         "P2-12"
@@ -948,7 +948,7 @@
         "Current week's card starts open"
       ],
       "done": [
-        "Matches `Income.dc.html`"
+        "Matches `design/Income.png`"
       ],
       "blocked": [
         "P3-08"
@@ -1032,7 +1032,7 @@
         "Next year shows its empty state; charts have text equivalents"
       ],
       "done": [
-        "Matches `Main.dc.html` at 1440 and 390"
+        "Matches `design/Main.png` at 1440 and 390"
       ],
       "blocked": [
         "P4-01"
@@ -1050,7 +1050,7 @@
         "Expected balance = last snapshot + recorded flows since"
       ],
       "done": [
-        "Matches `Accounts.dc.html`"
+        "Matches `design/Accounts.png`"
       ],
       "blocked": [
         "P3-12"
@@ -1103,7 +1103,7 @@
         "Wrap-up choices (mark paid, move to next month, drop) apply in the same transaction"
       ],
       "done": [
-        "Matches `StartMonth.dc.html`"
+        "Matches `design/StartMonth.png`"
       ],
       "blocked": [
         "P4-02"
@@ -1169,7 +1169,7 @@
         "Current year shows as a preview"
       ],
       "done": [
-        "Matches `YearEnd.dc.html`"
+        "Matches `design/YearEnd.png`"
       ],
       "blocked": [
         "P5-01"
@@ -1202,7 +1202,7 @@
         "At 390px, Home shows the verdict and This week actions work"
       ],
       "done": [
-        "Matches `Phone.dc.html`"
+        "Matches `design/Phone.png`"
       ],
       "blocked": [
         "P5-03"
@@ -1281,7 +1281,7 @@
         "Checklist items tick off as each first action happens"
       ],
       "done": [
-        "Matches `EmptyStates.dc.html`"
+        "Matches `design/EmptyStates.png`"
       ],
       "blocked": [
         "P6-01"
