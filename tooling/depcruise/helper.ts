@@ -8,7 +8,7 @@ const fixtures = fileURLToPath(new URL('./fixtures/', import.meta.url));
 /** Names of the dependency-cruiser rules violated by one fixture file. */
 export async function violationsOf(pkg: string, file: string): Promise<string[]> {
   const ruleSet = await extractDepcruiseConfig(`${root}/.dependency-cruiser.cjs`);
-  const result = await cruise([`${fixtures}${pkg}/src/${file}`], {
+  const result = await cruise([`${fixtures}packages/${pkg}/src/${file}`], {
     ruleSet,
     validate: true,
     tsPreCompilationDeps: true,

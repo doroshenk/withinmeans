@@ -1,5 +1,15 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  test: { name: 'domain', include: ['src/**/*.test.ts'] },
+  test: {
+    name: 'domain',
+    include: ['src/**/*.test.ts'],
+    passWithNoTests: true,
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.test.ts'],
+      thresholds: { lines: 100, statements: 100, functions: 100, branches: 100 },
+    },
+  },
 });

@@ -1,3 +1,3 @@
-export function add(_a: number, _b: number): number {
-  throw new Error('not implemented');
+export function add(a: number, b: number): number {
+  return a + b;
 }

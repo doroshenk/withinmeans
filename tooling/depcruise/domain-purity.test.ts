@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { violationsOf } from './helper';
 
 describe('domain imports nothing from db, api, web, infra or AWS SDKs', () => {
-  it.each(['db', 'api', 'web', 'infra'])('fails when domain imports @withinmeans/%s', async (pkg) => {
-    expect(await violationsOf('domain', `imports-${pkg}.ts`)).toContain('domain-is-pure');
-  });
+  it.each(['db', 'api', 'web', 'infra'])(
+    'fails when domain imports @withinmeans/%s',
+    async (pkg) => {
+      expect(await violationsOf('domain', `imports-${pkg}.ts`)).toContain('domain-is-pure');
+    },
+  );
 
   it('fails when domain imports an AWS SDK', async () => {
     expect(await violationsOf('domain', 'imports-aws-sdk.ts')).toContain('domain-is-pure');

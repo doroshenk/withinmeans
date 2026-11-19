@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+design
+docs
+coverage
+tooling/depcruise/fixtures
+scripts
+.github
+.claude
+README.md
