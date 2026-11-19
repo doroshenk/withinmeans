@@ -53,13 +53,27 @@ The owner is learning AWS: when you touch infrastructure, explain what each reso
 
 ```bash
 pnpm install
-pnpm test             # all unit and integration tests
-pnpm coverage         # with coverage gates
-pnpm lint && pnpm typecheck
-pnpm dev              # web app against the dev API
-pnpm migrate --stage dev
-pnpm seed:dev
-pnpm --filter infra cdk diff --context stage=dev
+pnpm test             # all unit and integration tests (vitest projects: packages/* and tooling)
+pnpm coverage         # per-package coverage gates (domain 100/100, db and api 95/90, web 85/80)
+pnpm lint             # ESLint + Prettier --check + dependency-cruiser
+pnpm typecheck        # tsc per package, plus tooling/
+pnpm format           # prettier --write .
+pnpm dev              # (Phase 0, P0-11) web app against the dev API
+pnpm migrate --stage dev        # (P0-06)
+pnpm seed:dev                   # (later)
+pnpm --filter infra cdk diff --context stage=dev   # (P0-04+)
 ```
 
-(Commands become real as Phase 0 tickets create them. Keep this list current.)
+(Commands marked with a ticket become real when that ticket lands. Keep this list current.)
+
+## Repo conventions learned so far
+
+- **Layout:** `packages/{domain,db,api,web,infra}` are `@withinmeans/*`. `tooling/` is not a package: it holds tests for the repo's own rules (dependency-cruiser in `tooling/depcruise`, domain lint rules in `tooling/lint`). Fixtures live under `tooling/depcruise/fixtures/packages/<pkg>/src` and must keep the `packages/<pkg>/` path so the rules' path patterns match them. Fixtures are excluded from ESLint, Prettier and tsc.
+- **`packages/domain` lint rules** (in `eslint.config.js`): no `Date`, `Temporal.Now` or `Math.random`; no division, fractional multiplication, `Math.*` or `toFixed` on identifiers ending `_cents` or `Cents`. Do money arithmetic through `money.ts` helpers; `formatMoney` works on the digit string. The rule is syntactic, so name money variables `*Cents` / `*_cents`.
+- **Temporal:** Node 24 has no native `Temporal`. Import it from `temporal-polyfill` (domain dependency). Domain code takes a `Clock` and a time zone; only `api` / `web` build the real clock.
+- **Versions:** TypeScript is pinned to `~5.9` because typescript-eslint doesn't support 7.0 yet. Bump both together.
+- **Line endings:** `.gitattributes` forces LF. Windows checkouts with `core.autocrlf=true` otherwise make `prettier --check` fail. New config files you write must be LF.
+- **Prettier ignores** `docs/`, `design/`, `scripts/`, `.github/`, `.claude/`, `README.md` and the fixtures.
+- **Placeholders for red tests:** to get a test that fails for the right reason, add a stub that `throw new Error('not implemented')` (never a missing import). Check the failure output is an assertion, not an import or syntax error.
+- **Setup:** use `npm install -g pnpm@10` if `corepack enable` fails with EPERM (it needs an admin shell). `gh` and `git` on this machine: if `git push`/`fetch` fail with "could not read Username", run `gh auth setup-git` once.
+- **Merging:** PRs are merged with a merge commit (so the `test:` then `feat:` commits stay visible).
