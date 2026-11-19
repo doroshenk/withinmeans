@@ -7,9 +7,14 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "coverage": "vitest run --coverage --passWithNoTests",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "mutation": "stryker run"
   },
   "dependencies": {
     "temporal-polyfill": "^1.0.8"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1"
   }
 }

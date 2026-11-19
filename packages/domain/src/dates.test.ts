@@ -76,3 +76,24 @@ describe('parseYm', () => {
     },
   );
 });
+
+describe('input validation and formatting edge cases (mutation-killing)', () => {
+  it('parseYm explains what was wrong with the input', () => {
+    expect(() => parseYm('2026-13')).toThrow('Invalid year-month "2026-13", expected YYYY-MM');
+  });
+
+  it('parseYm rejects anything before the year-month, not just after it', () => {
+    expect(() => parseYm('x2026-11')).toThrow(RangeError);
+    expect(() => parseYm('12026-11')).toThrow(RangeError);
+  });
+
+  it('addMonths explains that the month count must be an integer', () => {
+    expect(() => addMonths('2026-11', 1.5)).toThrow('Month count must be an integer, got 1.5');
+  });
+
+  it('addMonths zero-pads years below 1000 to four digits', () => {
+    expect(addMonths('0999-12', 1)).toBe('1000-01');
+    expect(addMonths('0001-11', 1)).toBe('0001-12');
+    expect(addMonths('0001-12', 1)).toBe('0002-01');
+  });
+});

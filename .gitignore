@@ -5,3 +5,5 @@ cdk.out/
 .env
 .env.*
 design/*.zip
+.stryker-tmp/
+reports/

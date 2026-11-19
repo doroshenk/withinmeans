@@ -80,3 +80,16 @@ describe('money helpers reject non-integer cents', () => {
     expect(sumCents([])).toBe(0);
   });
 });
+
+describe('error messages name the offending argument (mutation-killing)', () => {
+  it('assertCents defaults its label to "value"', () => {
+    expect(() => assertCents(1.5)).toThrow('value must be an integer number of cents, got 1.5');
+  });
+
+  it('addCents, subCents and sumCents name which operand is bad', () => {
+    expect(() => addCents(0.5, 1)).toThrow(/^a must be/);
+    expect(() => addCents(1, 0.5)).toThrow(/^b must be/);
+    expect(() => subCents(0.5, 1)).toThrow(/^a must be/);
+    expect(() => subCents(1, 0.5)).toThrow(/^b must be/);
+  });
+});
