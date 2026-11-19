@@ -55,6 +55,7 @@ The owner is learning AWS: when you touch infrastructure, explain what each reso
 pnpm install
 pnpm test             # all unit and integration tests (vitest projects: packages/* and tooling)
 pnpm coverage         # per-package coverage gates (domain 100/100, db and api 95/90, web 85/80)
+pnpm --filter @withinmeans/domain mutation   # Stryker on domain, must score 90% or more
 pnpm lint             # ESLint + Prettier --check + dependency-cruiser
 pnpm typecheck        # tsc per package, plus tooling/
 pnpm format           # prettier --write .
