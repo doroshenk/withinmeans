@@ -99,7 +99,9 @@ describe('P0-07: DataStack', () => {
             Match.objectLike({
               ScheduleExpression: 'cron(0 5 * * ? *)',
               Lifecycle: { DeleteAfterDays: 14 },
-              TargetBackupVault: { Ref: Match.stringLikeRegexp('Vault') },
+              TargetBackupVault: {
+                'Fn::GetAtt': [Match.stringLikeRegexp('^Vault'), 'BackupVaultName'],
+              },
             }),
           ],
         },
@@ -128,6 +130,13 @@ describe('P0-07: DataStack', () => {
           }),
         ]),
       });
+    });
+
+    it('P0-12: outputs what the on-demand backup script needs', () => {
+      const outputs = synth('dev').toJSON().Outputs as Record<string, unknown>;
+      expect(Object.keys(outputs)).toEqual(
+        expect.arrayContaining(['BackupVaultName', 'ClusterArn', 'BackupRoleArn']),
+      );
     });
 
     it('P0-12: prod vault is retained, dev vault is destroyed with the stack', () => {

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Takes an on-demand AWS Backup recovery point of one stage's DSQL cluster and waits for it.
+# The prod deploy runs this before migrations (ADR 0014). Usage: scripts/backup-now.sh dev|prod
+# Needs AWS credentials for the account and these CloudFormation outputs on DataStack-<stage>.
+set -euo pipefail
+
+stage="${1:?usage: backup-now.sh dev|prod}"
+case "$stage" in dev | prod) ;; *) echo "stage must be dev or prod" >&2; exit 2 ;; esac
+stack="DataStack-$stage"
+region="us-east-2"
+
+out() {
+  aws cloudformation describe-stacks --region "$region" --stack-name "$stack" \
+    --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text
+}
+vault="$(out BackupVaultName)"
+cluster_arn="$(out ClusterArn)"
+role_arn="$(out BackupRoleArn)"
+
+job="$(aws backup start-backup-job --region "$region" --backup-vault-name "$vault" \
+  --resource-arn "$cluster_arn" --iam-role-arn "$role_arn" --query BackupJobId --output text)"
+echo "Started backup job $job"
+
+while true; do
+  state="$(aws backup describe-backup-job --region "$region" --backup-job-id "$job" \
+    --query State --output text)"
+  case "$state" in
+    COMPLETED) echo "Backup completed"; exit 0 ;;
+    ABORTED | FAILED | EXPIRED) echo "Backup job ended as $state" >&2; exit 1 ;;
+    *) echo "State: $state"; sleep 15 ;;
+  esac
+done
