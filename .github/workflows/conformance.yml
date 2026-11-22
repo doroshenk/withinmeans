@@ -2,7 +2,7 @@ name: DSQL conformance
 
 # After each merge to main: runs the migrations and the repository/isolation suite against the
 # real dev Aurora DSQL cluster. Each test file works in its own throwaway schema and drops it.
-# Needs the dev DataStack deployed first (`pnpm --filter @withinmeans/infra cdk deploy DataStack-dev`).
+# Needs the dev DataStack deployed first (`pnpm --filter @withinmeans/infra exec cdk deploy DataStack-dev --context stage=dev`).
 on:
   push:
     branches: [main]
