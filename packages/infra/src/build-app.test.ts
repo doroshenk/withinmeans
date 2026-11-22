@@ -13,6 +13,14 @@ describe('P0-05: buildApp', () => {
     expect(stack.region).toBe('us-east-2');
   });
 
+  it('P0-05: the real app trusts GitHub immutable subjects (owner and repo IDs)', () => {
+    const assembly = buildApp().synth();
+    const json = JSON.stringify(assembly.stacks[0]?.template);
+    expect(json).toContain('repo:doroshenk@26264461/withinmeans@1464146358:ref:refs/heads/main');
+    expect(json).toContain('repo:doroshenk@26264461/withinmeans@1464146358:ref:refs/tags/v*');
+    expect(json).not.toContain('repo:doroshenk/withinmeans:');
+  });
+
   it('P0-05: still synthesizes without an account (CI has no AWS credentials)', () => {
     const app = buildApp();
     const assembly = app.synth();

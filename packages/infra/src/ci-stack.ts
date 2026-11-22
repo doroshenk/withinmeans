@@ -10,6 +10,8 @@ import type { Construct } from 'constructs';
 export interface CiStackProps extends StackProps {
   /** GitHub repository allowed to deploy, as `owner/name`. */
   readonly githubRepo: string;
+  /** GitHub's immutable `sub` prefix: `repo:<owner>@<owner-id>/<repo>@<repo-id>`. */
+  readonly githubSubjectPrefix: string;
 }
 
 const GITHUB_ISSUER = 'token.actions.githubusercontent.com';

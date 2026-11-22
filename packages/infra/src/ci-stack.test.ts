@@ -6,12 +6,15 @@ import { CiStack } from './ci-stack.js';
 const ACCOUNT = '111111111111'; // fake account for tests
 const REGION = 'us-east-2';
 const REPO = 'doroshenk/withinmeans';
+// GitHub's immutable subject (the repo has use_immutable_subject on): owner and repo IDs, fake here.
+const SUBJECT = 'repo:doroshenk@111/withinmeans@222';
 const GITHUB = 'token.actions.githubusercontent.com';
 
 function synth(): Template {
   const app = new App();
   const stack = new CiStack(app, 'CiStack', {
     githubRepo: REPO,
+    githubSubjectPrefix: SUBJECT,
     env: { account: ACCOUNT, region: REGION },
   });
   return Template.fromStack(stack);
@@ -71,8 +74,8 @@ describe('P0-05: CiStack GitHub OIDC deploy role', () => {
     // Must be StringLike: in StringEquals the `*` in `v*` would be a literal character.
     const sub = cond.StringLike?.[`${GITHUB}:sub`] ?? 'missing';
     expect([sub].flat().sort()).toEqual([
-      `repo:${REPO}:ref:refs/heads/main`,
-      `repo:${REPO}:ref:refs/tags/v*`,
+      `${SUBJECT}:ref:refs/heads/main`,
+      `${SUBJECT}:ref:refs/tags/v*`,
     ]);
     expect(JSON.stringify(cond)).not.toContain('pull_request');
   });
@@ -94,6 +97,18 @@ describe('P0-05: CiStack GitHub OIDC deploy role', () => {
         (r) => `${prefix}-${r}-role-${ACCOUNT}-${REGION}`,
       ),
     );
+  });
+
+  it('P0-05: sub uses the immutable owner/repo IDs, not the mutable names', () => {
+    const template = synth();
+    const { Statement } = onlyRole(template).AssumeRolePolicyDocument;
+    const cond = (Statement[0] as Statement).Condition ?? {};
+    const sub = [cond.StringLike?.[`${GITHUB}:sub`] ?? []].flat();
+    for (const value of sub) {
+      expect(value).toMatch(/^repo:[^/@]+@\d+\/[^/@]+@\d+:ref:refs\//);
+      expect(value).not.toContain(`repo:${REPO}:`);
+    }
+    expect(sub).toHaveLength(2);
   });
 
   it('P0-05: no policy or trust condition uses a bare wildcard', () => {
