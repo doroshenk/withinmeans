@@ -60,6 +60,7 @@ describe('P0-05: CiStack GitHub OIDC deploy role', () => {
     expect(JSON.stringify(stmt.Principal)).toMatch(/Federated/);
     expect(JSON.stringify(stmt.Principal)).not.toContain('"AWS"');
     expect(JSON.stringify(stmt.Principal)).not.toContain('"Service"');
+    expect(JSON.stringify(stmt.Principal?.Federated)).toContain('GithubOidcProvider');
     expect(stmt.Condition?.StringEquals).toMatchObject({ [`${GITHUB}:aud`]: 'sts.amazonaws.com' });
   });
 
@@ -67,8 +68,8 @@ describe('P0-05: CiStack GitHub OIDC deploy role', () => {
     const template = synth();
     const { Statement } = onlyRole(template).AssumeRolePolicyDocument;
     const cond = (Statement[0] as Statement).Condition ?? {};
-    const sub =
-      cond.StringLike?.[`${GITHUB}:sub`] ?? cond.StringEquals?.[`${GITHUB}:sub`] ?? 'missing';
+    // Must be StringLike: in StringEquals the `*` in `v*` would be a literal character.
+    const sub = cond.StringLike?.[`${GITHUB}:sub`] ?? 'missing';
     expect([sub].flat().sort()).toEqual([
       `repo:${REPO}:ref:refs/heads/main`,
       `repo:${REPO}:ref:refs/tags/v*`,
