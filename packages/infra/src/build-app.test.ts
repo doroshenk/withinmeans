@@ -69,3 +69,27 @@ describe('P0-07: buildApp data stacks', () => {
     expect(() => stageFromContext('{"stage":"staging"}')).toThrow(/stage/);
   });
 });
+
+describe('P0-08: buildApp auth stacks', () => {
+  const names = (stage?: 'dev' | 'prod'): string[] =>
+    buildApp('111111111111', stage)
+      .synth()
+      .stacks.map((s) => s.stackName)
+      .sort();
+
+  it('P0-08: builds an AuthStack per stage', () => {
+    expect(names()).toEqual(
+      expect.arrayContaining([
+        'AuthStack-dev',
+        'AuthStack-prod',
+        'CiStack',
+        'DataStack-dev',
+        'DataStack-prod',
+      ]),
+    );
+  });
+
+  it('P0-08: the stage selector builds only that stage’s AuthStack', () => {
+    expect(names('dev')).toEqual(['AuthStack-dev', 'CiStack', 'DataStack-dev']);
+  });
+});
