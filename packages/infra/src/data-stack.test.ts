@@ -51,13 +51,28 @@ describe('P0-07: DataStack', () => {
     template.hasResourceProperties('AWS::IAM::Policy', {
       Roles: ['withinmeans-github-deploy'],
       PolicyDocument: {
-        Statement: [
+        Statement: Match.arrayWith([
           Match.objectLike({
             Action: 'dsql:DbConnectAdmin',
             Effect: 'Allow',
             Resource: Match.objectLike({ 'Fn::GetAtt': [Match.anyValue(), 'ResourceArn'] }),
           }),
-        ],
+        ]),
+      },
+    });
+  });
+
+  it('P0-07: connectRoleName can also read this stack outputs, and nothing wider', () => {
+    const template = synth('dev', 'withinmeans-github-deploy');
+    template.hasResourceProperties('AWS::IAM::Policy', {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: 'cloudformation:DescribeStacks',
+            Effect: 'Allow',
+            Resource: { Ref: 'AWS::StackId' },
+          }),
+        ]),
       },
     });
   });
