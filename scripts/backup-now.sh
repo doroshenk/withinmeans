@@ -3,6 +3,8 @@
 # The prod deploy runs this before migrations (ADR 0014). Usage: scripts/backup-now.sh dev|prod
 # Needs AWS credentials for the account and these CloudFormation outputs on DataStack-<stage>.
 set -euo pipefail
+# Started from PowerShell, Git Bash may not have its own tools (sleep) on PATH.
+PATH="/usr/bin:$PATH"
 
 stage="${1:?usage: backup-now.sh dev|prod}"
 case "$stage" in dev | prod) ;; *) echo "stage must be dev or prod" >&2; exit 2 ;; esac
