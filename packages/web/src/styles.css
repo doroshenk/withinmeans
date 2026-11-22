@@ -1,0 +1,228 @@
+/* Colours are the §7 tokens: main.tsx injects them as --color-* variables from
+   src/theme/tokens.ts, so there is one source. */
+:root {
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+.brand {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Split screen: teal pitch left, form right (design/SignIn.png). */
+.auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+}
+
+.auth-pitch {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.auth-pitch .brand {
+  font-size: 28px;
+}
+
+.auth-pitch h2 {
+  font-size: 40px;
+  line-height: 1.15;
+  max-width: 14em;
+}
+
+.auth-pitch ul {
+  list-style: none;
+  padding: 0;
+  margin: 32px 0 0;
+  display: grid;
+  gap: 12px;
+}
+
+.auth-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+
+.form {
+  width: 100%;
+  max-width: 440px;
+  display: grid;
+  gap: 16px;
+}
+
+.form h1 {
+  font-size: 36px;
+  line-height: 1.15;
+}
+
+.form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--color-ink-2);
+}
+
+.form input:not([type='checkbox']) {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-input);
+  border-radius: 10px;
+  background: var(--color-surface);
+  font: inherit;
+  color: var(--color-ink);
+}
+
+.form .check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-weight: 400;
+}
+
+.check input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--color-primary);
+}
+
+.button {
+  min-height: 48px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.button-quiet {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-border-input);
+}
+
+.link {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.switch {
+  margin: 0;
+  text-align: center;
+  color: var(--color-ink-2);
+}
+
+.error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--color-warning-bg);
+  color: var(--color-error-text);
+}
+
+.meter {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.meter-step {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border-input);
+}
+
+.meter-step.on {
+  background: var(--color-primary);
+}
+
+.hello {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 64px 24px;
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+}
+
+.hello h1 {
+  font-size: 48px;
+  line-height: 1.1;
+}
+
+/* Phone, 390px: one column, the pitch becomes a short banner. */
+@media (max-width: 800px) {
+  .auth {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .auth-pitch {
+    padding: 24px;
+    gap: 16px;
+  }
+
+  .auth-pitch-copy {
+    display: none;
+  }
+
+  .auth-form {
+    align-items: flex-start;
+    padding: 32px 20px;
+  }
+
+  .form h1 {
+    font-size: 30px;
+  }
+
+  .hello {
+    padding: 32px 20px;
+  }
+
+  .hello h1 {
+    font-size: 36px;
+  }
+}

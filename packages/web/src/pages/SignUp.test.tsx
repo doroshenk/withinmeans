@@ -9,7 +9,7 @@ function fakeAuth(signUp: AuthClient['signUp']): AuthClient {
     signIn: vi.fn(),
     signUp,
     signOut: vi.fn(),
-    getIdToken: vi.fn(() => Promise.resolve(undefined)),
+    getAccessToken: vi.fn(() => Promise.resolve(undefined)),
   };
 }
 

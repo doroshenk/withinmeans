@@ -9,5 +9,5 @@ export interface AuthClient {
   signIn(email: string, password: string, keepSignedIn: boolean): Promise<void>;
   signUp(input: SignUpInput): Promise<void>;
   signOut(): void;
-  getIdToken(): Promise<string | undefined>;
+  getAccessToken(): Promise<string | undefined>;
 }
