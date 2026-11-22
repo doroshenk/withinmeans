@@ -14,6 +14,9 @@ export interface AuthStackProps extends StackProps {
  * (deleting a pool deletes every user).
  */
 export class AuthStack extends Stack {
+  readonly userPool: UserPool;
+  readonly client: UserPoolClient;
+
   constructor(scope: Construct, id: string, props: AuthStackProps) {
     super(scope, id, props);
     const isProd = props.stage === 'prod';
@@ -38,6 +41,7 @@ export class AuthStack extends Stack {
       removalPolicy: isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
     });
     Tags.of(pool).add('Stage', props.stage);
+    this.userPool = pool;
 
     // The app client: what the browser app signs in through. Public (no secret, since a
     // browser can't keep one), SRP so the password never travels, and a 30-day refresh token
@@ -49,6 +53,8 @@ export class AuthStack extends Stack {
       refreshTokenValidity: Duration.days(30),
       preventUserExistenceErrors: true,
     });
+
+    this.client = client;
 
     new CfnOutput(this, 'UserPoolId', { value: pool.userPoolId });
     new CfnOutput(this, 'UserPoolClientId', { value: client.userPoolClientId });
