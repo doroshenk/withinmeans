@@ -1,3 +1,4 @@
+import { sql } from 'kysely';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createTestDb, type TestDb } from './harness.js';
 
@@ -24,5 +25,18 @@ describe('test harness', () => {
       })
       .execute();
     expect(await b.db.selectFrom('households').selectAll().execute()).toEqual([]);
+  });
+
+  it('P0-07: destroy removes the schema and every table in it (one DDL statement at a time)', async () => {
+    const t = await createTestDb();
+    const { schema } = t;
+    const admin = await createTestDb();
+    made.push(admin);
+    await t.destroy();
+    const left =
+      await sql`SELECT 1 FROM information_schema.schemata WHERE schema_name = ${schema}`.execute(
+        admin.db,
+      );
+    expect(left.rows).toHaveLength(0);
   });
 });

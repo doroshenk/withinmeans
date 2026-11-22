@@ -43,6 +43,16 @@ describe('P0-07: DSQL connection', () => {
     expect(query).toHaveBeenCalledWith('SET search_path TO "t_abc"');
   });
 
+  it('P0-07: a failing SET search_path surfaces as a client error, not an unhandled rejection', async () => {
+    createDsqlDb(ENDPOINT, 't_abc');
+    const failure = new Error('permission denied');
+    const emit = vi.fn();
+    const query = vi.fn().mockRejectedValue(failure);
+    pools[0]?.handlers['connect']?.({ query, emit });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(emit).toHaveBeenCalledWith('error', failure);
+  });
+
   it('P0-07: without a schema no search_path is set', () => {
     createDsqlDb(ENDPOINT);
     expect(pools[0]?.handlers['connect']).toBeUndefined();
