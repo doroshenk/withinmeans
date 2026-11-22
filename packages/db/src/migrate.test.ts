@@ -52,25 +52,52 @@ describe('migrate', () => {
     expect(tables.some((x) => x.name === 'd')).toBe(false);
   });
 
-  it('P0-07: DDL statements and the bookkeeping row each get their own transaction (DSQL)', async () => {
-    // DSQL allows one DDL statement per transaction and no DDL mixed with DML, so the runner
-    // must not wrap a DDL migration in one transaction. Each transaction has its own xmin.
-    await migrate(
+  it('P0-07: a DDL migration never opens a transaction (DSQL: one DDL per transaction, no DDL with DML)', async () => {
+    // Counts db.transaction() calls. (An earlier version compared Postgres's xmin per table, but
+    // DSQL has no system columns, so it could not run in the conformance suite.)
+    let transactions = 0;
+    const spy = new Proxy(t.db, {
+      get(target, prop) {
+        if (prop === 'transaction') {
+          return () => {
+            transactions += 1;
+            return target.transaction();
+          };
+        }
+        const value = Reflect.get(target, prop) as unknown;
+        return typeof value === 'function' ? (value as () => unknown).bind(target) : value;
+      },
+    });
+    const dir = dirWith({
+      '0006_two.sql':
+        'CREATE TABLE f1 (id uuid PRIMARY KEY); CREATE TABLE f2 (id uuid PRIMARY KEY);',
+    });
+    expect(await migrate(spy, dir)).toEqual(['0006_two.sql']);
+    expect(transactions).toBe(0);
+    const recorded = await sql`SELECT 1 FROM schema_migrations WHERE name = '0006_two.sql'`.execute(
       t.db,
-      dirWith({
-        '0006_two.sql':
-          'CREATE TABLE f1 (id uuid PRIMARY KEY); CREATE TABLE f2 (id uuid PRIMARY KEY);',
-      }),
     );
-    const { rows } = await sql<{ what: string; xid: string }>`
-      SELECT c.relname AS what, c.xmin::text AS xid FROM pg_class c
-        WHERE c.relname IN ('f1', 'f2') AND c.relnamespace = to_regnamespace(current_schema())
-      UNION ALL
-      SELECT 'record', m.xmin::text FROM schema_migrations m WHERE m.name = '0006_two.sql'`.execute(
-      t.db,
-    );
-    expect(rows).toHaveLength(3);
-    expect(new Set(rows.map((r) => r.xid)).size).toBe(3);
+    expect(recorded.rows).toHaveLength(1);
+  });
+
+  it('P0-07: a DML migration uses exactly one transaction, including its bookkeeping row', async () => {
+    await migrate(t.db, dirWith({ '0006b_t.sql': 'CREATE TABLE h (id int PRIMARY KEY);' }));
+    let transactions = 0;
+    const spy = new Proxy(t.db, {
+      get(target, prop) {
+        if (prop === 'transaction') {
+          return () => {
+            transactions += 1;
+            return target.transaction();
+          };
+        }
+        const value = Reflect.get(target, prop) as unknown;
+        return typeof value === 'function' ? (value as () => unknown).bind(target) : value;
+      },
+    });
+    const dir = dirWith({ '0006c_dml.sql': 'INSERT INTO h VALUES (1); INSERT INTO h VALUES (2);' });
+    expect(await migrate(spy, dir)).toEqual(['0006c_dml.sql']);
+    expect(transactions).toBe(1);
   });
 
   it('P0-07: a failing DDL migration is not recorded, and can be fixed and re-run', async () => {
