@@ -10,8 +10,8 @@
 
 | Area | Decision |
 |---|---|
-| AWS account | Free plan credits for now; switch to the Paid plan with a $1 budget alert **before the Free plan's 6 months end** (the account closes otherwise). Build only on Always Free services. |
-| Region | us-east-1 |
+| AWS account | Free plan credits for now; switch to the Paid plan with a $1 budget alert **before the Free plan ends on 2027-11-12** (the account closes otherwise). Build only on Always Free services. |
+| Region | us-east-2 |
 | Stack | TypeScript monorepo: `domain`, `db`, `api`, `web`, `infra` |
 | Database | Aurora DSQL. UUID keys, no sequences or triggers, migrations linted, retry on conflicts |
 | Isolation | Tenant-scoped repository layer with `HouseholdContext`; only `packages/db` may touch the database (lint-enforced); isolation tests for every repository function |
@@ -258,7 +258,7 @@ A thin, deployed thread through every layer: repo and CI, AWS account, every CDK
 - [ ] AWS Budget with a $1 alert to your email
 - [ ] Note the Free plan credit expiry date in `docs/runbooks/aws-account.md`; switch to the Paid plan before it
 - [ ] AWS CLI v2 installed and signed in (`aws login` or SSO profile `withinmeans`)
-- [ ] `cdk bootstrap aws://<account>/us-east-1` run once
+- [ ] `cdk bootstrap aws://<account>/us-east-2` run once
 
 **Find it in the console (learning):**
 
@@ -396,7 +396,7 @@ A thin, deployed thread through every layer: repo and CI, AWS account, every CDK
 
 **Find it in the console (learning):**
 
-- [ ] Certificate Manager (us-east-1): watch the certificate go from Pending to Issued
+- [ ] Certificate Manager (us-east-1; the account's SCP denies this region, so ask for an exception first, see `docs/runbooks/aws-account.md`): watch the certificate go from Pending to Issued
 - [ ] CloudFront: find the distribution, its origins and its behaviors
 - [ ] S3: open the bucket and confirm "Block all public access" is on
 

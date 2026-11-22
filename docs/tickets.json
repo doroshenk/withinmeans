@@ -119,7 +119,7 @@
         "AWS Budget with a $1 alert to your email",
         "Note the Free plan credit expiry date in `docs/runbooks/aws-account.md`; switch to the Paid plan before it",
         "AWS CLI v2 installed and signed in (`aws login` or SSO profile `withinmeans`)",
-        "`cdk bootstrap aws://<account>/us-east-1` run once"
+        "`cdk bootstrap aws://<account>/us-east-2` run once"
       ],
       "blocked": [
         "P0-01"
@@ -259,7 +259,7 @@
         "P0-05"
       ],
       "console": [
-        "Certificate Manager (us-east-1): watch the certificate go from Pending to Issued",
+        "Certificate Manager (us-east-1; the account's SCP denies this region, so ask for an exception first, see `docs/runbooks/aws-account.md`): watch the certificate go from Pending to Issued",
         "CloudFront: find the distribution, its origins and its behaviors",
         "S3: open the bucket and confirm \"Block all public access\" is on"
       ]
