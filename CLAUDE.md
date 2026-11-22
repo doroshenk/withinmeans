@@ -62,7 +62,8 @@ pnpm typecheck        # tsc per package, plus tooling/
 pnpm format           # prettier --write .
 pnpm dev              # web app on :5173 against the dev API (see packages/web/README.md)
 pnpm --filter @withinmeans/web build   # production build into packages/web/dist
-pnpm migrate --stage dev        # applies migrations to the dev DSQL cluster (prod is refused)
+pnpm migrate --stage dev        # applies migrations to the dev DSQL cluster (prod is refused except in the tag workflow)
+pnpm e2e                        # Playwright smoke tests; needs SMOKE_BASE_URL (+ SMOKE_EMAIL, SMOKE_PASSWORD for sign-in); runs from the deploy workflow
 pnpm --filter @withinmeans/db conformance   # needs DSQL_ENDPOINT; runs the repo suite on real DSQL
 scripts/backup-now.sh dev|prod      # on-demand AWS Backup of the stage's cluster (prod deploy calls it)
 pnpm seed:dev                   # (later)

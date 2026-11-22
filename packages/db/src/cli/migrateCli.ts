@@ -10,15 +10,21 @@ export interface MigrateCliDeps {
   env: Record<string, string | undefined>;
 }
 
+/** True only inside GitHub Actions on a `v*` tag run, i.e. the prod deploy workflow. */
+function isTagWorkflow(env: MigrateCliDeps['env']): boolean {
+  return env['GITHUB_ACTIONS'] === 'true' && (env['GITHUB_REF'] ?? '').startsWith('refs/tags/v');
+}
+
 /** `pnpm migrate --stage dev`. Prod migrates only from the tag workflow, never a laptop. */
 export async function runMigrateCli(argv: string[], deps: MigrateCliDeps): Promise<void> {
   const at = argv.indexOf('--stage');
   const stage = at === -1 ? undefined : argv[at + 1];
   if (stage === undefined) throw new Error('Usage: pnpm migrate --stage dev');
-  if (stage === 'prod') {
+  if (stage === 'prod' && !isTagWorkflow(deps.env)) {
     throw new Error('Refusing to migrate prod from a laptop: prod migrates from the tag workflow');
   }
-  if (stage !== 'dev') throw new Error(`Unknown stage "${stage}": use --stage dev`);
+  if (stage !== 'dev' && stage !== 'prod')
+    throw new Error(`Unknown stage "${stage}": use --stage dev`);
 
   const db = deps.connect(await deps.lookupEndpoint(`DataStack-${stage}`));
   try {

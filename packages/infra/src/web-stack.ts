@@ -12,6 +12,7 @@ import {
   ViewerProtocolPolicy,
 } from 'aws-cdk-lib/aws-cloudfront';
 import { HttpOrigin, S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
+import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 import { BlockPublicAccess, Bucket, BucketEncryption, type IBucket } from 'aws-cdk-lib/aws-s3';
 import type { Construct } from 'constructs';
 import type { Stage } from './data-stack.js';
@@ -92,6 +93,17 @@ export class WebStack extends Stack {
         },
       },
     });
+    // Uploads the built web app (packages/web/dist) and tells CloudFront to drop its cached copy.
+    // Console: it runs as a Lambda-backed custom resource; the files appear in the S3 bucket.
+    if (props.siteAssetPath !== undefined) {
+      new BucketDeployment(this, 'SiteFiles', {
+        sources: [Source.asset(props.siteAssetPath)],
+        destinationBucket: bucket as IBucket,
+        distribution,
+        distributionPaths: ['/*'],
+        prune: true,
+      });
+    }
     Tags.of(this).add('Stage', props.stage);
 
     // Values for Network Solutions: CNAME <SiteDomain> → <DistributionDomain>.

@@ -93,6 +93,24 @@ export class DataStack extends Stack {
           resources: [cluster.attrResourceArn],
         }),
       );
+      // The prod deploy takes an on-demand backup first (scripts/backup-now.sh): start a job in
+      // this stack's vault, watch it, and hand AWS Backup its role (and only that role).
+      role.addToPrincipalPolicy(
+        new PolicyStatement({
+          actions: ['backup:StartBackupJob'],
+          resources: [this.backupVault.backupVaultArn],
+        }),
+      );
+      role.addToPrincipalPolicy(
+        new PolicyStatement({ actions: ['backup:DescribeBackupJob'], resources: ['*'] }),
+      );
+      role.addToPrincipalPolicy(
+        new PolicyStatement({
+          actions: ['iam:PassRole'],
+          resources: [backupRole.roleArn],
+          conditions: { StringEquals: { 'iam:PassedToService': 'backup.amazonaws.com' } },
+        }),
+      );
       // Lets the run read this stack's outputs (the endpoint) with `aws cloudformation describe-stacks`.
       role.addToPrincipalPolicy(
         new PolicyStatement({
