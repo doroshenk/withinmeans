@@ -57,6 +57,20 @@ describe('P0-09: handler', () => {
     expect(logged).not.toContain('amount_cents');
   });
 
+  it('P0-09: redacts digits in error messages before logging', async () => {
+    const db = {
+      selectFrom() {
+        throw new Error('invalid input syntax for type bigint: "987654"');
+      },
+    } as unknown as Database;
+    const { logger, lines } = captureLogger();
+    const handler = createHandler({ db, verifier: fakeVerifier, logger });
+    await handler(event('/me', 'good:sub-x'));
+    const logged = lines.join('\n');
+    expect(logged).toContain('invalid input syntax');
+    expect(logged).not.toContain('987654');
+  });
+
   it('P0-09: logs each request without its body', async () => {
     const { handler, lines } = setup();
     await handler({ ...event('/me', undefined, 'POST'), body: '{"total_cents":777}' });

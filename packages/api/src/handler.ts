@@ -3,6 +3,11 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'a
 import { createContextFactory, type ContextDeps } from './context.js';
 import { appRouter } from './router.js';
 
+/** Error text can echo values (e.g. a bad bigint); digits never reach the log. */
+function redactDigits(text: string): string {
+  return text.replace(/\d+/g, '#');
+}
+
 /** CloudFront forwards `/api/*` to API Gateway unchanged; tRPC wants the path without it. */
 function withoutApiPrefix(event: APIGatewayProxyEventV2): APIGatewayProxyEventV2 {
   const rawPath = event.rawPath.replace(/^\/api(?=\/|$)/, '') || '/';
@@ -17,8 +22,8 @@ export function createHandler(
   const trpc = awsLambdaRequestHandler({
     router: appRouter,
     createContext: ({ event }) => createContext(event.headers.authorization),
-    // Only the kind of error, where it happened and its message: never inputs, bodies or
-    // database row details, and the logger drops money fields regardless.
+    // Only the kind of error, where it happened and its message with digits redacted. Inputs
+    // and bodies are never logged, and the logger drops money fields regardless.
     onError({ error, path }) {
       const original = error.cause ?? error;
       // Expected rejections (not signed in, bad input) are not faults.
@@ -26,7 +31,7 @@ export function createHandler(
         code: error.code,
         path,
         name: original.name,
-        message: original.message,
+        message: redactDigits(original.message),
       };
       if (error.code === 'INTERNAL_SERVER_ERROR') logger.error('request failed', fields);
       else logger.info('request rejected', fields);

@@ -67,6 +67,8 @@ export class ApiStack extends Stack {
       },
     });
 
+    // Phase 0 connects as the DSQL admin role, which is broader than ideal. The policy is pinned
+    // to this one cluster; a scoped database role with dsql:DbConnect is planned for later.
     // The function's role may mint a database sign-in token for this stage's cluster, and
     // nothing else beyond writing its own logs. Console: IAM → Roles → the ApiFunction role.
     fn.addToRolePolicy(
