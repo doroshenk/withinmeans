@@ -4,6 +4,10 @@ import {
   AllowedMethods,
   CachePolicy,
   Distribution,
+  Function as CloudFrontFunction,
+  FunctionCode,
+  FunctionEventType,
+  FunctionRuntime,
   OriginRequestPolicy,
   ViewerProtocolPolicy,
 } from 'aws-cdk-lib/aws-cloudfront';
@@ -43,6 +47,19 @@ export class WebStack extends Stack {
     // The API host is the URL without "https://" and any path.
     const apiHost = Fn.select(2, Fn.split('/', props.apiUrl));
 
+    const spaRewrite = new CloudFrontFunction(this, 'SpaRewrite', {
+      runtime: FunctionRuntime.JS_2_0,
+      code: FunctionCode.fromInline(
+        [
+          'function handler(event) {',
+          '  var request = event.request;',
+          "  if (request.uri.split('/').pop().indexOf('.') === -1) request.uri = '/index.html';",
+          '  return request;',
+          '}',
+        ].join('\n'),
+      ),
+    });
+
     const distribution = new Distribution(this, 'Distribution', {
       domainNames: [domain],
       certificate: Certificate.fromCertificateArn(this, 'Certificate', props.certificateArn),
@@ -51,6 +68,12 @@ export class WebStack extends Stack {
       // only this distribution.
       defaultBehavior: {
         origin: S3BucketOrigin.withOriginAccessControl(bucket as IBucket),
+        // Single-page app: paths without a file extension load index.html. This is a function on
+        // this behavior only, not a distribution-wide error page, so /api/* 403 and 404 answers
+        // reach the browser as JSON.
+        functionAssociations: [
+          { function: spaRewrite, eventType: FunctionEventType.VIEWER_REQUEST },
+        ],
         viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
       additionalBehaviors: {
@@ -66,12 +89,6 @@ export class WebStack extends Stack {
           originRequestPolicy: OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
         },
       },
-      // Single-page app: unknown paths (S3 answers 403 for a missing key) load the app instead.
-      errorResponses: [403, 404].map((httpStatus) => ({
-        httpStatus,
-        responseHttpStatus: 200,
-        responsePagePath: '/index.html',
-      })),
     });
     Tags.of(this).add('Stage', props.stage);
 

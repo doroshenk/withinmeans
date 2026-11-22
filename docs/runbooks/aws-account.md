@@ -145,3 +145,12 @@ a real deploy with it fails.
   Error pages tab: 403/404 return `/index.html`.
 - **S3 → Buckets:** the `WebStack-<stage>` bucket → Permissions: "Block all public access" is
   on, and the bucket policy allows only that distribution.
+
+### Known limits
+
+- The GitHub deploy role can assume only the us-east-2 CDK bootstrap roles, so it cannot deploy
+  `CertificateStack-*` (us-east-1). Deploy the certificate by hand, as above.
+- The dev bucket is removed with its stack, but S3 refuses to delete a non-empty bucket: empty it
+  first (S3 → the bucket → Empty). The prod bucket is always kept.
+- Paths without a file extension load the app through a CloudFront Function on the default
+  behavior only, so `/api/*` errors stay JSON.

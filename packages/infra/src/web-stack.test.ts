@@ -1,5 +1,5 @@
 import { App } from 'aws-cdk-lib';
-import { Template } from 'aws-cdk-lib/assertions';
+import { Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
 import type { Stage } from './data-stack.js';
 import { domainForStage } from './domains.js';
@@ -26,14 +26,15 @@ interface Distribution {
     DistributionConfig: {
       Aliases: string[];
       ViewerCertificate: { AcmCertificateArn: string };
-      CustomErrorResponses: { ErrorCode: number; ResponseCode: number; ResponsePagePath: string }[];
-      DefaultCacheBehavior: { ViewerProtocolPolicy: string };
+      CustomErrorResponses?: unknown[];
+      DefaultCacheBehavior: { ViewerProtocolPolicy: string; FunctionAssociations?: unknown[] };
       CacheBehaviors: {
         PathPattern: string;
         CachePolicyId: unknown;
         OriginRequestPolicyId: unknown;
         AllowedMethods: string[];
         TargetOriginId: string;
+        FunctionAssociations?: unknown[];
       }[];
       Origins: { Id: string; DomainName: unknown; OriginAccessControlId?: unknown }[];
     };
@@ -89,12 +90,8 @@ describe('P0-10: WebStack', () => {
     expect(behavior?.AllowedMethods).toEqual(
       expect.arrayContaining(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
     );
-    // Caching disabled: the managed CachingDisabled policy, or a policy with every TTL at 0.
-    if (!JSON.stringify(behavior?.CachePolicyId).includes(MANAGED_CACHING_DISABLED)) {
-      template.hasResourceProperties('AWS::CloudFront::CachePolicy', {
-        CachePolicyConfig: { DefaultTTL: 0, MaxTTL: 0, MinTTL: 0 },
-      });
-    }
+    // Caching disabled: the managed CachingDisabled policy.
+    expect(JSON.stringify(behavior?.CachePolicyId)).toContain(MANAGED_CACHING_DISABLED);
     // Authorization is forwarded: the managed AllViewerExceptHostHeader origin request policy
     // sends every viewer header except Host (CloudFront rejects naming Authorization itself).
     expect(JSON.stringify(behavior?.OriginRequestPolicyId)).toContain(
@@ -120,17 +117,19 @@ describe('P0-10: WebStack', () => {
     },
   );
 
-  it('P0-10: unknown paths fall back to index.html (single-page app)', () => {
-    const errors = distribution(synth('dev')).Properties.DistributionConfig.CustomErrorResponses;
-    for (const code of [403, 404]) {
-      expect(errors).toContainEqual(
-        expect.objectContaining({
-          ErrorCode: code,
-          ResponseCode: 200,
-          ResponsePagePath: '/index.html',
-        }),
-      );
-    }
+  it('P0-10: unknown paths fall back to index.html for the app only, not for /api/*', () => {
+    const template = synth('dev');
+    const config = distribution(template).Properties.DistributionConfig;
+    // A distribution-wide error page would turn API 403/404 JSON into HTML.
+    expect(config.CustomErrorResponses).toBeUndefined();
+    expect(config.DefaultCacheBehavior.FunctionAssociations).toEqual([
+      expect.objectContaining({ EventType: 'viewer-request' }),
+    ]);
+    const api = config.CacheBehaviors.find((b) => b.PathPattern === '/api/*');
+    expect(api?.FunctionAssociations).toBeUndefined();
+    template.hasResourceProperties('AWS::CloudFront::Function', {
+      FunctionCode: Match.stringLikeRegexp('/index\.html'),
+    });
   });
 
   it('P0-10: viewers are redirected from HTTP to HTTPS', () => {
