@@ -6,7 +6,7 @@ import { CiStack } from './ci-stack.js';
  * (the repo is public). The region is fixed to us-east-2: the account's service control policy
  * denies the others. Without an account (CI synth), ARNs use the AWS::AccountId pseudo-parameter.
  */
-export function buildApp(account?: string): App {
+export function buildApp(account?: string, _stage?: 'dev' | 'prod'): App {
   const app = new App();
   const env = account === undefined ? { region: 'us-east-2' } : { account, region: 'us-east-2' };
   new CiStack(app, 'CiStack', {

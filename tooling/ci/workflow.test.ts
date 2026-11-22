@@ -146,3 +146,29 @@ describe('branch protection script', () => {
     expect(s).toMatch(/enforce_admins['"]?\s*[:=]\s*true/);
   });
 });
+
+describe('P0-07: conformance workflow', () => {
+  const conformance = (): Workflow => parse(read('.github/workflows/conformance.yml')) as Workflow;
+  const text = (): string => read('.github/workflows/conformance.yml');
+
+  it('P0-07: runs after merges to main, not on pull requests', () => {
+    const on = conformance().on;
+    expect(on).toHaveProperty('push');
+    expect(on).not.toHaveProperty('pull_request');
+    expect(JSON.stringify(on)).toContain('main');
+  });
+
+  it('P0-07: authenticates with OIDC, never stored AWS keys', () => {
+    expect(text()).toContain('id-token: write');
+    expect(text()).toContain('aws-actions/configure-aws-credentials');
+    expect(text()).toContain('role-to-assume');
+    expect(text()).not.toMatch(/AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID/);
+  });
+
+  it('P0-07: points the repository suite at the dev cluster', () => {
+    const all = Object.values(conformance().jobs).flatMap(runs).join('\n');
+    expect(all).toMatch(/DSQL_ENDPOINT/);
+    expect(all).toMatch(/DataStack-dev/);
+    expect(all).not.toMatch(/DataStack-prod/);
+  });
+});
