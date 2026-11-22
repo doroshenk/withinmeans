@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@trpc/server": "^11.29.7",
     "@types/node": "^26.6.6",
     "@vitest/coverage-v8": "^5.1.1",
     "dependency-cruiser": "^18.8.0",
