@@ -37,11 +37,22 @@ describe('P0-08: AuthStack', () => {
     });
   });
 
-  it('P0-08: self sign-up is allowed', () => {
-    const [pool] = Object.values(synth('dev').findResources('AWS::Cognito::UserPool'));
-    const config = pool?.Properties.AdminCreateUserConfig as
-      { AllowAdminCreateUserOnly?: boolean } | undefined;
-    expect(config?.AllowAdminCreateUserOnly ?? false).toBe(false);
+  it('P0-08: self sign-up is allowed (admin-only creation is off)', () => {
+    synth('dev').hasResourceProperties('AWS::Cognito::UserPool', {
+      AdminCreateUserConfig: { AllowAdminCreateUserOnly: false },
+    });
+  });
+
+  it('P0-08: email sign-in is case-insensitive', () => {
+    synth('dev').hasResourceProperties('AWS::Cognito::UserPool', {
+      UsernameConfiguration: { CaseSensitive: false },
+    });
+  });
+
+  it('P0-08: sign-in and reset do not reveal whether an email is registered', () => {
+    synth('dev').hasResourceProperties('AWS::Cognito::UserPoolClient', {
+      PreventUserExistenceErrors: 'ENABLED',
+    });
   });
 
   it('P0-08: email is the username and is auto-verified', () => {
