@@ -181,4 +181,25 @@ describe('P0-13: the Playwright smoke test files', () => {
     expect(spec).toMatch(/Hello/);
     expect(spec).not.toMatch(/\.skip|\.only|fixme/);
   });
+
+  it('P0-13: failed smoke runs never publish traces (they record the typed password) on a public repo', () => {
+    expect(read('playwright.config.ts')).toMatch(/trace:\s*'off'/);
+    expect(text()).not.toMatch(/upload-artifact|playwright-traces/);
+  });
+
+  it('P0-13: stops early when the stage certificate variable is empty (no fallback to the dev one)', () => {
+    const check = steps('deploy.yml').findIndex(
+      (s) => (s.run ?? '').includes('CERTIFICATE_ARN') && (s.run ?? '').includes('exit 1'),
+    );
+    expect(check, 'a step that fails on an empty CERTIFICATE_ARN').toBeGreaterThanOrEqual(0);
+    expect(check).toBeLessThan(at('deploy.yml', 'cdk deploy'));
+  });
+
+  it('P0-13: stops when the web build output is missing, before the website stack is deployed', () => {
+    const check = steps('deploy.yml').findIndex((s) =>
+      (s.run ?? '').includes('packages/web/dist/index.html'),
+    );
+    expect(check, 'a step that checks packages/web/dist/index.html').toBeGreaterThanOrEqual(0);
+    expect(check).toBeLessThan(at('deploy.yml', 'WebStack-${{ inputs.stage }}'));
+  });
 });
