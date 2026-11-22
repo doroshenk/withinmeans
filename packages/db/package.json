@@ -9,7 +9,7 @@
     "coverage": "vitest run --coverage --passWithNoTests",
     "typecheck": "tsc -p .",
     "migrate": "tsx src/cli/migrate.ts",
-    "conformance": "vitest run"
+    "conformance": "vitest run --no-file-parallelism"
   },
   "dependencies": {
     "@aws-sdk/client-cloudformation": "^3.1175.0",

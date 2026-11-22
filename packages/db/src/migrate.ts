@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { sql } from 'kysely';
 import type { Database } from './db.js';
 import { lintMigration } from './lint/migrationLinter.js';
+import { runDdl } from './ddl.js';
 import { splitStatements } from './sqlStatements.js';
 
 /** The linter guarantees a migration is DDL-only or DML-only; this is the DDL side. */
@@ -14,9 +15,10 @@ export const MIGRATIONS_DIR = new URL('../migrations/', import.meta.url);
 
 /** Forward-only: applies new *.sql files in name order, each in its own transaction. */
 export async function migrate(db: Database, dir: URL = MIGRATIONS_DIR): Promise<string[]> {
-  await sql`CREATE TABLE IF NOT EXISTS schema_migrations (
-    name text PRIMARY KEY, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())`.execute(
+  await runDdl(
     db,
+    `CREATE TABLE IF NOT EXISTS schema_migrations (
+      name text PRIMARY KEY, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())`,
   );
   const applied = new Map(
     (
@@ -55,7 +57,7 @@ export async function migrate(db: Database, dir: URL = MIGRATIONS_DIR): Promise<
       // statement runs on its own and the bookkeeping row is written afterwards. A failure part-way
       // leaves earlier statements applied and the migration unrecorded: write DDL to be re-runnable
       // (IF NOT EXISTS).
-      for (const statement of statements) await sql.raw(statement).execute(db);
+      for (const statement of statements) await runDdl(db, statement);
       await record(db);
     } else {
       await db.transaction().execute(async (trx) => {
