@@ -15,4 +15,5 @@ await runMigrateCli(process.argv.slice(2), {
   connect: (endpoint) => createDsqlDb(endpoint),
   migrate,
   log: (line) => console.log(line),
+  env: process.env,
 });

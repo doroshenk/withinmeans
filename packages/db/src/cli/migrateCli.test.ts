@@ -10,6 +10,7 @@ function deps(overrides: Partial<MigrateCliDeps> = {}) {
     connect: vi.fn().mockReturnValue(db),
     migrate: vi.fn().mockResolvedValue(['0001_core.sql']),
     log: vi.fn(),
+    env: {},
     ...overrides,
   } satisfies MigrateCliDeps;
   return { d, destroy, db };
@@ -53,5 +54,28 @@ describe('P0-07: pnpm migrate --stage', () => {
   it('P0-07: rejects an unknown stage', async () => {
     const { d } = deps();
     await expect(runMigrateCli(['--stage', 'staging'], d)).rejects.toThrow(/stage/);
+  });
+});
+
+describe('P0-13: pnpm migrate --stage prod from the tag workflow', () => {
+  const tagRun = { GITHUB_ACTIONS: 'true', GITHUB_REF: 'refs/tags/v0.0.1' };
+
+  it('P0-13: migrates prod when run by GitHub Actions on a v* tag', async () => {
+    const { d } = deps({ env: tagRun });
+    await runMigrateCli(['--stage', 'prod'], d);
+    expect(d.lookupEndpoint).toHaveBeenCalledWith('DataStack-prod');
+    expect(d.migrate).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ['a laptop', {}],
+    ['GitHub Actions on main', { GITHUB_ACTIONS: 'true', GITHUB_REF: 'refs/heads/main' }],
+    ['a pull request', { GITHUB_ACTIONS: 'true', GITHUB_REF: 'refs/pull/5/merge' }],
+    ['a non-version tag', { GITHUB_ACTIONS: 'true', GITHUB_REF: 'refs/tags/test' }],
+    ['a laptop faking only the ref', { GITHUB_REF: 'refs/tags/v1.0.0' }],
+  ])('P0-13: still refuses prod from %s', async (_name, env) => {
+    const { d } = deps({ env });
+    await expect(runMigrateCli(['--stage', 'prod'], d)).rejects.toThrow(/prod/);
+    expect(d.lookupEndpoint).not.toHaveBeenCalled();
   });
 });

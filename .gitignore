@@ -7,3 +7,5 @@ cdk.out/
 design/*.zip
 .stryker-tmp/
 reports/
+test-results/
+playwright-report/

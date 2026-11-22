@@ -6,6 +6,8 @@ export interface MigrateCliDeps {
   connect(endpoint: string): Database;
   migrate(db: Database): Promise<string[]>;
   log(line: string): void;
+  /** The process environment; says whether this is the tag workflow. */
+  env: Record<string, string | undefined>;
 }
 
 /** `pnpm migrate --stage dev`. Prod migrates only from the tag workflow, never a laptop. */

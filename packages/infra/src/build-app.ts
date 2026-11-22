@@ -21,7 +21,11 @@ const PLACEHOLDER_CERTIFICATE_ARN =
 export function buildApp(
   account?: string,
   stage?: Stage,
-  options: { bundle?: boolean; certificateArns?: Partial<Record<Stage, string>> } = {},
+  options: {
+    bundle?: boolean;
+    certificateArns?: Partial<Record<Stage, string>>;
+    webDist?: string;
+  } = {},
 ): App {
   // Bundling runs esbuild; tests that only inspect templates turn it off.
   const app = new App(

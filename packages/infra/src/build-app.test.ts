@@ -1,4 +1,5 @@
 import type { Stack } from 'aws-cdk-lib';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildApp } from './build-app.js';
 
@@ -75,13 +76,14 @@ describe('P0-07: buildApp data stacks', () => {
     ]);
   });
 
-  it('P0-07: only dev lets the GitHub deploy role connect to the database', () => {
+  it('P0-13: both stages let the GitHub deploy role connect to their own database (prod migrates from the tag workflow)', () => {
     const assembly = buildApp('111111111111', undefined, { bundle: false }).synth();
     const json = (name: string): string =>
       JSON.stringify(assembly.stacks.find((s) => s.stackName === name)?.template);
-    expect(json('DataStack-dev')).toContain('dsql:DbConnectAdmin');
-    expect(json('DataStack-dev')).toContain('withinmeans-github-deploy');
-    expect(json('DataStack-prod')).not.toContain('dsql:DbConnectAdmin');
+    for (const stack of ['DataStack-dev', 'DataStack-prod']) {
+      expect(json(stack)).toContain('dsql:DbConnectAdmin');
+      expect(json(stack)).toContain('withinmeans-github-deploy');
+    }
   });
 
   it('P0-07: the entry file reads --context stage from CDK_CONTEXT_JSON', async () => {
@@ -91,5 +93,17 @@ describe('P0-07: buildApp data stacks', () => {
     expect(stageFromContext(undefined)).toBeUndefined();
     expect(stageFromContext('{}')).toBeUndefined();
     expect(() => stageFromContext('{"stage":"staging"}')).toThrow(/stage/);
+  });
+
+  it('P0-13: uploads the built web app only when its folder is given', () => {
+    const has = (webDist?: string): boolean =>
+      buildApp('111111111111', 'dev', {
+        bundle: false,
+        ...(webDist === undefined ? {} : { webDist }),
+      })
+        .synth()
+        .stacks.some((s) => JSON.stringify(s.template).includes('Custom::CDKBucketDeployment'));
+    expect(has()).toBe(false);
+    expect(has(fileURLToPath(new URL('.', import.meta.url)))).toBe(true);
   });
 });

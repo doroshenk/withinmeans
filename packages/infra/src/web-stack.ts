@@ -23,6 +23,8 @@ export interface WebStackProps extends StackProps {
   readonly certificateArn: string;
   /** The HTTP API's endpoint URL, e.g. https://abc.execute-api.us-east-2.amazonaws.com */
   readonly apiUrl: string;
+  /** Folder with the built web app to upload (P0-13). */
+  readonly siteAssetPath?: string;
 }
 
 /**
