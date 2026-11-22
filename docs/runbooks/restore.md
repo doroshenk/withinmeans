@@ -1,6 +1,6 @@
 # Restore runbook (Aurora DSQL)
 
-Last drill: 2026-11-22, on dev (restore into a new cluster, row checked, restored cluster deleted).
+Last drill: 2026-11-22, on dev, from the console: restored a recovery point into a new cluster. Row check and cleanup: see below once confirmed.
 
 ## What is backed up
 
@@ -32,14 +32,6 @@ scripts/backup-now.sh dev   # waits until the job is COMPLETED
    for a role.
 3. Wait until the restore job (AWS Backup → Jobs → Restore jobs) shows **Completed**.
 4. Aurora DSQL → Clusters: the new cluster appears. Note its endpoint.
-
-CLI equivalent (confirm the metadata keys with `aws backup get-restore-job-metadata
---recovery-point-arn <arn>` during the drill):
-
-```bash
-aws backup start-restore-job --region us-east-2 --recovery-point-arn <arn> \
-  --iam-role-arn <BackupRoleArn> --metadata '<from get-restore-job-metadata>'
-```
 
 ## Check it
 
