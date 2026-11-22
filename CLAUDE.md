@@ -15,7 +15,7 @@ The owner is learning AWS: when you touch infrastructure, explain what each reso
 - Never weaken, skip (`.skip`, `.only`) or delete a test to make CI pass. If a test seems wrong, stop and ask.
 - Before saying a ticket is done: `pnpm lint && pnpm typecheck && pnpm test && pnpm coverage` all pass, and every box in the ticket and in the plan's Definition of done (§9) is ticked.
 - If the spec is unclear or seems wrong, stop and ask. Don't guess, and don't silently change behavior.
-- **Pull requests:** the Claude GitHub Action reviews every PR. Address or answer every review comment; the owner resolves threads. Merge only with `/merge-pr <n>` (merge commit, never `--admin`); update branches with `/sync`. Branch protection on `main` is the real gate: never try to get around it.
+- **Pull requests:** before opening any PR, always run the `pr-reviewer` subagent (no need to ask) and fix or answer its blocking findings. The Claude GitHub Action reviews every PR. Address or answer every review comment; the owner resolves threads. Merge only with `/merge-pr <n>` (merge commit, never `--admin`); update branches with `/sync`. Branch protection on `main` is the real gate: never try to get around it.
 
 ## Architecture rules (enforced by lint, dependency-cruiser and tests)
 

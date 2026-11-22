@@ -8,5 +8,14 @@
     "test": "vitest run --passWithNoTests",
     "coverage": "vitest run --coverage --passWithNoTests",
     "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "kysely": "^0.29.9",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@testcontainers/postgresql": "^12.2.2",
+    "@types/pg": "^8.23.1",
+    "testcontainers": "^12.2.2"
   }
 }
