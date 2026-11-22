@@ -21,12 +21,14 @@ member account. The member account's Billing pages are empty or read-only.
 
 ## Region
 
-Everything deploys to **us-east-2 (Ohio)**. A service control policy from the owning
-organization denies other regions (for example CloudFormation in us-east-1). You cannot
-change it from this account; the owner can edit it in the management account (Organizations →
-Policies → Service control policies). CloudFront needs its ACM certificate in us-east-1, so
-the custom-domain ticket must add a narrow exception for that. When looking for a stack in the console, set the region
-selector to us-east-2 first.
+Everything deploys to **us-east-2 (Ohio)**. A service control policy (SCP) from the owning
+organization denies other regions, for example CloudFormation in us-east-1.
+
+- The SCP can't be changed from this account. The owner can edit it in the management account
+  (Organizations → Policies → Service control policies).
+- CloudFront needs its ACM certificate in us-east-1, so the custom-domain ticket must add a
+  narrow SCP exception for that.
+- When you look for a stack in the console, set the region selector to us-east-2 first.
 
 ## Baseline checklist (P0-04)
 

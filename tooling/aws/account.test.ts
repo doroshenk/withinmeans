@@ -13,7 +13,7 @@ describe.runIf(expectedAccount !== undefined)('P0-04: AWS admin profile', () => 
     const result = spawnSync(
       'aws',
       ['sts', 'get-caller-identity', '--profile', 'withinmeans', '--output', 'json'],
-      { encoding: 'utf8', shell: process.platform === 'win32' },
+      { encoding: 'utf8', shell: process.platform === 'win32', timeout: 20_000 },
     );
     expect(result.status, result.stderr).toBe(0);
     const identity = JSON.parse(result.stdout) as { Account: string; Arn: string };
@@ -38,6 +38,15 @@ describe('P0-04: docs/runbooks/aws-account.md', () => {
     for (const topic of ['Root MFA', 'Admin user', 'Budget', 'cdk bootstrap', 'CDKToolkit']) {
       expect(body, `runbook must mention ${topic}`).toContain(topic);
     }
+  });
+
+  it('P0-04: names the profile, the $1 budget, us-east-2 and the Free Tier page', () => {
+    const body = text();
+    expect(body).toContain('`withinmeans`');
+    expect(body).toContain('$1');
+    expect(body).toContain('Free Tier');
+    expect(body).toMatch(/cdk bootstrap aws:\/\/<account>\/us-east-2/);
+    expect(body).not.toContain('us-east-1 once');
   });
 
   it('P0-04: contains no account ID or email address (the repo is public)', () => {

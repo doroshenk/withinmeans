@@ -5,7 +5,7 @@
 
 ## Context
 
-The site must stay on AWS's free tier. The account is on the Free plan ($200 credits), which ends after 6 months and closes the account if not upgraded.
+The site must stay on AWS's free tier. The account is on the Free plan ($120 credits, expiring 2027-11-12; the credits live in the organization's management account), which closes the account if not upgraded before it ends.
 
 ## Decision
 
