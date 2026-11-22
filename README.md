@@ -22,9 +22,12 @@ pnpm coverage    # per-package coverage gates
 
 Each stage (`dev`, `prod`) has its own DSQL cluster, created by the CDK `DataStack-<stage>`.
 
-```bash
-# one-time, with your AWS profile signed in (dev only; never deploy prod from a laptop)
-pnpm --filter @withinmeans/infra cdk deploy DataStack-dev CiStack --context stage=dev
+Sign in first, in a normal PowerShell window (`aws login` needs a real console; see `docs/runbooks/aws-account.md`): `aws login --profile withinmeans --region us-east-2`, then sign in as the IAM user `withinmeans-admin` with its password and MFA code. Check with `aws sts get-caller-identity --profile withinmeans`.
+
+```powershell
+# one-time (dev only; never deploy prod from a laptop). cdk is a bin, so use `exec`.
+$env:AWS_PROFILE = "withinmeans"
+pnpm --filter @withinmeans/infra exec cdk deploy DataStack-dev --context stage=dev
 pnpm migrate --stage dev    # reads the endpoint from the stack output, applies new migrations
 ```
 

@@ -64,7 +64,7 @@ pnpm dev              # (Phase 0, P0-11) web app against the dev API
 pnpm migrate --stage dev        # applies migrations to the dev DSQL cluster (prod is refused)
 pnpm --filter @withinmeans/db conformance   # needs DSQL_ENDPOINT; runs the repo suite on real DSQL
 pnpm seed:dev                   # (later)
-pnpm --filter infra cdk diff --context stage=dev   # (P0-04+)
+pnpm --filter @withinmeans/infra exec cdk diff --context stage=dev   # (P0-04+); cdk is a bin, so use exec
 ```
 
 (Commands marked with a ticket become real when that ticket lands. Keep this list current.)
