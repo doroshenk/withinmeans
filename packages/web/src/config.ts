@@ -5,9 +5,21 @@ export interface AppConfig {
 
 export type ConfigResult = { ok: true; config: AppConfig } | { ok: false; missing: string[] };
 
-export function loadConfig(_env: {
+/** Reads the build-time variables that say which Cognito pool to sign in to. */
+export function loadConfig(env: {
   VITE_USER_POOL_ID?: string | undefined;
   VITE_USER_POOL_CLIENT_ID?: string | undefined;
 }): ConfigResult {
-  throw new Error('not implemented');
+  const userPoolId = env.VITE_USER_POOL_ID;
+  const clientId = env.VITE_USER_POOL_CLIENT_ID;
+  if (!userPoolId || !clientId) {
+    return {
+      ok: false,
+      missing: [
+        ...(userPoolId ? [] : ['VITE_USER_POOL_ID']),
+        ...(clientId ? [] : ['VITE_USER_POOL_CLIENT_ID']),
+      ],
+    };
+  }
+  return { ok: true, config: { userPoolId, clientId } };
 }
