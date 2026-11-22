@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { sql } from 'kysely';
 import type { Database } from './db.js';
 import { lintMigration } from './lint/migrationLinter.js';
@@ -26,7 +27,7 @@ export async function migrate(db: Database, dir: URL = MIGRATIONS_DIR): Promise<
     .filter((f) => f.endsWith('.sql'))
     .sort();
   for (const file of files) {
-    const text = readFileSync(join(dir.pathname.replace(/^\/([A-Za-z]:)/, '$1'), file), 'utf8');
+    const text = readFileSync(join(fileURLToPath(dir), file), 'utf8');
     const checksum = createHash('sha256').update(text).digest('hex');
     const previous = applied.get(file);
     if (previous !== undefined) {

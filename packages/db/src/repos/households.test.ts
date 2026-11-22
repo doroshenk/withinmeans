@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Forbidden, type HouseholdContext } from '../context.js';
 import { createTestDb, type TestDb } from '../testing/harness.js';
 import { households } from './households.js';
@@ -12,8 +12,8 @@ const ctx = (householdId: string, role: HouseholdContext['role'] = 'owner'): Hou
   role,
 });
 
-beforeAll(async () => {
-  t = await createTestDb();
+async function seed() {
+  await t.db.deleteFrom('households').execute();
   await t.db
     .insertInto('households')
     .values([
@@ -35,7 +35,12 @@ beforeAll(async () => {
       },
     ])
     .execute();
+}
+
+beforeAll(async () => {
+  t = await createTestDb();
 });
+beforeEach(seed);
 afterAll(async () => {
   await t.destroy();
 });
@@ -59,11 +64,13 @@ describe('isolation: household A cannot touch household B', () => {
   });
   it("cannot update B's row", async () => {
     await households.rename(t.db, ctx(A), 'A renamed');
+    expect((await households.getMine(t.db, ctx(A)))?.name).toBe('A renamed');
     const b = await households.getMine(t.db, ctx(B));
     expect(b?.name).toBe('B');
   });
   it("cannot delete B's row", async () => {
     await households.remove(t.db, ctx(A));
+    expect(await households.getMine(t.db, ctx(A))).toBeUndefined();
     expect((await households.getMine(t.db, ctx(B)))?.name).toBe('B');
   });
 });

@@ -15,7 +15,7 @@ afterAll(async () => {
 });
 
 function dirWith(files: Record<string, string>): URL {
-  const dir = mkdtempSync(join(tmpdir(), 'mig-'));
+  const dir = mkdtempSync(join(tmpdir(), 'mig with space-'));
   for (const [name, sql] of Object.entries(files)) writeFileSync(join(dir, name), sql);
   return pathToFileURL(dir + '/');
 }
