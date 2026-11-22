@@ -1,6 +1,6 @@
 # Restore runbook (Aurora DSQL)
 
-Last drill: 2026-11-22, on dev, from the console: restored a recovery point into a new cluster. Row check and cleanup: see below once confirmed.
+Last drill: 2026-11-22, on dev, from the console: restored a recovery point into a new cluster with the stack's backup role (job Completed), then deleted the restored cluster. The row check was not done in this drill; do it next time.
 
 ## What is backed up
 
