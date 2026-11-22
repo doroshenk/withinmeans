@@ -184,7 +184,7 @@ describe('P0-13: the Playwright smoke test files', () => {
 
   it('P0-13: failed smoke runs never publish traces (they record the typed password) on a public repo', () => {
     expect(read('playwright.config.ts')).toMatch(/trace:\s*'off'/);
-    expect(text()).not.toMatch(/upload-artifact|playwright-traces/);
+    expect(read('.github/workflows/deploy.yml')).not.toMatch(/upload-artifact|playwright-traces/);
   });
 
   it('P0-13: stops early when the stage certificate variable is empty (no fallback to the dev one)', () => {

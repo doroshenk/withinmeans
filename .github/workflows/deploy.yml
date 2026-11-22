@@ -40,6 +40,13 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-2
 
+      - name: Stop if this stage has no certificate variable
+        run: |
+          if [ -z "$CERTIFICATE_ARN" ]; then
+            echo "Set the ${{ inputs.stage == 'prod' && 'PROD_CERTIFICATE_ARN' || 'DEV_CERTIFICATE_ARN' }} repository variable" >&2
+            exit 1
+          fi
+
       - name: Deploy auth, database and API
         run: |
           pnpm --filter @withinmeans/infra exec cdk deploy \
@@ -52,6 +59,7 @@ jobs:
           export VITE_USER_POOL_ID=$(jq -r '."AuthStack-${{ inputs.stage }}".UserPoolId' "$RUNNER_TEMP/outputs.json")
           export VITE_USER_POOL_CLIENT_ID=$(jq -r '."AuthStack-${{ inputs.stage }}".UserPoolClientId' "$RUNNER_TEMP/outputs.json")
           pnpm --filter @withinmeans/web build
+          test -f packages/web/dist/index.html || { echo 'Web build produced no packages/web/dist/index.html' >&2; exit 1; }
 
       - name: Deploy the website (uploads the build)
         run: |
@@ -83,10 +91,3 @@ jobs:
         env:
           SMOKE_BASE_URL: https://within.doroshenk.com
         run: pnpm exec playwright test e2e/loads.spec.ts
-
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-traces
-          path: test-results/
-          if-no-files-found: ignore
