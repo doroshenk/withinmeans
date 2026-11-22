@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-// Copies the Claude Code project settings, the /work-ticket skill and the PR template
-// from setup/ into .claude/ and .github/. Run once from the repo root:  node scripts/install-tooling.mjs
-import { cpSync, rmSync } from 'node:fs';
+// Copies Claude Code project files (settings, skills, agents) and GitHub templates
+// from setup/ into .claude/ and .github/, then removes setup/. Run from the repo root:
+//   node scripts/install-tooling.mjs
+import { cpSync, existsSync, rmSync } from 'node:fs';
 
-cpSync('setup/dot-claude', '.claude', { recursive: true });
-cpSync('setup/dot-github', '.github', { recursive: true });
+const copied = [];
+if (existsSync('setup/dot-claude')) { cpSync('setup/dot-claude', '.claude', { recursive: true }); copied.push('.claude/'); }
+if (existsSync('setup/dot-github')) { cpSync('setup/dot-github', '.github', { recursive: true }); copied.push('.github/'); }
 rmSync('setup', { recursive: true, force: true });
-console.log('Installed .claude/settings.json, .claude/skills/work-ticket/SKILL.md and .github/pull_request_template.md; removed setup/.');
+console.log(copied.length ? `Installed into ${copied.join(' and ')}; removed setup/.` : 'Nothing to install (no setup/ folder).');

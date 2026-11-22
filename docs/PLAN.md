@@ -22,7 +22,8 @@
 | Email | SES from `no-reply@within.doroshenk.com`, invites only, sandbox mode with both addresses verified. Password reset by Cognito |
 | Infrastructure | AWS CDK (TypeScript) with assertion tests; each infra ticket has a "find it in the console" checklist |
 | Environments | `dev` + `prod` in one account |
-| Delivery | GitHub Actions + OIDC. PR checks block merges; merge → dev; tag `v*` → prod. $0 Actions spending limit |
+| Delivery | Public repo. GitHub Actions + OIDC (deploy role usable only from `main` and `v*` tags). Branch protection on `main`; merge → dev; tag `v*` → prod |
+| PR flow | Claude GitHub Action reviews every PR; `/merge-pr` merges only when every check passes; `/sync` updates branches; `pr-reviewer` subagent for a local pre-PR review |
 | Tests | Domain (pure) → repository/API on Postgres in Docker → DSQL conformance on dev after merge; Playwright e2e |
 | Coverage | domain 100/100 + Stryker ≥ 90%; db/api 95/90; web 85/80 |
 | Months | Only the user opens a month, via `openMonth(ym)`. No job ever opens one |
@@ -72,7 +73,7 @@ withinmeans/
     web/                    React app, theme/tokens.ts, components, pages, Playwright e2e
     infra/                  CDK app: Ci, Data, Auth, Api, Web, Email, Backup, Jobs stacks
   .github/workflows/        pr.yml, deploy-dev.yml, deploy-prod.yml
-  .claude/                  project settings and the work-ticket skill
+  .claude/                  settings, skills (/work-ticket, /merge-pr, /sync), agents (pr-reviewer)
 ```
 
 ### Dependency rules (enforced by dependency-cruiser)
@@ -123,7 +124,7 @@ withinmeans/
 | SES | Invite emails | Pennies at most |
 | S3, AWS Backup | Site files, exports, backups | Well under 1 GB: a few cents a month at most |
 | ACM certificates | 2 | Free |
-| GitHub Actions | Private repo | Free plan allowance (about 2,000 Linux minutes a month); $0 spending limit |
+| GitHub Actions | Public repo | Unlimited minutes on standard runners. Claude reviews use your Claude subscription |
 
 **Guardrails:** the $1 budget alert, the DSQL DPU graph in CloudWatch (check it monthly), no NAT gateways, no RDS, no Secrets Manager (use SSM Parameter Store standard parameters if a secret is ever needed), and no provisioned capacity anywhere.
 
@@ -136,8 +137,9 @@ These can't be automated by CDK. Each is part of a ticket's checklist.
 | When | Where | Step |
 |---|---|---|
 | Before P0-01 | Terminal at the repo root | `node scripts/install-tooling.mjs`, commit and push, then `node scripts/create-issues.mjs` (§10.1) |
-| P0-03 | GitHub → Settings → Billing | Set the Actions spending limit to $0 |
-| P0-03 | GitHub → repo → Settings → Branches | Protect `main` (PR required, checks required) |
+| P0-03 | GitHub → repo → Settings → Branches | Protect `main` (see P0-03 for the exact options) |
+| P0-03 | Claude Code | `/install-github-app`: review workflow with a subscription token |
+| P0-03 | GitHub → repo → Settings → Actions | Require approval for outside contributors' workflow runs |
 | P0-04 | AWS console | Root MFA, admin user with MFA, $1 budget, note the credit expiry |
 | P0-10 | Network Solutions DNS for `doroshenk.com` | CNAME for the ACM certificate validation (value printed by CDK) |
 | P0-10 | Network Solutions | CNAME `within` → prod CloudFront domain; CNAME `dev.within` → dev CloudFront domain |
@@ -215,30 +217,26 @@ A thin, deployed thread through every layer: repo and CI, AWS account, every CDK
 - [ ] A lint rule forbids `Date` in `packages/domain` and float math on `*_cents` identifiers
 
 
-#### P0-03 · CI: PR checks and branch protection
+#### P0-03 · CI, branch protection and the PR review flow
 
-**Spec:** §12  
+**Spec:** §12, ADR 0017  
 **Blocked by:** P0-01
 
-**Goal.** GitHub Actions workflow on every PR: install with cache, lint, typecheck, unit tests with coverage gates, dependency-cruiser, CDK synth. Stryker mutation run only when `packages/domain` changes.
+**Goal.** GitHub Actions workflow on every PR: install with cache, lint, typecheck, unit tests with coverage gates, dependency-cruiser, CDK synth. Stryker only when `packages/domain` changes. Branch protection on `main` (the repo is public, so it's free). The Claude review workflow on every PR.
 
 **Tests to write first (red):**
 
 - [ ] A PR that drops domain coverage below 100% fails the check (verify once with a throwaway PR)
 - [ ] Stryker job fails below a 90% mutation score
+- [ ] A direct `git push` to `main` is rejected (verify once)
 
 **Also done when:**
 
-- [ ] Branch protection on `main`: PR required, checks required, no direct pushes
-- [ ] `concurrency` cancels superseded runs on the same PR
-- [ ] GitHub Actions spending limit set to $0 (manual step in GitHub billing settings)
-
-**Carried over from P0-01 and P0-02:**
-
-- CI must run exactly what `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm coverage` run locally (the root scripts include dependency-cruiser and the `tooling/` rule tests).
-- **Stryker is not set up yet.** This ticket adds it (domain only, ≥ 90%). `packages/domain` is already at 100% lines and branches.
-- CI runs on Linux with LF checkouts (`.gitattributes` pins LF); Prettier is checked in `pnpm lint`.
-- Use the `pnpm` version from `packageManager` in the root `package.json` (pnpm 10), e.g. `pnpm/action-setup`, and Node from `.nvmrc`.
+- [ ] Branch protection on `main`: require a PR; require status checks (the CI jobs) and up-to-date branches; require conversation resolution (so unresolved Claude review comments block the merge); allow merge commits only (Settings → General → Pull Requests: turn off squash and rebase merging); do not allow bypassing, including for admins
+- [ ] Claude review: run `/install-github-app` in Claude Code, choose the review workflow and a subscription token (`CLAUDE_CODE_OAUTH_TOKEN`); merge its PR; add `concurrency` so superseded reviews cancel
+- [ ] Settings → Actions → General: require approval for workflow runs from outside contributors (public repo: forks can open PRs)
+- [ ] `concurrency` cancels superseded CI runs on the same PR
+- [ ] `/merge-pr` and `/sync` tried once on this ticket's own PR
 
 
 #### P0-04 · AWS account baseline (manual, guided)
@@ -277,7 +275,7 @@ A thin, deployed thread through every layer: repo and CI, AWS account, every CDK
 
 **Tests to write first (red):**
 
-- [ ] CDK assertion: the role trusts only `token.actions.githubusercontent.com` with `sub` limited to `repo:doroshenk/withinmeans:*`
+- [ ] CDK assertion: the role trusts only `token.actions.githubusercontent.com`, and `sub` only for `repo:doroshenk/withinmeans:ref:refs/heads/main` and `repo:doroshenk/withinmeans:ref:refs/tags/v*` (never pull requests: the repo is public)
 - [ ] CDK assertion: the role can assume only the CDK bootstrap roles
 
 **Also done when:**
@@ -1349,16 +1347,16 @@ The phone-only flows, bottom sheets, remaining empty states and the accessibilit
 
 1. **Install the tools:**
    - Git for Windows (Claude Code on Windows uses its Bash)
-   - Node.js 24 LTS, then `corepack enable` (turns on pnpm; if it fails with EPERM, run `npm install -g pnpm@10` instead)
+   - Node.js 24 LTS, then `corepack enable` (turns on pnpm)
    - Docker Desktop, with the WSL 2 backend (needed for the Postgres test containers)
    - AWS CLI v2
-   - GitHub CLI, then `gh auth login` and `gh auth setup-git` (without the second, `git push` / `git fetch` can fail with "could not read Username")
+   - GitHub CLI, then `gh auth login`
    - VS Code
 2. **Install the Claude Code extension:** in VS Code press `Ctrl+Shift+X`, search **Claude Code** (publisher Anthropic), click Install, then open it from the Spark icon and sign in with your Claude account. For `claude` in the integrated terminal as well, install the standalone CLI.
 3. **Recommended extensions:** ESLint, Prettier, Vitest, Playwright Test for VS Code, GitHub Pull Requests, Docker.
 4. **Open the repo folder itself:** `File → Open Folder… → C:\dev\WithinMeans\withinmeans`. Open the repo, not its parent, so Claude Code loads the repo's `CLAUDE.md`, `.claude/settings.json` and the `/work-ticket` skill.
 5. **Start each conversation in plan mode:** VS Code settings (`Ctrl+,`) → Extensions → Claude Code → *Initial Permission Mode* → `plan`. Every new ticket then starts with a plan you approve before any file changes.
-6. **Install the repo's Claude Code tooling once:** in a terminal at the repo root run `node scripts/install-tooling.mjs`. It moves `.claude/settings.json`, the `/work-ticket` skill and the PR template from `setup/` into place. Then commit everything (`git add -A && git commit -m "docs: development plan, rules and tooling" && git push`).
+6. **Install the repo's Claude Code tooling:** in a terminal at the repo root run `node scripts/install-tooling.mjs` whenever a `setup/` folder appears. It moves Claude Code settings, skills and agents (and GitHub templates) from `setup/` into `.claude/` and `.github/`. Then commit everything (`git add -A && git commit -m "docs: development plan, rules and tooling" && git push`).
 7. **Create the GitHub issues once:** in a terminal at the repo root run `node scripts/create-issues.mjs`. It uses your `gh` login to create the phase labels, the 7 milestones and the 69 issues, then links each *Blocked by* to real issue numbers. Safe to re-run: it skips tickets that already exist.
 8. **Turn on the run-on-save test view:** in the Testing sidebar, run Vitest in watch mode. You'll see red turn green as Claude works.
 
@@ -1375,8 +1373,24 @@ One ticket = one conversation = one branch = one PR. Fresh conversations keep Cl
 4. **Red.** Claude writes the ticket's tests first, runs them, shows them failing and commits them as `test: …`. **Read the test names against the ticket.** This is your most important review: if the tests are right, the code will be right.
 5. **Green.** Claude implements until the tests pass and the coverage gates hold, then commits `feat: …`, and refactors if useful.
 6. **Look at screens yourself.** For UI tickets, ask Claude to start the dev server (`pnpm dev`). Open the page and the matching `design/*.png` side by side at full width, then narrow the window to phone width.
-7. **Open the PR.** Say "create a PR for this ticket". Claude uses `gh` and fills in the template, and CI runs. Merge with **Rebase and merge** so the `test:` → `feat:` commits stay visible on `main`.
-8. **After merge,** watch the dev deploy in GitHub Actions. For infra tickets, do the console checklist and ask Claude to explain anything you see there.
+7. **Review locally (optional).** Say `@"pr-reviewer (agent)" review this branch`. The reviewer runs in its own context, so it hasn't seen the work being written. Fix anything blocking.
+8. **Open the PR.** Say "create a PR for this ticket". Claude uses `gh` and fills in the template. CI runs, and the Claude review workflow comments on the PR.
+9. **Handle the review.** Read Claude's comments on GitHub. For each one, either fix it (back in the ticket's conversation: "address the review comments on PR #12") or reply why not. Resolve each thread yourself. Branch protection blocks the merge while any thread is unresolved.
+10. **Merge.** In Claude Code, type `/merge-pr 12`. It checks the PR isn't a draft, isn't behind `main`, has green CI, has no unresolved threads, and has its `test` commit before its `feat` commit. It shows you a summary, asks you to confirm, then merges with a merge commit (so the `test:` → `feat:` commits stay visible), deletes the branch, syncs `main` and lists the tickets now unblocked.
+11. **After merge,** watch the dev deploy in GitHub Actions. For infra tickets, do the console checklist and ask Claude to explain anything you see there.
+
+If `main` moved on while your PR was open, `/merge-pr` stops and asks you to run `/sync 12`. That rebases the PR on GitHub's side, pulls it locally and reruns the tests. Run `/sync` with no number any time to tidy up: it switches to `main`, pulls, and deletes local branches that were merged.
+
+### 10.2a The PR agents at a glance
+
+| Job | What | Where it runs | Cost |
+|---|---|---|---|
+| Review | Claude Code GitHub Action, review workflow | GitHub, on every PR push | Your Claude subscription; Actions minutes are free on a public repo |
+| Pre-PR review | `pr-reviewer` subagent (read-only) | Your Claude Code session | Your Claude subscription |
+| Merge | `/merge-pr <n>` skill | Your Claude Code session, with your confirmation | Free |
+| Update | `/sync [n]` skill | Your Claude Code session | Free |
+
+The merge and update jobs are skills rather than free-running agents on purpose: they're fixed checklists, and they stop and ask instead of guessing. Branch protection on GitHub is the real gate; the skills just save you the clicking.
 
 ### 10.3 Useful features
 
@@ -1397,11 +1411,12 @@ One ticket = one conversation = one branch = one PR. Fresh conversations keep Cl
 - **Phase 1 onward:** **Edit automatically** is fine for file edits. Commands are still governed by `.claude/settings.json`.
 - **Never** use bypass mode on this repo.
 
-`.claude/settings.json` (already in the repo) pre-approves the safe commands: `pnpm test`, `coverage`, `lint`, `typecheck`, `cdk synth` and `cdk diff`, read-only `git`, and `gh issue view/list` and `gh pr view/checks`. Everything else asks you first. It **denies**:
+`.claude/settings.json` (already in the repo) pre-approves the safe commands: `pnpm test`, `coverage`, `lint`, `typecheck`, `cdk synth` and `cdk diff`, read-only `git`, `git fetch --prune`, and `gh issue view/list` and `gh pr view/diff/list/checks`. Everything else asks you first. It **denies**:
 
 - reading `.env*`;
 - `cdk deploy` or `cdk destroy` against prod, and anything with `--stage prod`;
-- `git push --force`;
+- `git push --force`, `git reset --hard` and `git branch -D`;
+- `gh pr merge` with `--admin`, `--squash` or `--rebase` (merge commits only, never bypassing protection);
 - `aws` delete, remove and terminate commands.
 
 Prod is deployed only by the tag workflow.
@@ -1422,22 +1437,8 @@ Prod is deployed only by the tag workflow.
 ### 10.7 Prompts worth reusing
 
 - `/work-ticket <ticket ID or issue number>`: the whole loop above.
+- `/merge-pr <n>` and `/sync [n]`: merge safely, and keep branches current.
+- `@"pr-reviewer (agent)" review this branch`: a fresh-eyes review before the PR.
 - "What's the next unblocked ticket?" Claude checks open issues and their *Blocked by* lines with `gh`.
 - "Review this branch against the ticket and `CLAUDE.md` before I open the PR."
 - "Show me the coverage report for `packages/domain` and any surviving Stryker mutants."
-
-### 10.8 Lessons learned (add to this as tickets land)
-
-Short, practical notes so later tickets don't repeat a mistake. Repo conventions live in `CLAUDE.md`; this is the "what bit us" log.
-
-| Ticket | Lesson |
-|---|---|
-| P0-01 | The `gh` CLI wasn't installed and `git` had no credentials: install `gh`, then `gh auth login` and `gh auth setup-git`. `corepack enable` needs an admin shell; `npm install -g pnpm@10` works without one. |
-| P0-01 | dependency-cruiser rules match on file paths, so rule fixtures must live under `packages/<pkg>/src` (here `tooling/depcruise/fixtures/packages/<pkg>/src`) or the rules never fire. Check a rule test fails when the rule is empty (red) before trusting it. |
-| P0-01 | typescript-eslint doesn't support TypeScript 7 yet; TypeScript is pinned to `~5.9`. |
-| P0-02 | Node 24 has no native `Temporal`; `temporal-polyfill` is the domain's runtime dependency. |
-| P0-02 | With `core.autocrlf=true`, merged files arrived with CRLF and `prettier --check` failed. `.gitattributes` now forces LF. |
-| P0-02 | A red test must fail on an assertion, not an import error: add throwing stubs first, then tests. |
-| P0-02 | Don't run `git stash` (or any state-changing git command) as a side check mid-ticket; it shelved the uncommitted work (recovered with `git stash pop`). |
-| Process | The plan suggests *Rebase and merge*; P0-01 and P0-02 were merged with merge commits, which also keep the `test:` then `feat:` commits visible. Either is fine; just stay consistent. |
-| Process | A hook message "jq not found — SAM template validation skipped" comes from the AWS serverless plugin and can be ignored: this repo uses CDK, not SAM. |

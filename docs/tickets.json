@@ -88,17 +88,20 @@
     {
       "id": "P0-03",
       "phase": 0,
-      "title": "CI: PR checks and branch protection",
-      "refs": "§12",
-      "goal": "GitHub Actions workflow on every PR: install with cache, lint, typecheck, unit tests with coverage gates, dependency-cruiser, CDK synth. Stryker mutation run only when `packages/domain` changes.",
+      "title": "CI, branch protection and the PR review flow",
+      "refs": "§12, ADR 0017",
+      "goal": "GitHub Actions workflow on every PR: install with cache, lint, typecheck, unit tests with coverage gates, dependency-cruiser, CDK synth. Stryker only when `packages/domain` changes. Branch protection on `main` (the repo is public, so it's free). The Claude review workflow on every PR.",
       "tests": [
         "A PR that drops domain coverage below 100% fails the check (verify once with a throwaway PR)",
-        "Stryker job fails below a 90% mutation score"
+        "Stryker job fails below a 90% mutation score",
+        "A direct `git push` to `main` is rejected (verify once)"
       ],
       "done": [
-        "Branch protection on `main`: PR required, checks required, no direct pushes",
-        "`concurrency` cancels superseded runs on the same PR",
-        "GitHub Actions spending limit set to $0 (manual step in GitHub billing settings)"
+        "Branch protection on `main`: require a PR; require status checks (the CI jobs) and up-to-date branches; require conversation resolution (so unresolved Claude review comments block the merge); allow merge commits only (Settings → General → Pull Requests: turn off squash and rebase merging); do not allow bypassing, including for admins",
+        "Claude review: run `/install-github-app` in Claude Code, choose the review workflow and a subscription token (`CLAUDE_CODE_OAUTH_TOKEN`); merge its PR; add `concurrency` so superseded reviews cancel",
+        "Settings → Actions → General: require approval for workflow runs from outside contributors (public repo: forks can open PRs)",
+        "`concurrency` cancels superseded CI runs on the same PR",
+        "`/merge-pr` and `/sync` tried once on this ticket's own PR"
       ],
       "blocked": [
         "P0-01"
@@ -138,7 +141,7 @@
       "refs": "§12",
       "goal": "A CDK `CiStack` that lets GitHub Actions deploy without stored AWS keys.",
       "tests": [
-        "CDK assertion: the role trusts only `token.actions.githubusercontent.com` with `sub` limited to `repo:doroshenk/withinmeans:*`",
+        "CDK assertion: the role trusts only `token.actions.githubusercontent.com`, and `sub` only for `repo:doroshenk/withinmeans:ref:refs/heads/main` and `repo:doroshenk/withinmeans:ref:refs/tags/v*` (never pull requests: the repo is public)",
         "CDK assertion: the role can assume only the CDK bootstrap roles"
       ],
       "done": [
@@ -259,7 +262,7 @@
         "P0-05"
       ],
       "console": [
-        "Certificate Manager (us-east-1; the account's SCP denies this region, so ask for an exception first, see `docs/runbooks/aws-account.md`): watch the certificate go from Pending to Issued",
+        "Certificate Manager (us-east-1): watch the certificate go from Pending to Issued",
         "CloudFront: find the distribution, its origins and its behaviors",
         "S3: open the bucket and confirm \"Block all public access\" is on"
       ]
