@@ -141,7 +141,7 @@ These can't be automated by CDK. Each is part of a ticket's checklist.
 | P0-03 | Claude Code | `/install-github-app`: review workflow with a subscription token |
 | P0-03 | GitHub → repo → Settings → Actions | Require approval for outside contributors' workflow runs |
 | P0-04 | AWS console | Root MFA, admin user with MFA, $1 budget, note the credit expiry |
-| P0-10 | Network Solutions DNS for `doroshenk.com` | CNAME for the ACM certificate validation (value printed by CDK) |
+| P0-10 | Network Solutions DNS for `doroshenk.com` | CNAME for the ACM certificate validation (name and value copied from the ACM console) |
 | P0-10 | Network Solutions | CNAME `within` → prod CloudFront domain; CNAME `dev.within` → dev CloudFront domain |
 | P1-03 | Network Solutions | 3 DKIM CNAMEs for `within.doroshenk.com`; TXT `_dmarc.within` = `v=DMARC1; p=none; rua=mailto:<your Gmail>` |
 | P1-03 | SES console | Verify your and your partner's email addresses |
@@ -379,7 +379,7 @@ A thin, deployed thread through every layer: repo and CI, AWS account, every CDK
 **Spec:** §12  
 **Blocked by:** P0-05
 
-**Goal.** CDK `WebStack`: private S3 bucket with Origin Access Control, CloudFront with SPA fallback, `/api/*` routed to the HTTP API, an ACM certificate for `within.doroshenk.com` / `dev.within.doroshenk.com`.
+**Goal.** CDK `WebStack`: private S3 bucket with Origin Access Control, CloudFront with SPA fallback, `/api/*` routed to the HTTP API, an ACM certificate for `within.doroshenk.com` / `dev.within.doroshenk.com`, requested by hand in ACM (us-east-1) because CDK cannot deploy there; its ARN is passed to `WebStack`.
 
 **Tests to write first (red):**
 
@@ -389,12 +389,12 @@ A thin, deployed thread through every layer: repo and CI, AWS account, every CDK
 
 **Also done when:**
 
-- [ ] Network Solutions checklist done: certificate validation CNAME, then `within` and `dev.within` CNAMEs to the distribution domains (CDK prints the values)
+- [ ] Network Solutions checklist done: certificate validation CNAME, then `within` and `dev.within` CNAMEs to the distribution domains (CDK prints the distribution domains; the validation CNAME comes from the ACM console)
 - [ ] HTTPS works at both addresses
 
 **Find it in the console (learning):**
 
-- [ ] Certificate Manager (us-east-1; the account's SCP denies this region, so ask for an exception first, see `docs/runbooks/aws-account.md`): watch the certificate go from Pending to Issued
+- [ ] Certificate Manager (switch the region selector to us-east-1; request the certificate by hand, see `docs/runbooks/aws-account.md`): watch the certificate go from Pending to Issued
 - [ ] CloudFront: find the distribution, its origins and its behaviors
 - [ ] S3: open the bucket and confirm "Block all public access" is on
 

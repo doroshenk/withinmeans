@@ -108,7 +108,7 @@ The web app is a set of files in a **private S3 bucket**. **CloudFront** (a cont
 network) serves them over HTTPS at `within.doroshenk.com` (prod) and `dev.within.doroshenk.com`
 (dev) and forwards `/api/*` to the HTTP API. There is no Route 53: DNS lives at Network Solutions.
 
-- **Defined in:** `packages/infra/src/web-stack.ts` (`WebStack-<stage>`, us-east-2).
+- **Defined in:** `packages/infra/src/web-stack.ts` (`WebStack-<stage>`, us-east-2). The certificate is the one thing in us-east-1: switch the console region selector to N. Virginia to see it.
 - **The certificate is not in CDK.** CloudFront only accepts a certificate from us-east-1, and the
   SCP blocks CloudFormation there (see Region above). You create it by hand once per stage and
   give `WebStack` its ARN.

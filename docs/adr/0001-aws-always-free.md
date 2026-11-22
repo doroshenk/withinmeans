@@ -19,4 +19,4 @@ No RDS, NAT gateways, Secrets Manager or provisioned capacity. Small costs (S3, 
 
 The AWS account is a member of an AWS Organization whose service control policy denies most regions other than us-east-2 (for example, CloudFormation in us-east-1 returns an explicit deny). The project therefore uses **us-east-2 (Ohio)** instead of us-east-1.
 
-Open risk: CloudFront needs its ACM certificate in us-east-1, which the policy denies. The custom domain ticket must resolve this (ask the organization's owner for a us-east-1 ACM exception, or serve from the default `cloudfront.net` domain) before it starts.
+CloudFront needs its ACM certificate in us-east-1. Resolved in P0-10: the policy allows `acm:*` and `cloudfront:*` in us-east-1 (but not CloudFormation, S3, SSM or ECR), so the certificates are requested by hand in the ACM console and their ARNs are passed to the CDK `WebStack`. See `docs/runbooks/aws-account.md`.
