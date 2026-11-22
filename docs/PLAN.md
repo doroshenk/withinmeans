@@ -275,7 +275,7 @@ A thin, deployed thread through every layer: repo and CI, AWS account, every CDK
 
 **Tests to write first (red):**
 
-- [ ] CDK assertion: the role trusts only `token.actions.githubusercontent.com`, and `sub` only for `repo:doroshenk/withinmeans:ref:refs/heads/main` and `repo:doroshenk/withinmeans:ref:refs/tags/v*` (never pull requests: the repo is public)
+- [ ] CDK assertion: the role trusts only `token.actions.githubusercontent.com`, and `sub` only for `refs/heads/main` and `refs/tags/v*` of this repo, written with GitHub's immutable subject prefix `repo:doroshenk@<owner-id>/withinmeans@<repo-id>` (the repo has `use_immutable_subject` on; never pull requests: the repo is public)
 - [ ] CDK assertion: the role can assume only the CDK bootstrap roles
 
 **Also done when:**
