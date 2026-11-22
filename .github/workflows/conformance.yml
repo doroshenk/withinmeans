@@ -1,0 +1,40 @@
+name: DSQL conformance
+
+# After each merge to main: runs the migrations and the repository/isolation suite against the
+# real dev Aurora DSQL cluster. Each test file works in its own throwaway schema and drops it.
+# Needs the dev DataStack deployed first (`pnpm --filter @withinmeans/infra cdk deploy DataStack-dev`).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: conformance
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # lets the run request a GitHub OIDC token (no stored AWS keys)
+  contents: read
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-2
+      - name: Run the repository suite on the dev cluster
+        run: |
+          DSQL_ENDPOINT=$(aws cloudformation describe-stacks --stack-name DataStack-dev \
+            --query "Stacks[0].Outputs[?OutputKey=='ClusterEndpoint'].OutputValue" --output text)
+          export DSQL_ENDPOINT
+          pnpm --filter @withinmeans/db conformance

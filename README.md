@@ -18,6 +18,24 @@ pnpm coverage    # per-package coverage gates
 
 **Docker Desktop must be running** to run the repository and isolation tests in `packages/db`: they start a Postgres 16 container with Testcontainers (the first run pulls the image). Set `TEST_DATABASE_URL` to use an existing Postgres instead (for example a CI service). Each test file gets its own freshly migrated schema.
 
+## Database (Aurora DSQL)
+
+Each stage (`dev`, `prod`) has its own DSQL cluster, created by the CDK `DataStack-<stage>`.
+
+```bash
+# one-time, with your AWS profile signed in (dev only; never deploy prod from a laptop)
+pnpm --filter @withinmeans/infra cdk deploy DataStack-dev CiStack --context stage=dev
+pnpm migrate --stage dev    # reads the endpoint from the stack output, applies new migrations
+```
+
+`pnpm migrate` connects as the DSQL `admin` user with an IAM token made from your own AWS credentials, so the signed-in profile needs `dsql:DbConnectAdmin` on the dev cluster and `cloudformation:DescribeStacks` on `DataStack-dev` (an administrator profile has both). Aurora DSQL allows one DDL statement per transaction, so the runner applies a DDL migration statement by statement and records it afterwards: write DDL migrations to be re-runnable (`CREATE TABLE IF NOT EXISTS`).
+
+The merged `0001_core.sql` uses plain `CREATE TABLE` and can't be edited. If the very first `pnpm migrate --stage dev` fails part-way, drop the tables it created (in the Aurora DSQL query editor, one `DROP TABLE` at a time) and run it again.
+
+`pnpm migrate --stage prod` is refused: prod migrates only from the tag workflow.
+
+**Conformance run.** After each merge to `main`, `.github/workflows/conformance.yml` runs the repository suite on the real dev cluster (each test file in its own throwaway schema, dropped afterwards). To run it from your laptop: `DSQL_ENDPOINT=<host from the stack output> pnpm --filter @withinmeans/db conformance`.
+
 ## Layout
 
 `packages/domain` (pure rules), `db`, `api`, `web`, `infra`. `tooling/` holds tests for the repo's own rules (dependency-cruiser).

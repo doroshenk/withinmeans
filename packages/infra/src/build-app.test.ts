@@ -15,7 +15,8 @@ describe('P0-05: buildApp', () => {
 
   it('P0-05: the real app trusts GitHub immutable subjects (owner and repo IDs)', () => {
     const assembly = buildApp().synth();
-    const json = JSON.stringify(assembly.stacks[0]?.template);
+    const ci = assembly.stacks.find((s) => s.stackName === 'CiStack');
+    const json = JSON.stringify(ci?.template);
     expect(json).toContain('repo:doroshenk@26264461/withinmeans@1464146358:ref:refs/heads/main');
     expect(json).toContain('repo:doroshenk@26264461/withinmeans@1464146358:ref:refs/tags/v*');
     expect(json).not.toContain('repo:doroshenk/withinmeans:');
@@ -24,12 +25,47 @@ describe('P0-05: buildApp', () => {
   it('P0-05: still synthesizes without an account (CI has no AWS credentials)', () => {
     const app = buildApp();
     const assembly = app.synth();
-    expect(assembly.stacks.map((s) => s.stackName)).toEqual(['CiStack']);
-    expect(JSON.stringify(assembly.stacks[0]?.template)).toContain('AWS::AccountId');
+    const ci = assembly.stacks.find((s) => s.stackName === 'CiStack');
+    expect(JSON.stringify(ci?.template)).toContain('AWS::AccountId');
   });
 
   it('P0-05: the entry file builds the app from CDK_DEFAULT_ACCOUNT', async () => {
     process.env.CDK_DEFAULT_ACCOUNT = '111111111111';
     await expect(import('./app.js')).resolves.toBeDefined();
+  });
+});
+
+describe('P0-07: buildApp data stacks', () => {
+  const names = (stage?: 'dev' | 'prod'): string[] =>
+    buildApp('111111111111', stage)
+      .synth()
+      .stacks.map((s) => s.stackName)
+      .sort();
+
+  it('P0-07: builds a DataStack per stage plus the CiStack', () => {
+    expect(names()).toEqual(['CiStack', 'DataStack-dev', 'DataStack-prod']);
+  });
+
+  it('P0-07: the stage selector builds only that stage (cdk --context stage=dev)', () => {
+    expect(names('dev')).toEqual(['CiStack', 'DataStack-dev']);
+    expect(names('prod')).toEqual(['CiStack', 'DataStack-prod']);
+  });
+
+  it('P0-07: only dev lets the GitHub deploy role connect to the database', () => {
+    const assembly = buildApp('111111111111').synth();
+    const json = (name: string): string =>
+      JSON.stringify(assembly.stacks.find((s) => s.stackName === name)?.template);
+    expect(json('DataStack-dev')).toContain('dsql:DbConnectAdmin');
+    expect(json('DataStack-dev')).toContain('withinmeans-github-deploy');
+    expect(json('DataStack-prod')).not.toContain('dsql:DbConnectAdmin');
+  });
+
+  it('P0-07: the entry file reads --context stage from CDK_CONTEXT_JSON', async () => {
+    const { stageFromContext } = await import('./app.js');
+    expect(stageFromContext('{"stage":"dev"}')).toBe('dev');
+    expect(stageFromContext('{"stage":"prod"}')).toBe('prod');
+    expect(stageFromContext(undefined)).toBeUndefined();
+    expect(stageFromContext('{}')).toBeUndefined();
+    expect(() => stageFromContext('{"stage":"staging"}')).toThrow(/stage/);
   });
 });

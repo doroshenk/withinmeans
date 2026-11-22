@@ -5,6 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { sql } from 'kysely';
 import type { Database } from './db.js';
 import { lintMigration } from './lint/migrationLinter.js';
+import { splitStatements } from './sqlStatements.js';
+
+/** The linter guarantees a migration is DDL-only or DML-only; this is the DDL side. */
+const DDL = /^(--[^\n]*\n|\/\*[\s\S]*?\*\/|\s)*(CREATE|ALTER|DROP|COMMENT)\b/i;
 
 export const MIGRATIONS_DIR = new URL('../migrations/', import.meta.url);
 
@@ -41,12 +45,24 @@ export async function migrate(db: Database, dir: URL = MIGRATIONS_DIR): Promise<
         `Migration ${file} fails the DSQL linter: ${violations.map((v) => v.rule).join(', ')}`,
       );
     }
-    await db.transaction().execute(async (trx) => {
-      await sql.raw(text).execute(trx);
-      await sql`INSERT INTO schema_migrations (name, checksum) VALUES (${file}, ${checksum})`.execute(
+    const record = (trx: Database) =>
+      sql`INSERT INTO schema_migrations (name, checksum) VALUES (${file}, ${checksum})`.execute(
         trx,
       );
-    });
+    const statements = splitStatements(text);
+    if (statements.some((s) => DDL.test(s))) {
+      // Aurora DSQL allows one DDL statement per transaction and no DDL mixed with DML, so each
+      // statement runs on its own and the bookkeeping row is written afterwards. A failure part-way
+      // leaves earlier statements applied and the migration unrecorded: write DDL to be re-runnable
+      // (IF NOT EXISTS).
+      for (const statement of statements) await sql.raw(statement).execute(db);
+      await record(db);
+    } else {
+      await db.transaction().execute(async (trx) => {
+        for (const statement of statements) await sql.raw(statement).execute(trx);
+        await record(trx);
+      });
+    }
     ran.push(file);
   }
   return ran;
