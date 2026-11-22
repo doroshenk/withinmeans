@@ -8,5 +8,15 @@
     "test": "vitest run --passWithNoTests",
     "coverage": "vitest run --coverage --passWithNoTests",
     "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@trpc/server": "^11.29.7",
+    "@withinmeans/db": "workspace:*",
+    "@withinmeans/domain": "workspace:*",
+    "aws-jwt-verify": "^5.2.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.164"
   }
 }

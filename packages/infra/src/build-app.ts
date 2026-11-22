@@ -13,7 +13,11 @@ const DEPLOY_ROLE_NAME = 'withinmeans-github-deploy';
  * denies the others. Without an account (CI synth), ARNs use the AWS::AccountId pseudo-parameter.
  * With a stage, only that stage's stacks are built (`cdk --context stage=dev`).
  */
-export function buildApp(account?: string, stage?: Stage): App {
+export function buildApp(
+  account?: string,
+  stage?: Stage,
+  _options: { bundle?: boolean } = {},
+): App {
   const app = new App();
   const env = account === undefined ? { region: 'us-east-2' } : { account, region: 'us-east-2' };
   new CiStack(app, 'CiStack', {

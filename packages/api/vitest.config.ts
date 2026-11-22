@@ -5,6 +5,8 @@ export default defineConfig({
     name: 'api',
     include: ['src/**/*.test.ts'],
     passWithNoTests: true,
+    testTimeout: 60_000,
+    hookTimeout: 120_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],

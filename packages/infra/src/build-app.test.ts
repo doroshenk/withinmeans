@@ -14,7 +14,7 @@ describe('P0-05: buildApp', () => {
   });
 
   it('P0-05: the real app trusts GitHub immutable subjects (owner and repo IDs)', () => {
-    const assembly = buildApp().synth();
+    const assembly = buildApp(undefined, undefined, { bundle: false }).synth();
     const ci = assembly.stacks.find((s) => s.stackName === 'CiStack');
     const json = JSON.stringify(ci?.template);
     expect(json).toContain('repo:doroshenk@26264461/withinmeans@1464146358:ref:refs/heads/main');
@@ -23,7 +23,7 @@ describe('P0-05: buildApp', () => {
   });
 
   it('P0-05: still synthesizes without an account (CI has no AWS credentials)', () => {
-    const app = buildApp();
+    const app = buildApp(undefined, undefined, { bundle: false });
     const assembly = app.synth();
     const ci = assembly.stacks.find((s) => s.stackName === 'CiStack');
     expect(JSON.stringify(ci?.template)).toContain('AWS::AccountId');
@@ -37,13 +37,15 @@ describe('P0-05: buildApp', () => {
 
 describe('P0-07: buildApp data stacks', () => {
   const names = (stage?: 'dev' | 'prod'): string[] =>
-    buildApp('111111111111', stage)
+    buildApp('111111111111', stage, { bundle: false })
       .synth()
       .stacks.map((s) => s.stackName)
       .sort();
 
   it('P0-07: builds a DataStack per stage plus the CiStack', () => {
     expect(names()).toEqual([
+      'ApiStack-dev',
+      'ApiStack-prod',
       'AuthStack-dev',
       'AuthStack-prod',
       'CiStack',
@@ -53,12 +55,12 @@ describe('P0-07: buildApp data stacks', () => {
   });
 
   it('P0-07: the stage selector builds only that stage (cdk --context stage=dev)', () => {
-    expect(names('dev')).toEqual(['AuthStack-dev', 'CiStack', 'DataStack-dev']);
-    expect(names('prod')).toEqual(['AuthStack-prod', 'CiStack', 'DataStack-prod']);
+    expect(names('dev')).toEqual(['ApiStack-dev', 'AuthStack-dev', 'CiStack', 'DataStack-dev']);
+    expect(names('prod')).toEqual(['ApiStack-prod', 'AuthStack-prod', 'CiStack', 'DataStack-prod']);
   });
 
   it('P0-07: only dev lets the GitHub deploy role connect to the database', () => {
-    const assembly = buildApp('111111111111').synth();
+    const assembly = buildApp('111111111111', undefined, { bundle: false }).synth();
     const json = (name: string): string =>
       JSON.stringify(assembly.stacks.find((s) => s.stackName === name)?.template);
     expect(json('DataStack-dev')).toContain('dsql:DbConnectAdmin');
