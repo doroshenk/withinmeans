@@ -41,7 +41,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # No-op until the first CDK stack ticket adds a "synth" script to packages/infra.
+      # Synthesizes the CDK app without AWS credentials.
       - run: pnpm --filter @withinmeans/infra --if-present synth
 
   changes:

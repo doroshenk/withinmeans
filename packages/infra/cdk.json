@@ -1,0 +1,5 @@
+{
+  "app": "tsx src/app.ts",
+  "output": "cdk.out",
+  "context": {}
+}

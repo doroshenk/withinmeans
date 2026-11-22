@@ -5,6 +5,7 @@ export default defineConfig({
     name: 'infra',
     include: ['src/**/*.test.ts'],
     passWithNoTests: true,
+    testTimeout: 30_000, // the first CDK synth in a run is slow
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
