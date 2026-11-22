@@ -1,14 +1,26 @@
-import type { HouseholdContext } from '../context.js';
+import type { Selectable } from 'kysely';
+import { assertCanWrite, type HouseholdContext } from '../context.js';
 import type { Database, HouseholdsTable } from '../db.js';
 
 export const households = {
-  async getMine(_db: Database, _ctx: HouseholdContext): Promise<HouseholdsTable | undefined> {
-    throw new Error('not implemented');
+  async getMine(
+    db: Database,
+    ctx: HouseholdContext,
+  ): Promise<Selectable<HouseholdsTable> | undefined> {
+    return db
+      .selectFrom('households')
+      .selectAll()
+      .where('id', '=', ctx.householdId)
+      .executeTakeFirst();
   },
-  async remove(_db: Database, _ctx: HouseholdContext): Promise<void> {
-    throw new Error('not implemented');
+
+  async rename(db: Database, ctx: HouseholdContext, name: string): Promise<void> {
+    assertCanWrite(ctx);
+    await db.updateTable('households').set({ name }).where('id', '=', ctx.householdId).execute();
   },
-  async rename(_db: Database, _ctx: HouseholdContext, _name: string): Promise<void> {
-    throw new Error('not implemented');
+
+  async remove(db: Database, ctx: HouseholdContext): Promise<void> {
+    assertCanWrite(ctx);
+    await db.deleteFrom('households').where('id', '=', ctx.householdId).execute();
   },
 };

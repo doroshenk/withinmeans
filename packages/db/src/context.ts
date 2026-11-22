@@ -14,6 +14,6 @@ export class Forbidden extends Error {
 }
 
 /** Every repository write calls this first. */
-export function assertCanWrite(_ctx: HouseholdContext): void {
-  throw new Error('not implemented');
+export function assertCanWrite(ctx: HouseholdContext): void {
+  if (ctx.role === 'view') throw new Forbidden('View-only members cannot make changes');
 }

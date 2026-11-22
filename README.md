@@ -16,7 +16,7 @@ pnpm typecheck
 pnpm coverage    # per-package coverage gates
 ```
 
-Docker Desktop must be running once repository tests arrive (Testcontainers, from P0-06 onward).
+**Docker Desktop must be running** to run the repository and isolation tests in `packages/db`: they start a Postgres 16 container with Testcontainers (the first run pulls the image). Set `TEST_DATABASE_URL` to use an existing Postgres instead (for example a CI service). Each test file gets its own freshly migrated schema.
 
 ## Layout
 

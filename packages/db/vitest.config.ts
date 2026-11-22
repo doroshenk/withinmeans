@@ -5,10 +5,13 @@ export default defineConfig({
     name: 'db',
     include: ['src/**/*.test.ts'],
     passWithNoTests: true,
+    // First run starts a Postgres container (and may pull the image).
+    testTimeout: 60_000,
+    hookTimeout: 120_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts'],
+      exclude: ['src/**/*.test.ts', 'src/testing/**', 'src/index.ts'],
       thresholds: { lines: 95, statements: 95, functions: 95, branches: 90 },
     },
   },

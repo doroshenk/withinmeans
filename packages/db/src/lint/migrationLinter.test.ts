@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { lintMigration } from './migrationLinter.js';
 
@@ -56,7 +56,35 @@ describe('migration linter: avoids false positives', () => {
   });
 });
 
+describe('migration linter: parsing edge cases', () => {
+  it('handles escaped quotes, block comments and tagged dollar quotes', () => {
+    const sql =
+      "/* TRUNCATE */ CREATE TABLE t (a text DEFAULT 'it''s SERIAL');\nCREATE FUNCTION f() RETURNS int AS $body$ TRUNCATE x; $body$ LANGUAGE sql;";
+    expect(rules(sql)).toEqual([]);
+  });
+  it('does not crash on unterminated comments, strings or dollar quotes', () => {
+    expect(rules('CREATE TABLE t (a int); /* open')).toEqual([]);
+    expect(rules('CREATE TABLE t (a int); -- trailing')).toEqual([]);
+    expect(rules("CREATE TABLE t (a text DEFAULT 'open")).toEqual([]);
+    expect(rules('CREATE TABLE t (a int); SELECT $$ open')).toEqual([]);
+  });
+  it('rejects a function with no LANGUAGE clause', () => {
+    expect(rules('CREATE FUNCTION f() RETURNS int AS $$ SELECT 1 $$;')).toContain(
+      'no-non-sql-function',
+    );
+  });
+  it('reports each rule once', () => {
+    expect(rules('CREATE SEQUENCE a; CREATE SEQUENCE b;')).toEqual(['no-sequence']);
+  });
+});
+
 describe('migration linter: real migrations', () => {
+  it('every migration in packages/db/migrations passes', () => {
+    const dir = new URL('../../migrations/', import.meta.url);
+    for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql'))) {
+      expect(lintMigration(readFileSync(new URL(f, dir), 'utf8')), f).toEqual([]);
+    }
+  });
   it('accepts the first real migration', () => {
     const sql = readFileSync(new URL('../../migrations/0001_core.sql', import.meta.url), 'utf8');
     expect(lintMigration(sql)).toEqual([]);
