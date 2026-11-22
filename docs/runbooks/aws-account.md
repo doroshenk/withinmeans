@@ -99,3 +99,58 @@ because the repo is public). The role can only assume the CDK bootstrap roles.
 - **IAM → Roles → `withinmeans-github-deploy` → Permissions:** the one policy, `sts:AssumeRole`
   on the four `cdk-hnb659fds-*` bootstrap roles.
 - **CloudFormation → Stacks → `CiStack`:** the stack that created all three.
+
+## Website: S3, CloudFront and the domain (P0-10)
+
+The web app is a set of files in a **private S3 bucket**. **CloudFront** (a content delivery
+network) serves them over HTTPS at `within.doroshenk.com` (prod) and `dev.within.doroshenk.com`
+(dev) and forwards `/api/*` to the HTTP API. There is no Route 53: DNS lives at Network Solutions.
+
+- **Defined in:** `packages/infra/src/web-stack.ts` (`WebStack-<stage>`, us-east-2) and
+  `certificate-stack.ts` (`CertificateStack-<stage>`, **us-east-1**).
+- **Why two regions:** CloudFront only accepts a certificate created in us-east-1, and the SCP
+  denies that region, so first ask for an exception (below).
+
+### Steps (owner, once per stage; do dev first)
+
+1. **SCP exception.** In the management account (Organizations → Policies → Service control
+   policies) allow us-east-1 for at least `acm:*`, `cloudformation:*` and `ssm:*`/`s3:*`/`iam:*`
+   for the CDK bootstrap. Allowing us-east-1 for everything is simplest.
+2. **Bootstrap us-east-1:** `cdk bootstrap aws://<account>/us-east-1` with the `withinmeans` profile.
+3. **Deploy the certificate:**
+   `pnpm --filter @withinmeans/infra exec cdk deploy CertificateStack-dev --context stage=dev`.
+   It will sit at "CREATE_IN_PROGRESS" waiting for DNS validation.
+4. **While it waits:** Certificate Manager (region us-east-1) → the certificate → "Domains"
+   shows a CNAME name and value. Add that CNAME at Network Solutions (drop `.doroshenk.com`
+   from the name if the form appends it). The status goes from Pending validation to Issued
+   (minutes). The stack finishes and prints `CertificateArn`.
+5. **Deploy the website**, passing the ARN:
+   `pnpm --filter @withinmeans/infra exec cdk deploy ApiStack-dev WebStack-dev --context stage=dev --context certificateArn=<arn>`.
+   It prints `SiteDomain` and `DistributionDomain`.
+6. **Point the name at CloudFront:** at Network Solutions add CNAME `dev.within` →
+   `<DistributionDomain>` (for prod: `within` → its distribution domain).
+7. **Check:** open `https://dev.within.doroshenk.com` (and prod). An empty bucket answers with
+   the SPA fallback (an error page from S3 until the web app is uploaded in a later ticket), but
+   the certificate must be valid. `https://<domain>/api/health` reaches the API.
+
+Without `--context certificateArn`, synth uses a placeholder ARN so CI can check the template;
+a real deploy with it fails.
+
+### Find it in the console
+
+- **Certificate Manager (us-east-1):** the certificate, Pending validation → Issued.
+- **CloudFront → Distributions:** the distribution. Origins tab: the bucket (with Origin
+  access control) and the API host. Behaviors tab: `/api/*` (caching disabled, all viewer
+  headers except Host forwarded, so Authorization reaches the API) and Default (`*`, the bucket).
+  Error pages tab: 403/404 return `/index.html`.
+- **S3 → Buckets:** the `WebStack-<stage>` bucket → Permissions: "Block all public access" is
+  on, and the bucket policy allows only that distribution.
+
+### Known limits
+
+- The GitHub deploy role can assume only the us-east-2 CDK bootstrap roles, so it cannot deploy
+  `CertificateStack-*` (us-east-1). Deploy the certificate by hand, as above.
+- The dev bucket is removed with its stack, but S3 refuses to delete a non-empty bucket: empty it
+  first (S3 → the bucket → Empty). The prod bucket is always kept.
+- Paths without a file extension load the app through a CloudFront Function on the default
+  behavior only, so `/api/*` errors stay JSON.

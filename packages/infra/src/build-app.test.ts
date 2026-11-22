@@ -44,21 +44,39 @@ describe('P0-07: buildApp data stacks', () => {
       .stacks.map((s) => s.stackName)
       .sort();
 
-  it('P0-07: builds a DataStack per stage plus the CiStack', () => {
+  it('P0-07/P0-10: builds every stack per stage plus the CiStack', () => {
     expect(names()).toEqual([
       'ApiStack-dev',
       'ApiStack-prod',
       'AuthStack-dev',
       'AuthStack-prod',
+      'CertificateStack-dev',
+      'CertificateStack-prod',
       'CiStack',
       'DataStack-dev',
       'DataStack-prod',
+      'WebStack-dev',
+      'WebStack-prod',
     ]);
   });
 
   it('P0-07: the stage selector builds only that stage (cdk --context stage=dev)', () => {
-    expect(names('dev')).toEqual(['ApiStack-dev', 'AuthStack-dev', 'CiStack', 'DataStack-dev']);
-    expect(names('prod')).toEqual(['ApiStack-prod', 'AuthStack-prod', 'CiStack', 'DataStack-prod']);
+    expect(names('dev')).toEqual([
+      'ApiStack-dev',
+      'AuthStack-dev',
+      'CertificateStack-dev',
+      'CiStack',
+      'DataStack-dev',
+      'WebStack-dev',
+    ]);
+    expect(names('prod')).toEqual([
+      'ApiStack-prod',
+      'AuthStack-prod',
+      'CertificateStack-prod',
+      'CiStack',
+      'DataStack-prod',
+      'WebStack-prod',
+    ]);
   });
 
   it('P0-07: only dev lets the GitHub deploy role connect to the database', () => {
