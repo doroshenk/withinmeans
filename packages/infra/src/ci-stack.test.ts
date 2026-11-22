@@ -99,7 +99,8 @@ describe('P0-05: CiStack GitHub OIDC deploy role', () => {
     const json = JSON.stringify(synth().toJSON());
     expect(json).not.toMatch(/"Resource":"\*"/);
     expect(json).not.toMatch(/"Action":"\*"/);
-    expect(json).not.toMatch(new RegExp(`${GITHUB}:sub":"(repo:)?\*`));
+    expect(json).not.toMatch(/:sub":"(repo:)?\*/);
+    expect(json).not.toMatch(/:sub":\[[^\]]*"(repo:)?\*"/);
   });
 
   it('P0-05: session duration is one hour and the role has a stable name', () => {

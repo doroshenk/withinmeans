@@ -1,0 +1,21 @@
+name: AWS identity check
+
+# Manual check that GitHub can assume the deploy role without stored keys.
+# The role trusts only runs from `main` and `v*` tags, so run this from `main`.
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write # lets the run request a GitHub OIDC token
+  contents: read
+
+jobs:
+  whoami:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-2
+      - run: aws sts get-caller-identity
