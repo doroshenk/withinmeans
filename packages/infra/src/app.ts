@@ -9,4 +9,12 @@ export function stageFromContext(json: string | undefined): Stage | undefined {
   throw new Error(`Unknown stage "${String(stage)}": use dev or prod`);
 }
 
-buildApp(process.env.CDK_DEFAULT_ACCOUNT, stageFromContext(process.env.CDK_CONTEXT_JSON));
+const stage = stageFromContext(process.env.CDK_CONTEXT_JSON);
+const certificateArn = (
+  JSON.parse(process.env.CDK_CONTEXT_JSON ?? '{}') as { certificateArn?: string }
+).certificateArn;
+buildApp(process.env.CDK_DEFAULT_ACCOUNT, stage, {
+  ...(stage !== undefined && certificateArn !== undefined
+    ? { certificateArns: { [stage]: certificateArn } }
+    : {}),
+});

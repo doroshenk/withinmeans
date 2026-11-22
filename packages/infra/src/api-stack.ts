@@ -27,6 +27,8 @@ const fromRoot = (path: string): string =>
  * API Gateway → APIs (the HTTP API and its routes), IAM → Roles (the function's role).
  */
 export class ApiStack extends Stack {
+  readonly api: HttpApi;
+
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
     const isProd = props.stage === 'prod';
@@ -77,9 +79,9 @@ export class ApiStack extends Stack {
 
     // The HTTP API sends every route to the function. It has no authorizer on purpose: the
     // function verifies the Cognito token itself (ADR 0003), so there is no paid authorizer.
-    const api = new HttpApi(this, 'HttpApi', {
+    const api = (this.api = new HttpApi(this, 'HttpApi', {
       defaultIntegration: new HttpLambdaIntegration('ApiIntegration', fn),
-    });
+    }));
     Tags.of(this).add('Stage', props.stage);
 
     new CfnOutput(this, 'ApiUrl', { value: api.apiEndpoint });

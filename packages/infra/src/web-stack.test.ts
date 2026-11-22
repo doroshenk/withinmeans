@@ -1,5 +1,5 @@
 import { App } from 'aws-cdk-lib';
-import { Match, Template } from 'aws-cdk-lib/assertions';
+import { Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
 import type { Stage } from './data-stack.js';
 import { domainForStage } from './domains.js';
@@ -7,6 +7,7 @@ import { WebStack } from './web-stack.js';
 
 const CERT_ARN =
   'arn:aws:acm:us-east-1:111111111111:certificate/11111111-2222-3333-4444-555555555555';
+const MANAGED_ALL_VIEWER_EXCEPT_HOST = 'b689b0a8-53d0-40ab-baf2-68738e2966ac';
 const MANAGED_CACHING_DISABLED = '4135ea2d-6df8-44a3-9df3-4b5a84be39ad';
 
 function synth(stage: Stage): Template {
@@ -30,6 +31,7 @@ interface Distribution {
       CacheBehaviors: {
         PathPattern: string;
         CachePolicyId: unknown;
+        OriginRequestPolicyId: unknown;
         AllowedMethods: string[];
         TargetOriginId: string;
       }[];
@@ -64,10 +66,12 @@ describe('P0-10: WebStack', () => {
     expect(allows[0]).toMatchObject({
       Action: 's3:GetObject',
       Principal: { Service: 'cloudfront.amazonaws.com' },
-      Condition: { StringEquals: { 'AWS:SourceArn': Match.anyValue() } },
     });
     // The condition names this stack's distribution, not "any distribution".
-    expect(JSON.stringify(allows[0]?.Condition)).toContain('arn:');
+    const condition = JSON.stringify(allows[0]?.Condition);
+    expect(condition).toContain('AWS:SourceArn');
+    expect(condition).toContain(':distribution/');
+    expect(condition).toContain('"Ref":"Distribution');
   });
 
   it('P0-10: the bucket uses Origin Access Control, not the legacy identity', () => {
@@ -91,15 +95,11 @@ describe('P0-10: WebStack', () => {
         CachePolicyConfig: { DefaultTTL: 0, MaxTTL: 0, MinTTL: 0 },
       });
     }
-    // Authorization is forwarded through an origin request policy.
-    template.hasResourceProperties('AWS::CloudFront::OriginRequestPolicy', {
-      OriginRequestPolicyConfig: {
-        HeadersConfig: {
-          HeaderBehavior: 'whitelist',
-          Headers: Match.arrayWith(['Authorization']),
-        },
-      },
-    });
+    // Authorization is forwarded: the managed AllViewerExceptHostHeader origin request policy
+    // sends every viewer header except Host (CloudFront rejects naming Authorization itself).
+    expect(JSON.stringify(behavior?.OriginRequestPolicyId)).toContain(
+      MANAGED_ALL_VIEWER_EXCEPT_HOST,
+    );
   });
 
   it('P0-10: /api/* goes to the HTTP API host, everything else to the bucket', () => {
