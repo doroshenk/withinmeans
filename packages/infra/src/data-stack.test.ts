@@ -80,4 +80,59 @@ describe('P0-07: DataStack', () => {
   it('P0-07: without connectRoleName no IAM policy is created', () => {
     synth('prod').resourceCountIs('AWS::IAM::Policy', 0);
   });
+
+  describe('P0-12: backups', () => {
+    it.each(['dev', 'prod'] as const)(
+      'P0-12: %s has one vault, one plan and one selection',
+      (s) => {
+        const template = synth(s);
+        template.resourceCountIs('AWS::Backup::BackupVault', 1);
+        template.resourceCountIs('AWS::Backup::BackupPlan', 1);
+        template.resourceCountIs('AWS::Backup::BackupSelection', 1);
+      },
+    );
+
+    it('P0-12: the plan has a daily rule that keeps recovery points 14 days', () => {
+      synth('dev').hasResourceProperties('AWS::Backup::BackupPlan', {
+        BackupPlan: {
+          BackupPlanRule: [
+            Match.objectLike({
+              ScheduleExpression: 'cron(0 5 * * ? *)',
+              Lifecycle: { DeleteAfterDays: 14 },
+              TargetBackupVault: { Ref: Match.stringLikeRegexp('Vault') },
+            }),
+          ],
+        },
+      });
+    });
+
+    it('P0-12: the selection is this stage cluster by ARN, with no wildcard', () => {
+      synth('dev').hasResourceProperties('AWS::Backup::BackupSelection', {
+        BackupSelection: Match.objectLike({
+          Resources: [Match.objectLike({ 'Fn::GetAtt': [Match.anyValue(), 'ResourceArn'] })],
+        }),
+      });
+    });
+
+    it('P0-12: the backup role is assumed by AWS Backup and uses the managed backup policy', () => {
+      const template = synth('dev');
+      template.hasResourceProperties('AWS::IAM::Role', {
+        AssumeRolePolicyDocument: {
+          Statement: [Match.objectLike({ Principal: { Service: 'backup.amazonaws.com' } })],
+        },
+        ManagedPolicyArns: Match.arrayWith([
+          Match.objectLike({
+            'Fn::Join': Match.arrayWith([
+              Match.arrayWith([Match.stringLikeRegexp('AWSBackupServiceRolePolicyForBackup$')]),
+            ]),
+          }),
+        ]),
+      });
+    });
+
+    it('P0-12: prod vault is retained, dev vault is destroyed with the stack', () => {
+      synth('prod').hasResource('AWS::Backup::BackupVault', { DeletionPolicy: 'Retain' });
+      synth('dev').hasResource('AWS::Backup::BackupVault', { DeletionPolicy: 'Delete' });
+    });
+  });
 });
