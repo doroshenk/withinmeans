@@ -76,6 +76,11 @@ token, an **OIDC identity provider** in AWS makes AWS trust it, and the IAM role
 `withinmeans-github-deploy` accepts only runs from `main` and `v*` tags (never pull requests,
 because the repo is public). The role can only assume the CDK bootstrap roles.
 
+- **Subject format:** this repo has `use_immutable_subject` on, so GitHub tokens carry numeric
+  IDs: `repo:doroshenk@<owner-id>/withinmeans@<repo-id>:ref:refs/heads/main`. The IDs are public
+  (`gh api repos/doroshenk/withinmeans --jq '.owner.id, .id'`). A trust policy written with the
+  plain `repo:owner/name` form never matches and fails with "Not authorized to perform
+  sts:AssumeRoleWithWebIdentity".
 - **Defined in:** `packages/infra/src/ci-stack.ts` (`CiStack`, one per account, not per stage).
 - **Deployed once by hand** with the admin profile, because the role can't deploy itself:
   `AWS_PROFILE=withinmeans pnpm --filter @withinmeans/infra exec cdk deploy CiStack`. Redeploy
