@@ -68,3 +68,29 @@ The ARN must end in `user/withinmeans-admin`, not `:root`.
 - **Budget:** Billing and Cost Management → Budgets → the $1 budget and its alert.
 - **CDKToolkit:** CloudFormation → Stacks (us-east-2) → `CDKToolkit`, created by `cdk bootstrap`. It holds
   the S3 bucket, the ECR repository and the IAM roles that CDK deploys through. Never delete it.
+
+## GitHub deploy role (P0-05)
+
+GitHub Actions deploys without stored AWS keys. GitHub gives each run a short-lived signed
+token, an **OIDC identity provider** in AWS makes AWS trust it, and the IAM role
+`withinmeans-github-deploy` accepts only runs from `main` and `v*` tags (never pull requests,
+because the repo is public). The role can only assume the CDK bootstrap roles.
+
+- **Defined in:** `packages/infra/src/ci-stack.ts` (`CiStack`, one per account, not per stage).
+- **Deployed once by hand** with the admin profile, because the role can't deploy itself:
+  `AWS_PROFILE=withinmeans pnpm --filter @withinmeans/infra exec cdk deploy CiStack`. Redeploy
+  the same way after changing the stack, until a deploy workflow takes over.
+- **GitHub repository variable** `AWS_DEPLOY_ROLE_ARN` holds the role ARN (it contains the
+  account ID, so it lives in GitHub settings, not in the repo): Settings → Secrets and variables
+  → Actions → Variables.
+- **Check it:** Actions → "AWS identity check" → Run workflow on `main`. The log shows
+  `aws sts get-caller-identity` returning an assumed-role ARN for `withinmeans-github-deploy`.
+
+### Find it in the console (set the region to us-east-2)
+
+- **IAM → Identity providers:** `token.actions.githubusercontent.com`, the GitHub OIDC provider.
+- **IAM → Roles → `withinmeans-github-deploy` → Trust relationships:** the trust policy. Read the
+  `sub` condition: only `main` and `v*` tags.
+- **IAM → Roles → `withinmeans-github-deploy` → Permissions:** the one policy, `sts:AssumeRole`
+  on the four `cdk-hnb659fds-*` bootstrap roles.
+- **CloudFormation → Stacks → `CiStack`:** the stack that created all three.
