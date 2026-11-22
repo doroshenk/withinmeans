@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { sql } from 'kysely';
 import { createDb, type Database } from '../db.js';
+import { runDdl } from '../ddl.js';
 import { createDsqlDb } from '../dsql.js';
 import { migrate } from '../migrate.js';
 import { testTarget } from './target.js';
@@ -33,6 +34,8 @@ async function opener(): Promise<(schema?: string) => Database> {
     );
 }
 
+const quoteIdent = (name: string): string => `"${name.replaceAll('"', '""')}"`;
+
 /**
  * Gives the caller a fresh schema with all migrations applied, and drops it afterwards. Runs on
  * Docker Postgres by default, or on the real DSQL cluster when DSQL_ENDPOINT is set (the
@@ -42,7 +45,7 @@ export async function createTestDb(): Promise<TestDb> {
   const open = await opener();
   const schema = `t_${randomUUID().replaceAll('-', '')}`;
   const admin = open();
-  await sql`CREATE SCHEMA ${sql.id(schema)}`.execute(admin);
+  await runDdl(admin, `CREATE SCHEMA ${quoteIdent(schema)}`);
   await admin.destroy();
 
   const db = open(schema);
@@ -57,9 +60,9 @@ export async function createTestDb(): Promise<TestDb> {
       }>`SELECT table_name FROM information_schema.tables
         WHERE table_schema = ${schema}`.execute(db);
       for (const { table_name } of tables.rows) {
-        await sql`DROP TABLE ${sql.id(schema, table_name)}`.execute(db);
+        await runDdl(db, `DROP TABLE ${quoteIdent(schema)}.${quoteIdent(table_name)}`);
       }
-      await sql`DROP SCHEMA ${sql.id(schema)}`.execute(db);
+      await runDdl(db, `DROP SCHEMA ${quoteIdent(schema)}`);
       await db.destroy();
     },
   };
