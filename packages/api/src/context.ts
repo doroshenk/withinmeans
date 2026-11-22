@@ -1,4 +1,4 @@
-import type { Database, HouseholdContext, Identity } from '@withinmeans/db';
+import { identity, type Database, type HouseholdContext, type Identity } from '@withinmeans/db';
 import type { TokenVerifier } from './auth.js';
 import type { Logger } from './logger.js';
 
@@ -17,8 +17,41 @@ export interface ContextDeps {
   logger: Logger;
 }
 
+function bearerToken(authorization: string | undefined): string | undefined {
+  const match = /^Bearer (\S+)$/i.exec(authorization ?? '');
+  return match?.[1];
+}
+
 export function createContextFactory(
-  _deps: ContextDeps,
+  deps: ContextDeps,
 ): (authorization: string | undefined) => Promise<Context> {
-  throw new Error('not implemented');
+  const { db, verifier, logger } = deps;
+  return async (authorization) => {
+    const token = bearerToken(authorization);
+    if (token === undefined) return { logger };
+    let auth: { sub: string };
+    try {
+      auth = await verifier.verify(token);
+    } catch {
+      logger.info('token rejected');
+      return { logger };
+    }
+    const found = await identity.findByCognitoSub(db, auth.sub);
+    if (found === undefined) return { logger, auth };
+    const { membership } = found;
+    return {
+      logger,
+      auth,
+      identity: found,
+      ...(membership === undefined
+        ? {}
+        : {
+            household: {
+              householdId: membership.householdId,
+              userId: found.user.id,
+              role: membership.role,
+            },
+          }),
+    };
+  };
 }

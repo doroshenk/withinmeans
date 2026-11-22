@@ -20,6 +20,9 @@ importers:
       dependency-cruiser:
         specifier: ^18.8.0
         version: 18.8.0
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
       eslint:
         specifier: ^10.15.0
         version: 10.15.0
@@ -120,9 +123,6 @@ importers:
       aws-cdk:
         specifier: ^2.1149.0
         version: 2.1149.0
-      esbuild:
-        specifier: ^0.28.2
-        version: 0.28.2
       tsx:
         specifier: ^4.23.15
         version: 4.23.15

@@ -4,14 +4,14 @@ import { describe, expect, it } from 'vitest';
 import { createHandler } from './handler.js';
 import { captureLogger, fakeVerifier } from './testing.js';
 
-function event(path: string, token?: string): APIGatewayProxyEventV2 {
+function event(path: string, token?: string, method = 'GET'): APIGatewayProxyEventV2 {
   return {
     version: '2.0',
     routeKey: '$default',
     rawPath: path,
     rawQueryString: '',
     headers: token === undefined ? {} : { authorization: `Bearer ${token}` },
-    requestContext: { http: { method: 'GET', path } },
+    requestContext: { http: { method, path } },
     isBase64Encoded: false,
   } as unknown as APIGatewayProxyEventV2;
 }
@@ -59,7 +59,19 @@ describe('P0-09: handler', () => {
 
   it('P0-09: logs each request without its body', async () => {
     const { handler, lines } = setup();
-    await handler({ ...event('/me'), body: '{"total_cents":777}' });
+    await handler({ ...event('/me', undefined, 'POST'), body: '{"total_cents":777}' });
     expect(lines.join('\n')).not.toContain('777');
+  });
+
+  it('P0-09: expected rejections (no token) are logged at info, not as errors', async () => {
+    const { handler, lines } = setup();
+    await handler(event('/me'));
+    const levels = lines.map((l) => (JSON.parse(l) as { level: string }).level);
+    expect(levels).not.toContain('error');
+  });
+
+  it('P0-09: a bare /api path is not treated as an error in the handler', async () => {
+    const res = (await setup().handler(event('/api'))) as APIGatewayProxyStructuredResultV2;
+    expect(res.statusCode).toBe(404);
   });
 });

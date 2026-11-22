@@ -17,11 +17,14 @@ export interface DataStackProps extends StackProps {
  * allowance covers a household. Prod is protected from deletion and kept if the stack is removed.
  */
 export class DataStack extends Stack {
+  readonly cluster: CfnCluster;
+
   constructor(scope: Construct, id: string, props: DataStackProps) {
     super(scope, id, props);
     const isProd = props.stage === 'prod';
 
     const cluster = new CfnCluster(this, 'Cluster', { deletionProtectionEnabled: isProd });
+    this.cluster = cluster;
     if (isProd) cluster.applyRemovalPolicy(RemovalPolicy.RETAIN);
     Tags.of(cluster).add('Stage', props.stage);
 

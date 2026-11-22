@@ -8,7 +8,9 @@ describe('P0-05: buildApp', () => {
   });
 
   it('P0-05: defines CiStack in us-east-2 with the signed-in account', () => {
-    const stack = buildApp('111111111111').node.findChild('CiStack') as Stack;
+    const stack = buildApp('111111111111', undefined, { bundle: false }).node.findChild(
+      'CiStack',
+    ) as Stack;
     expect(stack.account).toBe('111111111111');
     expect(stack.region).toBe('us-east-2');
   });

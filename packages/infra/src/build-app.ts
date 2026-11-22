@@ -1,4 +1,5 @@
 import { App } from 'aws-cdk-lib';
+import { ApiStack } from './api-stack.js';
 import { AuthStack } from './auth-stack.js';
 import { CiStack } from './ci-stack.js';
 import { DataStack, type Stage } from './data-stack.js';
@@ -13,23 +14,30 @@ const DEPLOY_ROLE_NAME = 'withinmeans-github-deploy';
  * denies the others. Without an account (CI synth), ARNs use the AWS::AccountId pseudo-parameter.
  * With a stage, only that stage's stacks are built (`cdk --context stage=dev`).
  */
-export function buildApp(
-  account?: string,
-  stage?: Stage,
-  _options: { bundle?: boolean } = {},
-): App {
-  const app = new App();
+export function buildApp(account?: string, stage?: Stage, options: { bundle?: boolean } = {}): App {
+  // Bundling runs esbuild; tests that only inspect templates turn it off.
+  const app = new App(
+    options.bundle === false ? { context: { 'aws:cdk:bundling-stacks': [] } } : {},
+  );
   const env = account === undefined ? { region: 'us-east-2' } : { account, region: 'us-east-2' };
   new CiStack(app, 'CiStack', {
     env,
     githubSubjectPrefix: 'repo:doroshenk@26264461/withinmeans@1464146358',
   });
   for (const s of STAGES.filter((s) => stage === undefined || s === stage)) {
-    new AuthStack(app, `AuthStack-${s}`, { env, stage: s });
-    new DataStack(app, `DataStack-${s}`, {
+    const auth = new AuthStack(app, `AuthStack-${s}`, { env, stage: s });
+    const data = new DataStack(app, `DataStack-${s}`, {
       env,
       stage: s,
       ...(s === 'dev' ? { connectRoleName: DEPLOY_ROLE_NAME } : {}),
+    });
+    new ApiStack(app, `ApiStack-${s}`, {
+      env,
+      stage: s,
+      clusterArn: data.cluster.attrResourceArn,
+      clusterEndpoint: data.cluster.attrEndpoint,
+      userPoolId: auth.userPool.userPoolId,
+      userPoolClientId: auth.client.userPoolClientId,
     });
   }
   return app;
