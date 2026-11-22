@@ -248,14 +248,14 @@
       "phase": 0,
       "title": "Web stack: S3, CloudFront, certificate and domain",
       "refs": "§12",
-      "goal": "CDK `WebStack`: private S3 bucket with Origin Access Control, CloudFront with SPA fallback, `/api/*` routed to the HTTP API, an ACM certificate for `within.doroshenk.com` / `dev.within.doroshenk.com`.",
+      "goal": "CDK `WebStack`: private S3 bucket with Origin Access Control, CloudFront with SPA fallback, `/api/*` routed to the HTTP API, an ACM certificate for `within.doroshenk.com` / `dev.within.doroshenk.com`, requested by hand in ACM (us-east-1) because CDK cannot deploy there; its ARN is passed to `WebStack`.",
       "tests": [
         "CDK assertion: the bucket blocks all public access and is readable only by the distribution",
         "CDK assertion: `/api/*` behavior has caching disabled and forwards the Authorization header",
         "CDK assertion: the distribution's alternate domain matches the stage"
       ],
       "done": [
-        "Network Solutions checklist done: certificate validation CNAME, then `within` and `dev.within` CNAMEs to the distribution domains (CDK prints the values)",
+        "Network Solutions checklist done: certificate validation CNAME, then `within` and `dev.within` CNAMEs to the distribution domains (CDK prints the distribution domains; the validation CNAME comes from the ACM console)",
         "HTTPS works at both addresses"
       ],
       "blocked": [

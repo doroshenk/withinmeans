@@ -2,7 +2,6 @@ import { App } from 'aws-cdk-lib';
 import { ApiStack } from './api-stack.js';
 import { AuthStack } from './auth-stack.js';
 import { CiStack } from './ci-stack.js';
-import { CertificateStack } from './certificate-stack.js';
 import { DataStack, type Stage } from './data-stack.js';
 import { WebStack } from './web-stack.js';
 
@@ -48,16 +47,11 @@ export function buildApp(
       userPoolId: auth.userPool.userPoolId,
       userPoolClientId: auth.client.userPoolClientId,
     });
-    // CloudFront's certificate must live in us-east-1, so it is its own stack. Deploy it by hand
-    // first, then pass its ARN with `--context certificateArn=<arn>`.
-    new CertificateStack(app, `CertificateStack-${s}`, {
-      env: { ...env, region: 'us-east-1' },
-      stage: s,
-    });
     new WebStack(app, `WebStack-${s}`, {
       env,
       stage: s,
-      // Synth-only placeholder when the real ARN isn't known yet (CI); a deploy with it fails.
+      // The certificate is created by hand in ACM (us-east-1), see the runbook. Synth-only
+      // placeholder when the ARN isn't known yet (CI); a deploy with it fails.
       certificateArn: options.certificateArns?.[s] ?? PLACEHOLDER_CERTIFICATE_ARN,
       apiUrl: api.api.apiEndpoint,
     });

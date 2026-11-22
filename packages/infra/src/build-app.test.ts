@@ -50,8 +50,6 @@ describe('P0-07: buildApp data stacks', () => {
       'ApiStack-prod',
       'AuthStack-dev',
       'AuthStack-prod',
-      'CertificateStack-dev',
-      'CertificateStack-prod',
       'CiStack',
       'DataStack-dev',
       'DataStack-prod',
@@ -64,7 +62,6 @@ describe('P0-07: buildApp data stacks', () => {
     expect(names('dev')).toEqual([
       'ApiStack-dev',
       'AuthStack-dev',
-      'CertificateStack-dev',
       'CiStack',
       'DataStack-dev',
       'WebStack-dev',
@@ -72,7 +69,6 @@ describe('P0-07: buildApp data stacks', () => {
     expect(names('prod')).toEqual([
       'ApiStack-prod',
       'AuthStack-prod',
-      'CertificateStack-prod',
       'CiStack',
       'DataStack-prod',
       'WebStack-prod',
