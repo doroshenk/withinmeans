@@ -60,7 +60,8 @@ pnpm --filter @withinmeans/domain mutation   # Stryker on domain, must score 90%
 pnpm lint             # ESLint + Prettier --check + dependency-cruiser
 pnpm typecheck        # tsc per package, plus tooling/
 pnpm format           # prettier --write .
-pnpm dev              # (Phase 0, P0-11) web app against the dev API
+pnpm dev              # web app on :5173 against the dev API (see packages/web/README.md)
+pnpm --filter @withinmeans/web build   # production build into packages/web/dist
 pnpm migrate --stage dev        # applies migrations to the dev DSQL cluster (prod is refused)
 pnpm --filter @withinmeans/db conformance   # needs DSQL_ENDPOINT; runs the repo suite on real DSQL
 pnpm seed:dev                   # (later)
