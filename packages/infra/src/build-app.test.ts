@@ -43,12 +43,18 @@ describe('P0-07: buildApp data stacks', () => {
       .sort();
 
   it('P0-07: builds a DataStack per stage plus the CiStack', () => {
-    expect(names()).toEqual(['CiStack', 'DataStack-dev', 'DataStack-prod']);
+    expect(names()).toEqual([
+      'AuthStack-dev',
+      'AuthStack-prod',
+      'CiStack',
+      'DataStack-dev',
+      'DataStack-prod',
+    ]);
   });
 
   it('P0-07: the stage selector builds only that stage (cdk --context stage=dev)', () => {
-    expect(names('dev')).toEqual(['CiStack', 'DataStack-dev']);
-    expect(names('prod')).toEqual(['CiStack', 'DataStack-prod']);
+    expect(names('dev')).toEqual(['AuthStack-dev', 'CiStack', 'DataStack-dev']);
+    expect(names('prod')).toEqual(['AuthStack-prod', 'CiStack', 'DataStack-prod']);
   });
 
   it('P0-07: only dev lets the GitHub deploy role connect to the database', () => {

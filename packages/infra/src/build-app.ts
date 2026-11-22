@@ -1,4 +1,5 @@
 import { App } from 'aws-cdk-lib';
+import { AuthStack } from './auth-stack.js';
 import { CiStack } from './ci-stack.js';
 import { DataStack, type Stage } from './data-stack.js';
 
@@ -20,6 +21,7 @@ export function buildApp(account?: string, stage?: Stage): App {
     githubSubjectPrefix: 'repo:doroshenk@26264461/withinmeans@1464146358',
   });
   for (const s of STAGES.filter((s) => stage === undefined || s === stage)) {
+    new AuthStack(app, `AuthStack-${s}`, { env, stage: s });
     new DataStack(app, `DataStack-${s}`, {
       env,
       stage: s,
