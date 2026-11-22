@@ -51,7 +51,15 @@ export async function createTestDb(): Promise<TestDb> {
     db,
     schema,
     async destroy() {
-      await sql`DROP SCHEMA ${sql.id(schema)} CASCADE`.execute(db);
+      // DSQL allows one DDL statement per transaction, so drop tables one at a time, then the schema.
+      const tables = await sql<{
+        table_name: string;
+      }>`SELECT table_name FROM information_schema.tables
+        WHERE table_schema = ${schema}`.execute(db);
+      for (const { table_name } of tables.rows) {
+        await sql`DROP TABLE ${sql.id(schema, table_name)}`.execute(db);
+      }
+      await sql`DROP SCHEMA ${sql.id(schema)}`.execute(db);
       await db.destroy();
     },
   };

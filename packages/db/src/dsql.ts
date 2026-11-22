@@ -17,7 +17,10 @@ export function createDsqlDb(endpoint: string, schema?: string): Database {
   const pool = new AuroraDSQLPool(dsqlPoolConfig(endpoint));
   if (schema !== undefined) {
     pool.on('connect', (client) => {
-      void client.query(`SET search_path TO "${schema}"`);
+      // Not awaited (pg queues later queries behind it); a failure must not be an unhandled rejection.
+      client.query(`SET search_path TO "${schema}"`).catch((err: unknown) => {
+        client.emit('error', err);
+      });
     });
   }
   return new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });

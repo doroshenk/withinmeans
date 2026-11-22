@@ -28,6 +28,8 @@ pnpm --filter @withinmeans/infra cdk deploy DataStack-dev CiStack --context stag
 pnpm migrate --stage dev    # reads the endpoint from the stack output, applies new migrations
 ```
 
+`pnpm migrate` connects as the DSQL `admin` user with an IAM token made from your own AWS credentials, so the signed-in profile needs `dsql:DbConnectAdmin` on the dev cluster and `cloudformation:DescribeStacks` on `DataStack-dev` (an administrator profile has both). Aurora DSQL allows one DDL statement per transaction, so the runner applies a DDL migration statement by statement and records it afterwards: write DDL migrations to be re-runnable (`CREATE TABLE IF NOT EXISTS`).
+
 `pnpm migrate --stage prod` is refused: prod migrates only from the tag workflow.
 
 **Conformance run.** After each merge to `main`, `.github/workflows/conformance.yml` runs the repository suite on the real dev cluster (each test file in its own throwaway schema, dropped afterwards). To run it from your laptop: `DSQL_ENDPOINT=<host from the stack output> pnpm --filter @withinmeans/db conformance`.
