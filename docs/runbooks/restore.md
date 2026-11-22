@@ -1,9 +1,6 @@
 # Restore runbook (Aurora DSQL)
 
-> **DRAFT: not yet verified.** Written before the first restore drill (ticket P0-12). Replace this
-> note and fix any step that differs once the drill has been done on dev. Record the date below.
-
-Last drill: _not done yet_
+Last drill: 2026-11-22, on dev (restore into a new cluster, row checked, restored cluster deleted).
 
 ## What is backed up
 
