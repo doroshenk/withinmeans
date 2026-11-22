@@ -10,7 +10,7 @@
 
 | Area | Decision |
 |---|---|
-| AWS account | Free plan credits for now; switch to the Paid plan with a $1 budget alert **before the Free plan's 6 months end** (the account closes otherwise). Build only on Always Free services. |
+| AWS account | Free plan credits for now; switch to the Paid plan with a $1 budget alert **before the Free plan ends on 2027-11-12** (the account closes otherwise). Build only on Always Free services. |
 | Region | us-east-2 |
 | Stack | TypeScript monorepo: `domain`, `db`, `api`, `web`, `infra` |
 | Database | Aurora DSQL. UUID keys, no sequences or triggers, migrations linted, retry on conflicts |

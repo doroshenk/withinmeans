@@ -734,7 +734,7 @@ Seed a household named "Our household" with John (owner) and a partner (full acc
 
 Decided in planning on Nov 19, 2026. Each decision has a record in the repo under `docs/adr/`.
 
-- **Hosting:** AWS, region us-east-2 (Ohio), staying within Always Free services. The account moves from the Free plan to the Paid plan (with a $1 budget alert) before the Free plan's 6 months end.
+- **Hosting:** AWS, region us-east-2 (Ohio), staying within Always Free services. The account moves from the Free plan to the Paid plan (with a $1 budget alert) before the Free plan ends on 2027-11-12.
 - **Stack:** TypeScript monorepo — `packages/domain` (all §5 rules, pure functions), `packages/db` (Kysely, the only package that touches the database), `packages/api` (tRPC + Zod on one Lambda behind API Gateway HTTP API), `packages/web` (React + Vite single-page app and PWA), `packages/infra` (AWS CDK).
 - **Database:** Aurora DSQL (Postgres-compatible, Always Free up to 100k DPUs and 1 GB a month). No sequences, triggers or row-level security; UUID keys; schema migrations each in their own transaction; a migration linter rejects unsupported features.
 - **Isolation:** every repository function takes a `HouseholdContext { householdId, userId, role }` built from the verified Cognito token and the user's Membership; writes reject the `view` role; a lint rule stops any other package importing the database driver.
