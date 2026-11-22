@@ -28,8 +28,8 @@ scripts/backup-now.sh dev   # waits until the job is COMPLETED
 ## Restore into a new cluster
 
 1. AWS Backup → Vaults → the stage's vault → pick a recovery point → **Restore**.
-2. Choose a restore into a new cluster. Use the backup role from the `BackupRoleArn` output if asked
-   for a role.
+2. Choose a restore into a new cluster. Choose the backup role from the `BackupRoleArn` output when it asks
+   for a role (the 2026-11-22 drill restored with it, so it needs no extra policy).
 3. Wait until the restore job (AWS Backup → Jobs → Restore jobs) shows **Completed**.
 4. Aurora DSQL → Clusters: the new cluster appears. Note its endpoint.
 
