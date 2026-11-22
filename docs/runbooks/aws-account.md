@@ -12,12 +12,12 @@ member account. The member account's Billing pages are empty or read-only.
 
 ## Dates to track
 
-- Free plan credit expiry: 2027-05-12
+- Free plan credit expiry: 2027-11-12
 - Free plan credits: $120
 - Read both in the **management account**: Billing and Cost Management → Free Tier.
 - **Before that date, switch the management account to the Paid plan** (Billing and Cost
   Management → Account → Account plan). If you don't, the Free plan ends and the account is
-  closed (ADR 0001). Set a calendar reminder for 2027-04-28.
+  closed (ADR 0001). Set a calendar reminder for 2027-10-29.
 
 ## Region
 
