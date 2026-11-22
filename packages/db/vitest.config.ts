@@ -5,6 +5,8 @@ export default defineConfig({
     name: 'db',
     include: ['src/**/*.test.ts'],
     passWithNoTests: true,
+    // With DSQL_ENDPOINT set (conformance run), clears leftover test schemas first.
+    globalSetup: ['./src/testing/globalSetup.ts'],
     // First run starts a Postgres container (and may pull the image).
     testTimeout: 60_000,
     hookTimeout: 120_000,

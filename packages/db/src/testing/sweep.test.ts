@@ -41,6 +41,11 @@ describe('P0-07: sweeping leftover test schemas (DSQL allows only 10 schemas)', 
   it('P0-07: returns nothing when there is nothing to sweep', async () => {
     const host = await createTestDb();
     made.push(host);
-    expect(await sweepTestSchemas(host.db, [host.schema])).toEqual([]);
+    expect(
+      await sweepTestSchemas(
+        host.db,
+        made.map((m) => m.schema),
+      ),
+    ).toEqual([]);
   });
 });
