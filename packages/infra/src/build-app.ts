@@ -11,7 +11,6 @@ export function buildApp(account?: string): App {
   const env = account === undefined ? { region: 'us-east-2' } : { account, region: 'us-east-2' };
   new CiStack(app, 'CiStack', {
     env,
-    githubRepo: 'doroshenk/withinmeans',
     githubSubjectPrefix: 'repo:doroshenk@26264461/withinmeans@1464146358',
   });
   return app;

@@ -8,9 +8,11 @@ import {
 import type { Construct } from 'constructs';
 
 export interface CiStackProps extends StackProps {
-  /** GitHub repository allowed to deploy, as `owner/name`. */
-  readonly githubRepo: string;
-  /** GitHub's immutable `sub` prefix: `repo:<owner>@<owner-id>/<repo>@<repo-id>`. */
+  /**
+   * GitHub's immutable `sub` prefix, `repo:<owner>@<owner-id>/<repo>@<repo-id>`. This repo has
+   * use_immutable_subject on, so tokens carry the numeric IDs instead of the names. The IDs are
+   * public, and unlike names they survive renames and can't be claimed by someone else.
+   */
   readonly githubSubjectPrefix: string;
 }
 
@@ -41,8 +43,8 @@ export class CiStack extends Stack {
         StringEquals: { [`${GITHUB_ISSUER}:aud`]: 'sts.amazonaws.com' },
         StringLike: {
           [`${GITHUB_ISSUER}:sub`]: [
-            `repo:${props.githubRepo}:ref:refs/heads/main`,
-            `repo:${props.githubRepo}:ref:refs/tags/v*`,
+            `${props.githubSubjectPrefix}:ref:refs/heads/main`,
+            `${props.githubSubjectPrefix}:ref:refs/tags/v*`,
           ],
         },
       }),

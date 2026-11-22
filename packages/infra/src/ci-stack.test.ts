@@ -13,7 +13,6 @@ const GITHUB = 'token.actions.githubusercontent.com';
 function synth(): Template {
   const app = new App();
   const stack = new CiStack(app, 'CiStack', {
-    githubRepo: REPO,
     githubSubjectPrefix: SUBJECT,
     env: { account: ACCOUNT, region: REGION },
   });
