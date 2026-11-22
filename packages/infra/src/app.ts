@@ -2,8 +2,11 @@ import { buildApp } from './build-app.js';
 import type { Stage } from './data-stack.js';
 
 /** `cdk --context stage=dev` reaches the app as JSON in CDK_CONTEXT_JSON. */
-export function stageFromContext(_json: string | undefined): Stage | undefined {
-  throw new Error('not implemented');
+export function stageFromContext(json: string | undefined): Stage | undefined {
+  const stage = (JSON.parse(json ?? '{}') as { stage?: unknown }).stage;
+  if (stage === undefined) return undefined;
+  if (stage === 'dev' || stage === 'prod') return stage;
+  throw new Error(`Unknown stage "${String(stage)}": use dev or prod`);
 }
 
-buildApp(process.env.CDK_DEFAULT_ACCOUNT);
+buildApp(process.env.CDK_DEFAULT_ACCOUNT, stageFromContext(process.env.CDK_CONTEXT_JSON));

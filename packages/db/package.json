@@ -7,7 +7,9 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "coverage": "vitest run --coverage --passWithNoTests",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "migrate": "tsx src/cli/migrate.ts",
+    "conformance": "vitest run src/migrate.test.ts src/repos src/context.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cloudformation": "^3.1175.0",
