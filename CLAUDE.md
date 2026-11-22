@@ -15,6 +15,7 @@ The owner is learning AWS: when you touch infrastructure, explain what each reso
 - Never weaken, skip (`.skip`, `.only`) or delete a test to make CI pass. If a test seems wrong, stop and ask.
 - Before saying a ticket is done: `pnpm lint && pnpm typecheck && pnpm test && pnpm coverage` all pass, and every box in the ticket and in the plan's Definition of done (§9) is ticked.
 - If the spec is unclear or seems wrong, stop and ask. Don't guess, and don't silently change behavior.
+- **Pull requests:** the Claude GitHub Action reviews every PR. Address or answer every review comment; the owner resolves threads. Merge only with `/merge-pr <n>` (merge commit, never `--admin`); update branches with `/sync`. Branch protection on `main` is the real gate: never try to get around it.
 
 ## Architecture rules (enforced by lint, dependency-cruiser and tests)
 
@@ -38,7 +39,7 @@ The owner is learning AWS: when you touch infrastructure, explain what each reso
 
 - Never log amounts: the logger drops `*_cents` fields and request/response bodies. Don't work around it.
 - Never collect card or account numbers.
-- Never read `.env*` files or print secrets. Secrets go in SSM Parameter Store, never in code.
+- Never read `.env*` files or print secrets. Secrets go in SSM Parameter Store, never in code. **The repo is public:** never commit keys, tokens, real email addresses, real financial data or screenshots with real numbers.
 - Never run `cdk deploy` against prod, `git push --force`, or destructive `aws` commands. Prod deploys only from the tag workflow.
 - `seed:dev` and any reset scripts run against dev only.
 

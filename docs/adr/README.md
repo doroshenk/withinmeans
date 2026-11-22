@@ -18,3 +18,4 @@
 | [0014](0014-backups.md) | Daily AWS Backup plus nightly JSON export |
 | [0015](0015-responsive-from-day-one.md) | Every screen responsive from day one |
 | [0016](0016-real-data-from-v0-2.md) | Real use from v0.2.0, alongside the Google Sheet |
+| [0017](0017-public-repo-and-pr-agents.md) | Public repo, branch protection, and the PR agents |
