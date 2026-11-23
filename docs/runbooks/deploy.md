@@ -22,3 +22,11 @@
   its stack can be deleted.
 - **Deleting the cluster behind a stack leaves the stack unable to update** (CloudFormation reads the
   missing cluster and fails). After a restore drill, delete the *restored* cluster, never the original.
+- **Read the prod diff before tagging** (you run it, never deploy from a laptop):
+  `pnpm --filter @withinmeans/infra exec cdk diff --context stage=prod --context certificateArn=<prod cert ARN>`.
+  A prod stack created before a ticket added resources shows those as `[+]` the first time (for example
+  the backup vault, plan and role in `DataStack-prod` after P0-12). That is expected. Stop only for
+  `[-]` or "replace" on the cluster, the user pool, the bucket or the distribution. If CDK says it
+  "Could not create a change set" it falls back to a template diff, which is less exact about
+  replacements; re-run with `-v` to see why. An existing distribution is not replaced, so its
+  `DistributionDomain` and your `within` CNAME stay the same.
