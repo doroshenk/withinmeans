@@ -44,12 +44,18 @@ export function createCognitoAuth(config: CognitoConfig): AuthClient {
       });
     },
 
-    forgotPassword() {
-      return Promise.reject(new Error('not implemented'));
+    forgotPassword(email) {
+      const user = new CognitoUser({ Username: email, Pool: persistent, Storage: localStorage });
+      return new Promise<void>((resolve, reject) => {
+        user.forgotPassword({ onSuccess: () => resolve(), onFailure: reject });
+      });
     },
 
-    resetPassword() {
-      return Promise.reject(new Error('not implemented'));
+    resetPassword(email, code, newPassword) {
+      const user = new CognitoUser({ Username: email, Pool: persistent, Storage: localStorage });
+      return new Promise<void>((resolve, reject) => {
+        user.confirmPassword(code, newPassword, { onSuccess: () => resolve(), onFailure: reject });
+      });
     },
 
     signOut() {
