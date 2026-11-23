@@ -258,6 +258,24 @@ describe('P1-03: resendInvite', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
+  it('P1-03: if the email fails the invite stays pending, so Resend can simply be pressed again', async () => {
+    await signUp();
+    const first = await (await caller(SAM)).invitePartner(pat);
+    invites.emailSender.failWith = new Error('SES is down');
+
+    await expect((await caller(SAM)).resendInvite({ inviteId: first.id })).rejects.toThrow(
+      'SES is down',
+    );
+
+    delete invites.emailSender.failWith;
+    await expect((await caller(SAM)).resendInvite({ inviteId: first.id })).resolves.toMatchObject({
+      status: 'pending',
+    });
+    expect(invites.emailSender.sent.at(-1)?.acceptUrl).toBe(
+      'https://app.test/accept?token=token-3',
+    );
+  });
+
   it('P1-03: a view-only member cannot resend', async () => {
     await signUp();
     const first = await (await caller(SAM)).invitePartner(pat);

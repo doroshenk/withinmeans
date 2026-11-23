@@ -41,7 +41,7 @@ export const appRouter = t.router({
   /** Creates a login, a household and the owner's membership. Open to anyone; see signUp.ts. */
   signUp: publicProcedure.input(signUpInput).mutation(({ ctx, input }) => signUp(ctx, input)),
 
-  /** Spec �3 step 3: stores the invite and emails the accept link. */
+  /** Spec §3 step 3: stores the invite and emails the accept link. */
   invitePartner: memberProcedure
     .input(invitePartnerInput)
     .mutation(({ ctx, input }) => invitePartner(ctx, input)),
