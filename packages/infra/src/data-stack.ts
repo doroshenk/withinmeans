@@ -2,7 +2,13 @@ import { CfnOutput, Duration, RemovalPolicy, Stack, Tags, type StackProps } from
 import { BackupPlan, BackupPlanRule, BackupResource, BackupVault } from 'aws-cdk-lib/aws-backup';
 import { CfnCluster } from 'aws-cdk-lib/aws-dsql';
 import { Schedule } from 'aws-cdk-lib/aws-events';
-import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import {
+  ManagedPolicy,
+  Policy,
+  PolicyStatement,
+  Role,
+  ServicePrincipal,
+} from 'aws-cdk-lib/aws-iam';
 import type { Construct } from 'constructs';
 
 export type Stage = 'dev' | 'prod';
@@ -84,40 +90,41 @@ export class DataStack extends Stack {
     });
 
     if (props.connectRoleName !== undefined) {
-      // Connecting needs an IAM token, not a password. This lets one named role mint it, for
-      // this cluster only.
       const role = Role.fromRoleName(this, 'ConnectRole', props.connectRoleName);
-      role.addToPrincipalPolicy(
-        new PolicyStatement({
-          actions: ['dsql:DbConnectAdmin'],
-          resources: [cluster.attrResourceArn],
-        }),
-      );
-      // The prod deploy takes an on-demand backup first (scripts/backup-now.sh): start a job in
-      // this stack's vault, watch it, and hand AWS Backup its role (and only that role).
-      role.addToPrincipalPolicy(
-        new PolicyStatement({
-          actions: ['backup:StartBackupJob'],
-          resources: [this.backupVault.backupVaultArn],
-        }),
-      );
-      role.addToPrincipalPolicy(
-        new PolicyStatement({ actions: ['backup:DescribeBackupJob'], resources: ['*'] }),
-      );
-      role.addToPrincipalPolicy(
-        new PolicyStatement({
-          actions: ['iam:PassRole'],
-          resources: [backupRole.roleArn],
-          conditions: { StringEquals: { 'iam:PassedToService': 'backup.amazonaws.com' } },
-        }),
-      );
-      // Lets the run read this stack's outputs (the endpoint) with `aws cloudformation describe-stacks`.
-      role.addToPrincipalPolicy(
-        new PolicyStatement({
-          actions: ['cloudformation:DescribeStacks'],
-          resources: [this.stackId],
-        }),
-      );
+      // One policy per stage on the shared deploy role. Dev and prod both attach to the same
+      // role, so the name must include the stage: a generated name is identical in both stacks
+      // and AWS refuses the second ("already managed by another stack").
+      new Policy(this, 'ConnectPolicy', {
+        policyName: `withinmeans-data-connect-${props.stage}`,
+        roles: [role],
+        statements: [
+          // Connecting needs an IAM token, not a password: this lets the role mint one, for this
+          // cluster only.
+          new PolicyStatement({
+            actions: ['dsql:DbConnectAdmin'],
+            resources: [cluster.attrResourceArn],
+          }),
+          // The prod deploy takes an on-demand backup before migrating (scripts/backup-now.sh):
+          // start a job in this stack's vault, watch it, and hand AWS Backup its role (and only
+          // that role).
+          new PolicyStatement({
+            actions: ['backup:StartBackupJob'],
+            resources: [this.backupVault.backupVaultArn],
+          }),
+          new PolicyStatement({ actions: ['backup:DescribeBackupJob'], resources: ['*'] }),
+          new PolicyStatement({
+            actions: ['iam:PassRole'],
+            resources: [backupRole.roleArn],
+            conditions: { StringEquals: { 'iam:PassedToService': 'backup.amazonaws.com' } },
+          }),
+          // Lets the run read this stack's outputs (the endpoint) with
+          // `aws cloudformation describe-stacks`.
+          new PolicyStatement({
+            actions: ['cloudformation:DescribeStacks'],
+            resources: [this.stackId],
+          }),
+        ],
+      });
     }
   }
 }
