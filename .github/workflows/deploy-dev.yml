@@ -1,0 +1,17 @@
+name: Deploy dev
+
+# Every merge to main deploys the dev stage (ADR 0006). The DSQL conformance run starts at the
+# same time from conformance.yml.
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy.yml
+    with:
+      stage: dev
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read

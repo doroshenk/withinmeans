@@ -1,0 +1,93 @@
+name: Deploy a stage
+
+# Shared by deploy-dev.yml (merge to main) and deploy-prod.yml (a v* tag). Not run on its own.
+# Order matters: infrastructure first, then the web app (it needs the Cognito IDs), then a
+# backup (prod only) and the database migrations, then a smoke test of the live site.
+on:
+  workflow_call:
+    inputs:
+      stage:
+        description: dev or prod
+        type: string
+        required: true
+
+# One deploy per stage at a time. A running deploy is never cancelled halfway.
+concurrency:
+  group: deploy-${{ inputs.stage }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # lets the run request a GitHub OIDC token (no stored AWS keys)
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # The certificate ARNs contain the account ID, so they live in GitHub variables, not the repo.
+      CERTIFICATE_ARN: ${{ inputs.stage == 'prod' && vars.PROD_CERTIFICATE_ARN || vars.DEV_CERTIFICATE_ARN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-2
+
+      - name: Stop if this stage has no certificate variable
+        run: |
+          if [ -z "$CERTIFICATE_ARN" ]; then
+            echo "Set the ${{ inputs.stage == 'prod' && 'PROD_CERTIFICATE_ARN' || 'DEV_CERTIFICATE_ARN' }} repository variable" >&2
+            exit 1
+          fi
+
+      - name: Deploy auth, database and API
+        run: |
+          pnpm --filter @withinmeans/infra exec cdk deploy \
+            AuthStack-${{ inputs.stage }} DataStack-${{ inputs.stage }} ApiStack-${{ inputs.stage }} \
+            --context stage=${{ inputs.stage }} --context certificateArn=$CERTIFICATE_ARN \
+            --require-approval never --outputs-file "$RUNNER_TEMP/outputs.json"
+
+      - name: Build the web app
+        run: |
+          export VITE_USER_POOL_ID=$(jq -r '."AuthStack-${{ inputs.stage }}".UserPoolId' "$RUNNER_TEMP/outputs.json")
+          export VITE_USER_POOL_CLIENT_ID=$(jq -r '."AuthStack-${{ inputs.stage }}".UserPoolClientId' "$RUNNER_TEMP/outputs.json")
+          pnpm --filter @withinmeans/web build
+          test -f packages/web/dist/index.html || { echo 'Web build produced no packages/web/dist/index.html' >&2; exit 1; }
+
+      - name: Deploy the website (uploads the build)
+        run: |
+          pnpm --filter @withinmeans/infra exec cdk deploy WebStack-${{ inputs.stage }} \
+            --context stage=${{ inputs.stage }} --context certificateArn=$CERTIFICATE_ARN \
+            --require-approval never
+
+      # Prod only: a recovery point of the database before anything changes (ADR 0014). After the deploy so the
+      # cluster exists on the very first prod release.
+      - name: Take an on-demand backup
+        if: inputs.stage == 'prod'
+        run: scripts/backup-now.sh prod
+
+      - name: Run the database migrations
+        run: pnpm migrate --stage ${{ inputs.stage }}
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - name: Smoke test (dev signs in as the test user)
+        if: inputs.stage == 'dev'
+        env:
+          SMOKE_BASE_URL: https://dev.within.doroshenk.com
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        run: pnpm exec playwright test e2e/sign-in.spec.ts
+
+      - name: Smoke test (prod checks the site loads)
+        if: inputs.stage == 'prod'
+        env:
+          SMOKE_BASE_URL: https://within.doroshenk.com
+        run: pnpm exec playwright test e2e/loads.spec.ts

@@ -6,7 +6,7 @@ import { DataStack, type Stage } from './data-stack.js';
 import { WebStack } from './web-stack.js';
 
 const STAGES: readonly Stage[] = ['dev', 'prod'];
-/** The deploy role created by CiStack; the dev conformance run connects to the database as it. */
+/** The deploy role created by CiStack; the migration and conformance runs connect to the database as it. */
 const DEPLOY_ROLE_NAME = 'withinmeans-github-deploy';
 
 const PLACEHOLDER_CERTIFICATE_ARN =
@@ -21,7 +21,11 @@ const PLACEHOLDER_CERTIFICATE_ARN =
 export function buildApp(
   account?: string,
   stage?: Stage,
-  options: { bundle?: boolean; certificateArns?: Partial<Record<Stage, string>> } = {},
+  options: {
+    bundle?: boolean;
+    certificateArns?: Partial<Record<Stage, string>>;
+    webDist?: string;
+  } = {},
 ): App {
   // Bundling runs esbuild; tests that only inspect templates turn it off.
   const app = new App(
@@ -37,7 +41,7 @@ export function buildApp(
     const data = new DataStack(app, `DataStack-${s}`, {
       env,
       stage: s,
-      ...(s === 'dev' ? { connectRoleName: DEPLOY_ROLE_NAME } : {}),
+      connectRoleName: DEPLOY_ROLE_NAME,
     });
     const api = new ApiStack(app, `ApiStack-${s}`, {
       env,
@@ -54,6 +58,7 @@ export function buildApp(
       // placeholder when the ARN isn't known yet (CI); a deploy with it fails.
       certificateArn: options.certificateArns?.[s] ?? PLACEHOLDER_CERTIFICATE_ARN,
       apiUrl: api.api.apiEndpoint,
+      ...(options.webDist === undefined ? {} : { siteAssetPath: options.webDist }),
     });
   }
   return app;

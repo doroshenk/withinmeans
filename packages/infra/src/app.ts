@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { buildApp } from './build-app.js';
 import type { Stage } from './data-stack.js';
 
@@ -16,7 +18,10 @@ const certificateArn = (
 if (certificateArn !== undefined && stage === undefined) {
   throw new Error('--context certificateArn needs --context stage=dev|prod (one ARN per stage)');
 }
+// The built web app, if `pnpm --filter @withinmeans/web build` has run (the deploy workflow does).
+const webDist = fileURLToPath(new URL('../../web/dist', import.meta.url));
 buildApp(process.env.CDK_DEFAULT_ACCOUNT, stage, {
+  ...(existsSync(webDist) ? { webDist } : {}),
   ...(stage !== undefined && certificateArn !== undefined
     ? { certificateArns: { [stage]: certificateArn } }
     : {}),

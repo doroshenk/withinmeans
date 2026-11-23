@@ -77,6 +77,32 @@ describe('P0-07: DataStack', () => {
     });
   });
 
+  it('P0-13: connectRoleName can run the on-demand backup: start it on this cluster, watch it, pass only the backup role', () => {
+    const template = synth('prod', 'withinmeans-github-deploy');
+    template.hasResourceProperties('AWS::IAM::Policy', {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: 'backup:StartBackupJob',
+            Effect: 'Allow',
+            Resource: Match.anyValue(),
+          }),
+          Match.objectLike({
+            Action: 'backup:DescribeBackupJob',
+            Effect: 'Allow',
+            Resource: '*',
+          }),
+          Match.objectLike({
+            Action: 'iam:PassRole',
+            Effect: 'Allow',
+            Resource: { 'Fn::GetAtt': [Match.stringLikeRegexp('BackupRole'), 'Arn'] },
+            Condition: { StringEquals: { 'iam:PassedToService': 'backup.amazonaws.com' } },
+          }),
+        ]),
+      },
+    });
+  });
+
   it('P0-07: without connectRoleName no IAM policy is created', () => {
     synth('prod').resourceCountIs('AWS::IAM::Policy', 0);
   });

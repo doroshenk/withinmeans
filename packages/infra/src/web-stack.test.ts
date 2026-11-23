@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { App } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
@@ -10,10 +11,11 @@ const CERT_ARN =
 const MANAGED_ALL_VIEWER_EXCEPT_HOST = 'b689b0a8-53d0-40ab-baf2-68738e2966ac';
 const MANAGED_CACHING_DISABLED = '4135ea2d-6df8-44a3-9df3-4b5a84be39ad';
 
-function synth(stage: Stage): Template {
+function synth(stage: Stage, siteAssetPath?: string): Template {
   const app = new App();
   const stack = new WebStack(app, `WebStack-${stage}`, {
     stage,
+    ...(siteAssetPath === undefined ? {} : { siteAssetPath }),
     certificateArn: CERT_ARN,
     apiUrl: 'https://abc123.execute-api.us-east-2.amazonaws.com',
     env: { account: '111111111111', region: 'us-east-2' },
@@ -150,5 +152,24 @@ describe('P0-10: WebStack', () => {
     const dev = Object.values(synth('dev').findResources('AWS::S3::Bucket'))[0];
     expect(prod?.DeletionPolicy).toBe('Retain');
     expect(dev?.DeletionPolicy).toBe('Delete');
+  });
+});
+
+describe('P0-13: WebStack uploads the built web app', () => {
+  const dist = fileURLToPath(new URL('.', import.meta.url));
+
+  it('P0-13: with a build folder, deploys it to the site bucket and invalidates CloudFront', () => {
+    const template = synth('dev', dist);
+    template.resourceCountIs('Custom::CDKBucketDeployment', 1);
+    template.hasResourceProperties('Custom::CDKBucketDeployment', {
+      DestinationBucketName: { Ref: Match.stringLikeRegexp('SiteBucket') },
+      DistributionId: { Ref: Match.stringLikeRegexp('Distribution') },
+      DistributionPaths: ['/*'],
+      Prune: true,
+    });
+  });
+
+  it('P0-13: without a build folder, creates no deployment', () => {
+    synth('prod').resourceCountIs('Custom::CDKBucketDeployment', 0);
   });
 });

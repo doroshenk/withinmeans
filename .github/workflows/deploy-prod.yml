@@ -1,0 +1,35 @@
+name: Deploy prod
+
+# Pushing a version tag (v0.0.1, v0.1.0, ...) deploys prod. The deliberate tag push is the approval
+# (ADR 0006). The deploy role trusts only main and v* tags.
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  tag-is-on-main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Refuse a tag that is not on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "Tag $GITHUB_REF_NAME is not on main: merge it first, then tag." >&2
+            exit 1
+          }
+
+  deploy:
+    needs: tag-is-on-main
+    uses: ./.github/workflows/deploy.yml
+    with:
+      stage: prod
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
