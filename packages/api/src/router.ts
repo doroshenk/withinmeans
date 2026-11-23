@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
-import { invitePartnerInput, signUpInput } from '@withinmeans/domain';
+import { acceptInviteInput, invitePartnerInput, signUpInput } from '@withinmeans/domain';
 import { z } from 'zod';
+import { acceptInvite, inviteDetails } from './acceptInvite.js';
 import type { Context } from './context.js';
 import { invitePartner, resendInvite } from './invitePartner.js';
 import { signUp } from './signUp.js';
@@ -40,6 +41,16 @@ export const publicProcedure = t.procedure;
 export const appRouter = t.router({
   /** Creates a login, a household and the owner's membership. Open to anyone; see signUp.ts. */
   signUp: publicProcedure.input(signUpInput).mutation(({ ctx, input }) => signUp(ctx, input)),
+
+  /** Spec §3, accepting an invite: what the accept screen shows. The token is the credential. */
+  inviteDetails: publicProcedure
+    .input(z.object({ token: z.string().min(1) }))
+    .query(({ ctx, input }) => inviteDetails(ctx, input.token)),
+
+  /** Spec §3, accepting an invite: the partner's own login and Membership. */
+  acceptInvite: publicProcedure
+    .input(acceptInviteInput)
+    .mutation(({ ctx, input }) => acceptInvite(ctx, input)),
 
   /** Spec §3 step 3: stores the invite and emails the accept link. */
   invitePartner: memberProcedure

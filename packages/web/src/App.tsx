@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { InvitePartnerInput, SignUpInput } from '@withinmeans/domain';
+import type { AcceptInviteInput, InvitePartnerInput, SignUpInput } from '@withinmeans/domain';
 import type { AuthClient } from './auth/types';
+import type { InviteDetails } from './pages/Accept';
 import { Hello, type HelloProps } from './pages/Hello';
 import { SignIn } from './pages/SignIn';
 import { SignUp, type PendingInvite } from './pages/SignUp';
@@ -12,7 +13,11 @@ export interface AppProps {
     signUp: { mutate: (input: SignUpInput) => Promise<unknown> };
     invitePartner: { mutate: (input: InvitePartnerInput) => Promise<PendingInvite> };
     resendInvite: { mutate: (input: { inviteId: string }) => Promise<PendingInvite> };
+    inviteDetails: { query: (input: { token: string }) => Promise<InviteDetails> };
+    acceptInvite: { mutate: (input: AcceptInviteInput) => Promise<unknown> };
   };
+  /** The page address; injected so tests can open an invite link. Defaults to the browser's. */
+  location?: { pathname: string; search: string };
 }
 
 type View = 'checking' | 'sign-in' | 'sign-up' | 'hello';
