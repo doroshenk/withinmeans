@@ -4,6 +4,8 @@ import type { Database, InvitesTable } from '../db.js';
 import { cleanName, mustHaveChanged, orConflict } from './shared.js';
 
 export type Invite = Selectable<InvitesTable>;
+/** What lists show: the secret token is never included (any member, even view-only, can list). */
+export type PendingInvite = Omit<Invite, 'token'>;
 
 export interface NewInvite {
   name: string;
@@ -40,10 +42,21 @@ export const invites = {
   },
 
   /** Not yet accepted (expired ones included: the UI shows them as expired). */
-  async listPending(db: Database, ctx: HouseholdContext): Promise<Invite[]> {
+  async listPending(db: Database, ctx: HouseholdContext): Promise<PendingInvite[]> {
     return db
       .selectFrom('invites')
-      .selectAll()
+      .select([
+        'id',
+        'household_id',
+        'name',
+        'email',
+        'role',
+        'note',
+        'expires_at',
+        'accepted_at',
+        'invited_by',
+        'created_at',
+      ])
       .where('household_id', '=', ctx.householdId)
       .where('accepted_at', 'is', null)
       .orderBy('created_at')

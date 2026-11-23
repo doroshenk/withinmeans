@@ -16,7 +16,9 @@ export interface NewRecurringBill {
   endYm?: string;
 }
 
-type Patch = Partial<Omit<NewRecurringBill, 'startYm' | 'endYm'>>;
+type Patch = Partial<Omit<NewRecurringBill, 'startYm' | 'endYm' | 'accountId'>> & {
+  accountId?: string | null;
+};
 
 function assertDueDay(day: number): void {
   if (!Number.isInteger(day) || day < 1 || day > 28) {
@@ -28,7 +30,7 @@ function assertDueDay(day: number): void {
 async function assertRefs(
   db: Database,
   ctx: HouseholdContext,
-  refs: { categoryId?: string; accountId?: string },
+  refs: { categoryId?: string | undefined; accountId?: string | null | undefined },
 ): Promise<void> {
   if (refs.categoryId !== undefined) {
     const found = await db
@@ -39,7 +41,7 @@ async function assertRefs(
       .executeTakeFirst();
     if (found === undefined) throw new NotFound('Category not found');
   }
-  if (refs.accountId !== undefined) {
+  if (refs.accountId !== undefined && refs.accountId !== null) {
     const found = await db
       .selectFrom('accounts')
       .select('id')

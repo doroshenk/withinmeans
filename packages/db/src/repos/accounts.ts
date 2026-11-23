@@ -51,13 +51,16 @@ export const accounts = {
     await inTransaction(db, async (trx) => {
       const account = await trx
         .selectFrom('accounts')
-        .select('type')
+        .select(['type', 'archived_at'])
         .where('id', '=', id)
         .where('household_id', '=', ctx.householdId)
         .executeTakeFirst();
       if (account === undefined) throw new NotFound('Account not found');
       if (account.type !== 'checking') {
         throw new InvalidInput('Only a checking account can be the primary checking account');
+      }
+      if (account.archived_at !== null) {
+        throw new InvalidInput('An archived account cannot be the primary checking account');
       }
       await trx
         .updateTable('accounts')

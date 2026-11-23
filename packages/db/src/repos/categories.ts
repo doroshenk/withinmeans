@@ -86,6 +86,7 @@ export const categories = {
   /** `ids` in the new order; every id must belong to the household. */
   async reorder(db: Database, ctx: HouseholdContext, ids: string[]): Promise<void> {
     assertCanWrite(ctx);
+    if (ids.length === 0) return;
     await inTransaction(db, async (trx) => {
       const mine = await trx
         .selectFrom('categories')
