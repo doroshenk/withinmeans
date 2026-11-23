@@ -77,6 +77,18 @@ describe('P0-07: DataStack', () => {
     });
   });
 
+  it('P0-13: dev and prod attach differently named policies, since both go on the same deploy role', () => {
+    const policyName = (stage: Stage): unknown => {
+      const policies = Object.values(
+        synth(stage, 'withinmeans-github-deploy').findResources('AWS::IAM::Policy'),
+      ) as { Properties: { PolicyName: unknown } }[];
+      expect(policies).toHaveLength(1);
+      return policies[0]?.Properties.PolicyName;
+    };
+    expect(policyName('dev')).toBe('withinmeans-data-connect-dev');
+    expect(policyName('prod')).toBe('withinmeans-data-connect-prod');
+  });
+
   it('P0-13: connectRoleName can run the on-demand backup: start it on this cluster, watch it, pass only the backup role', () => {
     const template = synth('prod', 'withinmeans-github-deploy');
     template.hasResourceProperties('AWS::IAM::Policy', {
