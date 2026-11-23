@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { ApiStack } from './api-stack.js';
 import type { Stage } from './data-stack.js';
 
+const POOL_ARN = 'arn:aws:cognito-idp:us-east-2:111111111111:userpool/us-east-2_Example';
 const CLUSTER_ARN = 'arn:aws:dsql:us-east-2:111111111111:cluster/abcdefghijklmnopqrstuvwxyz';
 
 function synth(stage: Stage): Template {
@@ -14,6 +15,7 @@ function synth(stage: Stage): Template {
     clusterArn: CLUSTER_ARN,
     clusterEndpoint: 'abcdefghijklmnopqrstuvwxyz.dsql.us-east-2.on.aws',
     userPoolId: 'us-east-2_Example',
+    userPoolArn: POOL_ARN,
     userPoolClientId: 'exampleclientid',
     env: { account: '111111111111', region: 'us-east-2' },
   });
@@ -51,6 +53,19 @@ describe('P0-09: ApiStack', () => {
       Action: 'dsql:DbConnectAdmin',
       Resource: CLUSTER_ARN,
     });
+  });
+
+  it("P1-02: the role can create, set the password of and delete users in this stage's pool only", () => {
+    const cognito = statements(synth('dev')).filter((s) =>
+      [s.Action].flat().some((a) => a.startsWith('cognito-idp:')),
+    );
+    expect(cognito).toHaveLength(1);
+    expect(cognito[0]).toMatchObject({ Effect: 'Allow', Resource: POOL_ARN });
+    expect([cognito[0]?.Action].flat().sort()).toEqual([
+      'cognito-idp:AdminCreateUser',
+      'cognito-idp:AdminDeleteUser',
+      'cognito-idp:AdminSetUserPassword',
+    ]);
   });
 
   it('P0-09: the role has no wildcard actions or resources', () => {

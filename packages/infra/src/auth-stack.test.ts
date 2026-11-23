@@ -37,9 +37,9 @@ describe('P0-08: AuthStack', () => {
     });
   });
 
-  it('P0-08: self sign-up is allowed (admin-only creation is off)', () => {
+  it('P1-02: the pool is closed to public SignUp (logins are created by our API, so no email enumeration)', () => {
     synth('dev').hasResourceProperties('AWS::Cognito::UserPool', {
-      AdminCreateUserConfig: { AllowAdminCreateUserOnly: false },
+      AdminCreateUserConfig: { AllowAdminCreateUserOnly: true },
     });
   });
 

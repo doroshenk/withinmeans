@@ -226,3 +226,49 @@ h2,
     font-size: 36px;
   }
 }
+
+/* Sign-up: step label and the "who is managing the money" cards (design/SignIn.png). */
+.stepper {
+  margin: 0;
+  color: var(--color-ink-2);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.modes {
+  display: grid;
+  gap: 12px;
+}
+
+.mode {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px 20px;
+  border: 2px solid var(--color-border-input);
+  border-radius: 16px;
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.mode.on {
+  border-color: var(--color-primary);
+}
+
+.mode input {
+  margin-top: 6px;
+  accent-color: var(--color-primary);
+}
+
+.mode > span {
+  display: grid;
+  gap: 2px;
+}
+
+.mode strong {
+  font-size: 18px;
+}
+
+.mode > span > span {
+  color: var(--color-ink-2);
+}

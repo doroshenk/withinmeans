@@ -50,6 +50,9 @@ importers:
 
   packages/api:
     dependencies:
+      '@aws-sdk/client-cognito-identity-provider':
+        specifier: ^3.1175.0
+        version: 3.1175.0
       '@trpc/server':
         specifier: ^11.29.7
         version: 11.29.7(@types/aws-lambda@8.10.164)(typescript@5.9.3)
@@ -62,6 +65,9 @@ importers:
       aws-jwt-verify:
         specifier: ^5.2.1
         version: 5.2.1
+      temporal-polyfill:
+        specifier: ^1.0.8
+        version: 1.0.8
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -109,6 +115,9 @@ importers:
       temporal-polyfill:
         specifier: ^1.0.8
         version: 1.0.8
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@stryker-mutator/core':
         specifier: ^10.1.1
@@ -214,6 +223,10 @@ packages:
 
   '@aws-sdk/client-cloudformation@3.1175.0':
     resolution: {integrity: sha512-IZEqnHJBZX74rCXsdeDBxlIB61xPO4B3VOpEtCoYGsi6uugXSCdWD83ehKOzvmCoY9JxSOiOp+5/rx/NsUEODw==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/client-cognito-identity-provider@3.1175.0':
+    resolution: {integrity: sha512-Y7pj2Eam+gXNYqC31CpJYjsZYUwGzrYtBMEHwD2abwkP+b7z5G7XUTWPZCGTwZJ2T0EUeYaqqzN6R4cZ6143sA==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/core@3.981.1':
@@ -3152,6 +3165,17 @@ snapshots:
       tslib: 1.14.1
 
   '@aws-sdk/client-cloudformation@3.1175.0':
+    dependencies:
+      '@aws-sdk/core': 3.981.1
+      '@aws-sdk/credential-provider-node': 3.972.98
+      '@aws-sdk/types': 3.975.1
+      '@smithy/core': 3.41.0
+      '@smithy/fetch-http-handler': 5.8.1
+      '@smithy/node-http-handler': 4.14.2
+      '@smithy/types': 4.20.0
+      tslib: 2.9.1
+
+  '@aws-sdk/client-cognito-identity-provider@3.1175.0':
     dependencies:
       '@aws-sdk/core': 3.981.1
       '@aws-sdk/credential-provider-node': 3.972.98
