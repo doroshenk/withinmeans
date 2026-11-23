@@ -1,6 +1,6 @@
 import { acceptInviteInput, type AcceptInviteInput } from '@withinmeans/domain';
 import { useEffect, useState, type FormEvent } from 'react';
-import { apiErrorMessage, GENERIC_ERROR } from '../auth/errors';
+import { apiErrorMessage } from '../auth/errors';
 import { passwordStrength } from '../auth/strength';
 import type { AuthClient } from '../auth/types';
 import { AuthLayout } from './AuthLayout';
@@ -26,10 +26,13 @@ export interface AcceptProps {
 
 type Loaded =
   | { kind: 'loading' }
-  | { kind: 'error'; message: string }
+  | { kind: 'error'; message: string; gone: boolean }
   | { kind: 'ready'; invite: InviteDetails };
 
 const LINK_GONE = 'This invite link has expired or was already used.';
+
+const isNotFound = (err: unknown): boolean =>
+  (err as { data?: { code?: string } }).data?.code === 'NOT_FOUND';
 
 const ACCESS = { full: 'Full access', view: 'View only' } as const;
 
@@ -43,7 +46,7 @@ export function Accept({
   onShowSignIn,
 }: AcceptProps) {
   const [loaded, setLoaded] = useState<Loaded>(
-    token === '' ? { kind: 'error', message: LINK_GONE } : { kind: 'loading' },
+    token === '' ? { kind: 'error', message: LINK_GONE, gone: true } : { kind: 'loading' },
   );
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
@@ -54,7 +57,9 @@ export function Accept({
     let cancelled = false;
     inviteDetails({ token }).then(
       (invite) => !cancelled && setLoaded({ kind: 'ready', invite }),
-      (err: unknown) => !cancelled && setLoaded({ kind: 'error', message: apiErrorMessage(err) }),
+      (err: unknown) =>
+        !cancelled &&
+        setLoaded({ kind: 'error', message: apiErrorMessage(err), gone: isNotFound(err) }),
     );
     return () => {
       cancelled = true;
@@ -101,7 +106,7 @@ export function Accept({
   }
 
   if (loaded.kind === 'error') {
-    const gone = loaded.message !== GENERIC_ERROR;
+    const { gone } = loaded;
     return (
       <AuthLayout>
         <div className="form">

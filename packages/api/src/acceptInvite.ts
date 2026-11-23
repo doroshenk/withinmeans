@@ -6,8 +6,7 @@ import type { Context } from './context.js';
 
 export const INVITE_GONE_MESSAGE = 'This invite link has expired or was already used.';
 /** The same words whether the email has a login, or only our database knows it. */
-export const ACCEPT_FAILED_MESSAGE =
-  "We couldn't create that login. Try a different email, or sign in if you already have an account.";
+export const ACCEPT_FAILED_MESSAGE = "We couldn't create that login. Try a different email.";
 
 const now = (ctx: Pick<Context, 'clock'>): Date => new Date(ctx.clock.now().epochMilliseconds);
 
@@ -43,7 +42,11 @@ export async function acceptInvite(
       cognitoSub: login.sub,
     });
   } catch (err) {
-    await ctx.identityProvider.deleteLogin(input.email);
+    try {
+      await ctx.identityProvider.deleteLogin(input.email);
+    } catch {
+      // The original failure is the one to report; a leftover login is a known gap (see the PR).
+    }
     if (err instanceof NotFound) throw gone();
     if (err instanceof Conflict) {
       throw new TRPCError({ code: 'CONFLICT', message: ACCEPT_FAILED_MESSAGE });

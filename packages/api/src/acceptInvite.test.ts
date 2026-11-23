@@ -178,6 +178,29 @@ describe('P1-04: acceptInvite', () => {
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
+  it('P1-04: two people using the link at once: exactly one joins and the other login is removed', async () => {
+    await invitePat();
+    const a = await caller();
+    const b = await caller();
+
+    const results = await Promise.allSettled([
+      a.acceptInvite(accept),
+      b.acceptInvite({ ...accept, email: 'other@example.test' }),
+    ]);
+
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(await t.db.selectFrom('memberships').selectAll().execute()).toHaveLength(2);
+    expect(provider.logins.size).toBe(2); // Sam and the one who joined
+  });
+
+  it('P1-04: a failed login clean-up does not hide the real error', async () => {
+    await invitePat();
+    provider.deleteLogin = () => Promise.reject(new Error('cognito down'));
+    await expect(
+      (await caller()).acceptInvite({ ...accept, email: 'sam@example.test' }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
   it('P1-04: a password under 8 characters is rejected and creates nothing', async () => {
     await invitePat();
     await expect(
