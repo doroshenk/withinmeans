@@ -26,3 +26,4 @@ export {
 } from './repos/recurringBills.js';
 export { withRetry, type RetryOptions } from './retry.js';
 export { signUp, type NewHousehold } from './repos/signUp.js';
+export { acceptInvite, type AcceptInput, type InvitePreview } from './repos/acceptInvite.js';

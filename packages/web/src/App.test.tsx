@@ -5,7 +5,7 @@ import { App } from './App';
 import type { AuthClient } from './auth/types';
 import type { MeResult } from './pages/Hello';
 
-function setup(token: string | undefined) {
+function setup(token: string | undefined, location?: { pathname: string; search: string }) {
   const auth: AuthClient = {
     signIn: vi.fn(() => Promise.resolve()),
     signOut: vi.fn(),
@@ -20,14 +20,33 @@ function setup(token: string | undefined) {
     daysLeft: 7,
   };
   const invitePartner = vi.fn((_input: unknown) => Promise.resolve(pending));
+  const inviteDetails = vi.fn((_input: unknown) =>
+    Promise.resolve({
+      inviterName: 'Sam',
+      householdName: 'The Examples',
+      inviteeName: 'Pat',
+      email: 'pat@example.com',
+      role: 'full' as const,
+      note: '',
+    }),
+  );
+  const acceptInvite = vi.fn((_input: unknown) => Promise.resolve({ status: 'joined' }));
   const createClient = vi.fn(() => ({
     me: { query: () => Promise.resolve(me) },
     signUp: { mutate: () => Promise.resolve({ status: 'created' }) },
     invitePartner: { mutate: invitePartner },
     resendInvite: { mutate: () => Promise.resolve(pending) },
+    inviteDetails: { query: inviteDetails },
+    acceptInvite: { mutate: acceptInvite },
   }));
-  render(<App auth={auth} createClient={createClient} />);
-  return { auth, invitePartner, user: userEvent.setup() };
+  render(
+    <App
+      auth={auth}
+      createClient={createClient}
+      {...(location === undefined ? {} : { location })}
+    />,
+  );
+  return { auth, invitePartner, inviteDetails, acceptInvite, user: userEvent.setup() };
 }
 
 describe('App', () => {
@@ -107,5 +126,46 @@ describe('App partner sign-up', () => {
     });
     await user.click(await screen.findByRole('button', { name: 'Start setting up' }));
     expect(await screen.findByRole('heading', { name: 'Hello Sam' })).toBeInTheDocument();
+  });
+});
+
+describe('App accept invite', () => {
+  const link = { pathname: '/accept', search: '?token=tok%2Fabc' };
+
+  it('P1-04: the invite link opens the accept screen with the token from the URL', async () => {
+    const { inviteDetails } = setup(undefined, link);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Sam invited you to The Examples' }),
+    ).toBeInTheDocument();
+    expect(inviteDetails).toHaveBeenCalledWith({ token: 'tok/abc' });
+  });
+
+  it('P1-04: joining signs in and lands in the app', async () => {
+    const { auth, acceptInvite, user } = setup(undefined, link);
+    await user.type(await screen.findByLabelText('Password'), 'abcd1234');
+    await user.click(screen.getByRole('button', { name: 'Join household' }));
+
+    expect(acceptInvite).toHaveBeenCalledWith({
+      token: 'tok/abc',
+      name: 'Pat',
+      email: 'pat@example.com',
+      password: 'abcd1234',
+    });
+    expect(auth.signIn).toHaveBeenCalledWith('pat@example.com', 'abcd1234', false);
+    expect(await screen.findByRole('heading', { name: 'Hello Sam' })).toBeInTheDocument();
+  });
+
+  it('P1-04: an invite link with no token shows the expired-link message', async () => {
+    setup(undefined, { pathname: '/accept', search: '' });
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This invite link has expired or was already used.',
+    );
+  });
+
+  it('P1-04: the accept screen can switch to sign-in', async () => {
+    const { user } = setup(undefined, { pathname: '/accept', search: '' });
+    await user.click(await screen.findByRole('button', { name: 'Sign in' }));
+    expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
   });
 });

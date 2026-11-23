@@ -11,10 +11,15 @@ function isTimeZone(value: string): boolean {
   }
 }
 
-const base = {
+/** The login fields shared by sign-up and accepting an invite. */
+export const loginFields = {
   name: z.string().trim().min(1, 'Enter your first name.'),
   email: z.string().trim().toLowerCase().pipe(z.email('Enter a valid email address.')),
   password: z.string().min(MIN_PASSWORD_LENGTH, 'Your password needs at least 8 characters.'),
+};
+
+const base = {
+  ...loginFields,
   timeZone: z.string().refine(isTimeZone, 'Unknown time zone.'),
 };
 
