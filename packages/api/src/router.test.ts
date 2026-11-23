@@ -2,7 +2,13 @@ import { createTestDb, type TestDb } from '@withinmeans/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createContextFactory } from './context.js';
 import { appRouter } from './router.js';
-import { captureLogger, fakeIdentityProvider, fakeVerifier, testClock } from './testing.js';
+import {
+  captureLogger,
+  fakeIdentityProvider,
+  fakeInviteDeps,
+  fakeVerifier,
+  testClock,
+} from './testing.js';
 
 let t: TestDb;
 const H1 = '11111111-1111-4111-8111-111111111111';
@@ -45,6 +51,7 @@ function factory() {
     logger,
     identityProvider: fakeIdentityProvider(),
     clock: testClock,
+    invites: fakeInviteDeps(),
   });
 }
 

@@ -81,4 +81,17 @@ export const invites = {
   async findByToken(db: Database, token: string): Promise<Invite | undefined> {
     return db.selectFrom('invites').selectAll().where('token', '=', token).executeTakeFirst();
   },
+
+  /**
+   * Resend: gives a pending invite a new token and expiry. The old token stops working because
+   * it is no longer stored. An accepted invite cannot be reissued (NotFound).
+   */
+  async reissue(
+    _db: Database,
+    _ctx: HouseholdContext,
+    _inviteId: string,
+    _next: { token: string; expiresAt: Date },
+  ): Promise<Invite> {
+    throw new Error('not implemented');
+  },
 };

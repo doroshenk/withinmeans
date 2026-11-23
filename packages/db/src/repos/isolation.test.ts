@@ -46,6 +46,16 @@ const cases: Case[] = [
   { name: 'invites.listPending', write: false, run: (db, ctx) => invites.listPending(db, ctx) },
   { name: 'invites.create', write: true, run: (db, ctx) => invites.create(db, ctx, newInvite()) },
   {
+    name: 'invites.reissue',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) =>
+      invites.reissue(db, ctx, t.inviteId, {
+        token: `tok-${randomUUID()}`,
+        expiresAt: new Date('2026-12-02T00:00:00Z'),
+      }),
+  },
+  {
     name: 'invites.revoke',
     write: true,
     namesId: true,

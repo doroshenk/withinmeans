@@ -8,6 +8,7 @@ import { appRouter } from './router.js';
 import {
   captureLogger,
   fakeIdentityProvider,
+  fakeInviteDeps,
   fakeVerifier,
   testClock,
   type FakeIdentityProvider,
@@ -39,6 +40,7 @@ async function caller(
     logger,
     identityProvider: provider,
     clock: over.clock ?? testClock,
+    invites: fakeInviteDeps(),
   })(authorization);
   return appRouter.createCaller(ctx);
 }

@@ -2,7 +2,13 @@ import type { Database } from '@withinmeans/db';
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 import { describe, expect, it } from 'vitest';
 import { createHandler } from './handler.js';
-import { captureLogger, fakeIdentityProvider, fakeVerifier, testClock } from './testing.js';
+import {
+  captureLogger,
+  fakeIdentityProvider,
+  fakeInviteDeps,
+  fakeVerifier,
+  testClock,
+} from './testing.js';
 
 function event(path: string, token?: string, method = 'GET'): APIGatewayProxyEventV2 {
   return {
@@ -35,6 +41,7 @@ function setup() {
       logger,
       identityProvider: fakeIdentityProvider(),
       clock: testClock,
+      invites: fakeInviteDeps(),
     }),
     lines,
   };
@@ -79,6 +86,7 @@ describe('P0-09: handler', () => {
       logger,
       identityProvider: fakeIdentityProvider(),
       clock: testClock,
+      invites: fakeInviteDeps(),
     });
     await handler(event('/me', 'good:sub-x'));
     const logged = lines.join('\n');

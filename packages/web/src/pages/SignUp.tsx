@@ -1,14 +1,26 @@
-import { signUpInput, type SignUpInput } from '@withinmeans/domain';
+import { signUpInput, type InvitePartnerInput, type SignUpInput } from '@withinmeans/domain';
 import { useState, type FormEvent } from 'react';
 import { authErrorMessage } from '../auth/errors';
 import { passwordStrength } from '../auth/strength';
 import type { AuthClient } from '../auth/types';
 import { AuthLayout } from './AuthLayout';
 
+export interface PendingInvite {
+  id: string;
+  name: string;
+  email: string;
+  status: 'pending';
+  daysLeft: number;
+}
+
 export interface SignUpProps {
   auth: AuthClient;
   /** Creates the login, household and owner membership (the API's `signUp`). */
   signUp: (input: SignUpInput) => Promise<unknown>;
+  /** Partner mode only: invites the partner (the API's `invitePartner`). */
+  invitePartner: (input: InvitePartnerInput) => Promise<PendingInvite>;
+  /** Sends the pending invite again with a new link (the API's `resendInvite`). */
+  resendInvite: (input: { inviteId: string }) => Promise<PendingInvite>;
   /** Signed in and ready for the setup wizard. */
   onSignedIn: () => void;
   onShowSignIn: () => void;

@@ -68,6 +68,28 @@ describe('P0-09: ApiStack', () => {
     ]);
   });
 
+  it('P1-03: the role can send email only through the within.doroshenk.com identity, from the no-reply address', () => {
+    const ses = statements(synth('dev')).filter((s) =>
+      [s.Action].flat().some((a) => a.startsWith('ses:')),
+    );
+    expect(ses).toHaveLength(1);
+    expect(ses[0]).toMatchObject({
+      Effect: 'Allow',
+      Action: 'ses:SendEmail',
+      Resource: 'arn:aws:ses:us-east-2:111111111111:identity/within.doroshenk.com',
+      Condition: { StringEquals: { 'ses:FromAddress': 'no-reply@within.doroshenk.com' } },
+    });
+  });
+
+  it.each([
+    ['dev', 'https://dev.within.doroshenk.com'],
+    ['prod', 'https://within.doroshenk.com'],
+  ] as const)('P1-03: %s builds accept links on its own site (APP_URL)', (stage, url) => {
+    synth(stage).hasResourceProperties('AWS::Lambda::Function', {
+      Environment: { Variables: Match.objectLike({ APP_URL: url }) },
+    });
+  });
+
   it('P0-09: the role has no wildcard actions or resources', () => {
     for (const s of statements(synth('dev'))) {
       expect([s.Action].flat().join()).not.toContain('*');
