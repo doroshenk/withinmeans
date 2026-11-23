@@ -6,6 +6,8 @@ const state = vi.hoisted(() => ({
   authResult: 'success' as 'success' | Error,
   currentUser: new Map<Storage, unknown>(),
   signedOut: [] as Storage[],
+  resetResult: 'success' as 'success' | Error,
+  resetCalls: [] as unknown[][],
   session: { valid: true, token: 'access-token' } as
     { valid: boolean; token: string } | Error | null,
 }));
@@ -30,6 +32,20 @@ vi.mock('amazon-cognito-identity-js', () => {
     ) {
       if (state.authResult === 'success') callbacks.onSuccess();
       else callbacks.onFailure(state.authResult);
+    }
+    forgotPassword(callbacks: { onSuccess: () => void; onFailure: (e: Error) => void }) {
+      state.resetCalls.push(['forgot', this.data.Username]);
+      if (state.resetResult === 'success') callbacks.onSuccess();
+      else callbacks.onFailure(state.resetResult);
+    }
+    confirmPassword(
+      code: string,
+      password: string,
+      callbacks: { onSuccess: () => void; onFailure: (e: Error) => void },
+    ) {
+      state.resetCalls.push(['confirm', this.data.Username, code, password]);
+      if (state.resetResult === 'success') callbacks.onSuccess();
+      else callbacks.onFailure(state.resetResult);
     }
   }
   return { AuthenticationDetails, CognitoUser, CognitoUserPool };
@@ -59,6 +75,8 @@ beforeEach(() => {
   state.authResult = 'success';
   state.currentUser = new Map();
   state.signedOut = [];
+  state.resetResult = 'success';
+  state.resetCalls = [];
   state.session = { valid: true, token: 'access-token' };
 });
 
@@ -127,5 +145,28 @@ describe('createCognitoAuth', () => {
     fakeCurrentUser(localStorage);
 
     expect(await auth().getAccessToken()).toBeUndefined();
+  });
+
+  it('P1-05: forgotPassword asks Cognito to email a code', async () => {
+    await auth().forgotPassword('sam@example.com');
+
+    expect(state.resetCalls).toEqual([['forgot', 'sam@example.com']]);
+  });
+
+  it('P1-05: resetPassword confirms with the code and new password', async () => {
+    await auth().resetPassword('sam@example.com', '123456', 'abcd1234');
+
+    expect(state.resetCalls).toEqual([['confirm', 'sam@example.com', '123456', 'abcd1234']]);
+  });
+
+  it('P1-05: reset failures reject with the Cognito error', async () => {
+    state.resetResult = Object.assign(new Error('bad'), { name: 'CodeMismatchException' });
+
+    await expect(auth().forgotPassword('a@b.c')).rejects.toMatchObject({
+      name: 'CodeMismatchException',
+    });
+    await expect(auth().resetPassword('a@b.c', '1', 'pw')).rejects.toMatchObject({
+      name: 'CodeMismatchException',
+    });
   });
 });

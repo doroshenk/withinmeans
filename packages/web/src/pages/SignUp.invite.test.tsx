@@ -21,6 +21,8 @@ function setup(
   const auth: AuthClient = {
     signIn: vi.fn(() => Promise.resolve()),
     signOut: vi.fn(),
+    forgotPassword: vi.fn(() => Promise.resolve()),
+    resetPassword: vi.fn(() => Promise.resolve()),
     getAccessToken: vi.fn(() => Promise.resolve(undefined)),
   };
   const props = {

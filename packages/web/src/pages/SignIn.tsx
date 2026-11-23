@@ -7,9 +7,10 @@ export interface SignInProps {
   auth: AuthClient;
   onSignedIn: () => void;
   onShowSignUp: () => void;
+  onForgotPassword: () => void;
 }
 
-export function SignIn({ auth, onSignedIn, onShowSignUp }: SignInProps) {
+export function SignIn({ auth, onSignedIn, onShowSignUp, onForgotPassword }: SignInProps) {
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
 
@@ -53,6 +54,9 @@ export function SignIn({ auth, onSignedIn, onShowSignUp }: SignInProps) {
             {error}
           </p>
         )}
+        <button type="button" className="link" onClick={onForgotPassword}>
+          Forgot password?
+        </button>
         <button type="submit" className="button" disabled={busy}>
           Sign in
         </button>

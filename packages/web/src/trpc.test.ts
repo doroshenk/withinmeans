@@ -6,6 +6,8 @@ function authWithToken(token: string | undefined): AuthClient {
   return {
     signIn: vi.fn(),
     signOut: vi.fn(),
+    forgotPassword: vi.fn(() => Promise.resolve()),
+    resetPassword: vi.fn(() => Promise.resolve()),
     getAccessToken: vi.fn(() => Promise.resolve(token)),
   };
 }

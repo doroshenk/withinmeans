@@ -44,6 +44,14 @@ export function createCognitoAuth(config: CognitoConfig): AuthClient {
       });
     },
 
+    forgotPassword() {
+      return Promise.reject(new Error('not implemented'));
+    },
+
+    resetPassword() {
+      return Promise.reject(new Error('not implemented'));
+    },
+
     signOut() {
       persistent.getCurrentUser()?.signOut();
       sessionOnly.getCurrentUser()?.signOut();
