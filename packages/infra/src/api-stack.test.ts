@@ -76,9 +76,12 @@ describe('P0-09: ApiStack', () => {
     expect(ses[0]).toMatchObject({
       Effect: 'Allow',
       Action: 'ses:SendEmail',
-      Resource: 'arn:aws:ses:us-east-2:111111111111:identity/within.doroshenk.com',
       Condition: { StringEquals: { 'ses:FromAddress': 'no-reply@within.doroshenk.com' } },
     });
+    // The partition is a CloudFormation reference, so compare the rest of the ARN.
+    expect(JSON.stringify(ses[0]?.Resource)).toContain(
+      ':ses:us-east-2:111111111111:identity/within.doroshenk.com"',
+    );
   });
 
   it.each([

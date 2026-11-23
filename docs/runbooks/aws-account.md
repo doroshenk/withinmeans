@@ -163,3 +163,38 @@ a real deploy with it fails.
   Function associations on the default behavior: the SPA rewrite function.
 - **S3 → Buckets:** the `WebStack-<stage>` bucket → Permissions: "Block all public access" is
   on, and the bucket policy allows only that distribution.
+
+## Email: SES for partner invites (P1-03)
+
+**SES** (Simple Email Service) sends the partner invite from the `no-reply` address on
+`within.doroshenk.com` (ADR 0008). It is the only email we send; password reset is Cognito's own. Nothing receives mail.
+
+- **Defined in:** `packages/infra/src/email-stack.ts` (`EmailStack`, us-east-2). One stack for both
+  stages, because the sending identity belongs to the account. The deploy workflow includes it.
+- **The API's permission:** the API function's role may call `ses:SendEmail` only on this one
+  identity and only from the no-reply address (`ApiStack`).
+- **Sandbox:** a new SES account can only send to addresses you have verified. That is fine here:
+  there are two people. Ask AWS for production access later only if you need more.
+
+### Steps (once)
+
+1. **Deploy the stack:** `pnpm --filter @withinmeans/infra exec cdk deploy EmailStack`
+   (with the `withinmeans` profile). The outputs list `DkimName1..3` and `DkimValue1..3`.
+2. **DKIM records:** at Network Solutions add three CNAMEs, host = each `DkimName` (if the form
+   appends `.doroshenk.com`, leave that part off, as for the ACM records), value = its `DkimValue`.
+3. **DMARC record:** add a TXT record, host `_dmarc.within`, value
+   `v=DMARC1; p=none; rua=mailto:<your Gmail address>`. Do **not** touch the root domain's MX, SPF
+   or DMARC records: Gmail relies on them.
+4. **Verify both people's addresses:** SES console → Configuration → Identities → Create identity
+   → Email address, once for yours and once for your partner's. Open each confirmation email and
+   click the link.
+5. **Check:** the domain identity shows "Verified" and DKIM "Successful" (DNS can take a few hours).
+6. **Allow the API to build links:** nothing to do; `APP_URL` is set by `ApiStack` per stage.
+
+### Find it in the console
+
+- **SES → Configuration → Identities → within.doroshenk.com:** Identity status Verified; the
+  Authentication tab shows DKIM "Successful" and the three CNAMEs.
+- **SES → Configuration → Identities:** your and your partner's email addresses, status Verified.
+- **SES → Account dashboard:** "Sandbox" banner and the sending quota.
+- **IAM → Roles → the ApiFunction role → Permissions:** the `ses:SendEmail` statement.

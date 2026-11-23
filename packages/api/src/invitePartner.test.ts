@@ -27,9 +27,10 @@ beforeEach(async () => {
   await t.db.deleteFrom('users').execute();
   await t.db.deleteFrom('households').execute();
   invites = fakeInviteDeps();
+  provider = fakeIdentityProvider();
 });
 
-const provider = fakeIdentityProvider();
+let provider = fakeIdentityProvider();
 async function caller(
   authorization?: string,
   over: { clock?: typeof testClock; db?: Database } = {},

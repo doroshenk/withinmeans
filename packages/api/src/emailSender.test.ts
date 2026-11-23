@@ -27,7 +27,9 @@ async function sendOne(over: Partial<InviteEmail> = {}) {
   });
   await sender.sendInvite({ ...email, ...over });
   expect(sent).toHaveLength(1);
-  return sent[0]!.input;
+  const [command] = sent;
+  if (command === undefined) throw new Error('nothing was sent');
+  return command.input;
 }
 
 describe('P1-03: SES invite email', () => {

@@ -2,15 +2,8 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import { invitePartnerInput, signUpInput } from '@withinmeans/domain';
 import { z } from 'zod';
 import type { Context } from './context.js';
+import { invitePartner, resendInvite } from './invitePartner.js';
 import { signUp } from './signUp.js';
-
-export interface InviteStatus {
-  id: string;
-  name: string;
-  email: string;
-  status: 'pending';
-  daysLeft: number;
-}
 
 const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
 
@@ -30,23 +23,33 @@ const signedIn = t.middleware(({ ctx, next }) => {
 
 export const protectedProcedure = t.procedure.use(signedIn);
 
+/** Signed in and in a household. The household context comes from the Membership, never input. */
+const inHousehold = t.middleware(({ ctx, next }) => {
+  const { household, identity } = ctx;
+  if (household === undefined || identity?.membership === undefined) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Join or create a household first.' });
+  }
+  const { membership } = identity;
+  return next({ ctx: { ...ctx, household, identity: { ...identity, membership } } });
+});
+
+export const memberProcedure = protectedProcedure.use(inHousehold);
+
 export const publicProcedure = t.procedure;
 
 export const appRouter = t.router({
   /** Creates a login, a household and the owner's membership. Open to anyone; see signUp.ts. */
   signUp: publicProcedure.input(signUpInput).mutation(({ ctx, input }) => signUp(ctx, input)),
 
-  invitePartner: protectedProcedure
+  /** Spec �3 step 3: stores the invite and emails the accept link. */
+  invitePartner: memberProcedure
     .input(invitePartnerInput)
-    .mutation((): Promise<InviteStatus> => {
-      throw new Error('not implemented');
-    }),
+    .mutation(({ ctx, input }) => invitePartner(ctx, input)),
 
-  resendInvite: protectedProcedure
+  /** Resend: a new link and a fresh 7 days; the old link stops working. */
+  resendInvite: memberProcedure
     .input(z.object({ inviteId: z.uuid() }))
-    .mutation((): Promise<InviteStatus> => {
-      throw new Error('not implemented');
-    }),
+    .mutation(({ ctx, input }) => resendInvite(ctx, input.inviteId)),
 
   /** Who am I? A signed-in user may have no profile or no household yet. */
   me: protectedProcedure.query(({ ctx }) => ({

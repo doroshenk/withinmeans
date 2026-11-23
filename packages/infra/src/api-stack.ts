@@ -8,6 +8,8 @@ import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import type { Construct } from 'constructs';
 import type { Stage } from './data-stack.js';
+import { domainForStage } from './domains.js';
+import { MAIL_DOMAIN } from './email-stack.js';
 
 export interface ApiStackProps extends StackProps {
   readonly stage: Stage;
@@ -66,6 +68,8 @@ export class ApiStack extends Stack {
         DSQL_ENDPOINT: props.clusterEndpoint,
         USER_POOL_ID: props.userPoolId,
         USER_POOL_CLIENT_ID: props.userPoolClientId,
+        // Invite emails link to this site's accept screen.
+        APP_URL: `https://${domainForStage(props.stage)}`,
         NODE_OPTIONS: '--enable-source-maps',
       },
     });
@@ -89,6 +93,18 @@ export class ApiStack extends Stack {
           'cognito-idp:AdminDeleteUser',
         ],
         resources: [props.userPoolArn],
+      }),
+    );
+
+    // Partner invites go out through SES, from the one no-reply address only, via the domain
+    // identity created by EmailStack. Console: IAM -> Roles -> the ApiFunction role -> Permissions.
+    fn.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['ses:SendEmail'],
+        resources: [
+          this.formatArn({ service: 'ses', resource: 'identity', resourceName: MAIL_DOMAIN }),
+        ],
+        conditions: { StringEquals: { 'ses:FromAddress': `no-reply@${MAIL_DOMAIN}` } },
       }),
     );
 

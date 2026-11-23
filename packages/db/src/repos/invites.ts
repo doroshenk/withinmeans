@@ -1,5 +1,5 @@
 import type { Selectable } from 'kysely';
-import { assertCanWrite, type HouseholdContext } from '../context.js';
+import { assertCanWrite, NotFound, type HouseholdContext } from '../context.js';
 import type { Database, InvitesTable } from '../db.js';
 import { cleanName, mustHaveChanged, orConflict } from './shared.js';
 
@@ -87,11 +87,25 @@ export const invites = {
    * it is no longer stored. An accepted invite cannot be reissued (NotFound).
    */
   async reissue(
-    _db: Database,
-    _ctx: HouseholdContext,
-    _inviteId: string,
-    _next: { token: string; expiresAt: Date },
+    db: Database,
+    ctx: HouseholdContext,
+    inviteId: string,
+    next: { token: string; expiresAt: Date },
   ): Promise<Invite> {
-    throw new Error('not implemented');
+    assertCanWrite(ctx);
+    const row = await orConflict(
+      () =>
+        db
+          .updateTable('invites')
+          .set({ token: next.token, expires_at: next.expiresAt })
+          .where('id', '=', inviteId)
+          .where('household_id', '=', ctx.householdId)
+          .where('accepted_at', 'is', null)
+          .returningAll()
+          .executeTakeFirst(),
+      'That invite token is already in use',
+    );
+    if (row === undefined) throw new NotFound('Invite not found');
+    return row;
   },
 };
