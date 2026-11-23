@@ -124,7 +124,7 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
     .values({
       household_id: h,
       ym,
-      started_at: new Date('2026-10-01T12:00:00Z'),
+      started_at: new Date(`${ym}-01T12:00:00Z`),
       closed_at: null,
     })
     .execute();

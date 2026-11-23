@@ -1,6 +1,5 @@
 import type { HouseholdContext, Role } from '../context.js';
 import type { Database } from '../db.js';
-import { notImplemented } from './notImplemented.js';
 
 export interface Member {
   userId: string;
@@ -10,7 +9,13 @@ export interface Member {
 }
 
 export const memberships = {
-  list(_db: Database, _ctx: HouseholdContext): Promise<Member[]> {
-    return notImplemented();
+  async list(db: Database, ctx: HouseholdContext): Promise<Member[]> {
+    return db
+      .selectFrom('memberships')
+      .innerJoin('users', 'users.id', 'memberships.user_id')
+      .select(['users.id as userId', 'users.name', 'users.email', 'memberships.role'])
+      .where('memberships.household_id', '=', ctx.householdId)
+      .orderBy('users.name')
+      .execute();
   },
 };

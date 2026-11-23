@@ -199,6 +199,8 @@ beforeEach(async () => {
 });
 
 const marker = (c: Case, s: Seeded) => c.marker?.(s) ?? `${s.label}-secret`;
+/** JSON.stringify(undefined) is undefined; an empty result should read as text. */
+const show = (value: unknown): string => JSON.stringify(value) ?? 'none';
 const reads = cases.filter((c) => !c.write);
 const writes = cases.filter((c) => c.write);
 
@@ -206,14 +208,14 @@ describe('P1-01 isolation: reads', () => {
   it.each(reads.map((c) => [c.name, c] as const))(
     '%s: A sees A data and never B data',
     async (_name, c) => {
-      expect(JSON.stringify(await c.run(t.db, A.ctx(), A))).toContain(marker(c, A));
-      expect(JSON.stringify(await c.run(t.db, A.ctx(), B))).not.toContain(marker(c, B));
+      expect(show(await c.run(t.db, A.ctx(), A))).toContain(marker(c, A));
+      expect(show(await c.run(t.db, A.ctx(), B))).not.toContain(marker(c, B));
     },
   );
   it.each(reads.map((c) => [c.name, c] as const))(
     '%s: a view-only member can read',
     async (_name, c) => {
-      expect(JSON.stringify(await c.run(t.db, A.ctx('view'), A))).toContain(marker(c, A));
+      expect(show(await c.run(t.db, A.ctx('view'), A))).toContain(marker(c, A));
     },
   );
 });

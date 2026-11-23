@@ -1,7 +1,7 @@
 import type { Selectable } from 'kysely';
-import type { HouseholdContext } from '../context.js';
+import { assertCanWrite, type HouseholdContext } from '../context.js';
 import type { Database, InvitesTable } from '../db.js';
-import { notImplemented } from './notImplemented.js';
+import { cleanName, mustHaveChanged, orConflict } from './shared.js';
 
 export type Invite = Selectable<InvitesTable>;
 
@@ -15,21 +15,57 @@ export interface NewInvite {
 }
 
 export const invites = {
-  create(_db: Database, _ctx: HouseholdContext, _input: NewInvite): Promise<Invite> {
-    return notImplemented();
+  async create(db: Database, ctx: HouseholdContext, input: NewInvite): Promise<Invite> {
+    assertCanWrite(ctx);
+    const name = cleanName(input.name);
+    return orConflict(
+      () =>
+        db
+          .insertInto('invites')
+          .values({
+            household_id: ctx.householdId,
+            name,
+            email: input.email.trim(),
+            role: input.role,
+            note: input.note,
+            token: input.token,
+            expires_at: input.expiresAt,
+            accepted_at: null,
+            invited_by: ctx.userId,
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow(),
+      'That invite token is already in use',
+    );
   },
+
   /** Not yet accepted (expired ones included: the UI shows them as expired). */
-  listPending(_db: Database, _ctx: HouseholdContext): Promise<Invite[]> {
-    return notImplemented();
+  async listPending(db: Database, ctx: HouseholdContext): Promise<Invite[]> {
+    return db
+      .selectFrom('invites')
+      .selectAll()
+      .where('household_id', '=', ctx.householdId)
+      .where('accepted_at', 'is', null)
+      .orderBy('created_at')
+      .orderBy('id')
+      .execute();
   },
-  revoke(_db: Database, _ctx: HouseholdContext, _inviteId: string): Promise<void> {
-    return notImplemented();
+
+  async revoke(db: Database, ctx: HouseholdContext, inviteId: string): Promise<void> {
+    assertCanWrite(ctx);
+    const result = await db
+      .deleteFrom('invites')
+      .where('id', '=', inviteId)
+      .where('household_id', '=', ctx.householdId)
+      .executeTakeFirst();
+    mustHaveChanged(result.numDeletedRows, 'Invite');
   },
+
   /**
    * The one lookup without a HouseholdContext: the invitee is not a member yet, so the secret
    * token is the credential (like `identity.findByCognitoSub`).
    */
-  findByToken(_db: Database, _token: string): Promise<Invite | undefined> {
-    return notImplemented();
+  async findByToken(db: Database, token: string): Promise<Invite | undefined> {
+    return db.selectFrom('invites').selectAll().where('token', '=', token).executeTakeFirst();
   },
 };
