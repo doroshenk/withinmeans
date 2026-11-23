@@ -1,0 +1,119 @@
+import type { Selectable } from 'kysely';
+import { assertCanWrite, NotFound, type HouseholdContext } from '../context.js';
+import type { CategoriesTable, Database } from '../db.js';
+import { cleanName, inTransaction, mustHaveChanged, orConflict } from './shared.js';
+
+export type Category = Selectable<CategoriesTable>;
+
+/** The unique key: names match ignoring case (the name is already trimmed). */
+const keyOf = (name: string): string => name.toLowerCase();
+
+export const categories = {
+  async list(
+    db: Database,
+    ctx: HouseholdContext,
+    options: { includeArchived?: boolean } = {},
+  ): Promise<Category[]> {
+    let query = db.selectFrom('categories').selectAll().where('household_id', '=', ctx.householdId);
+    if (options.includeArchived !== true) query = query.where('archived_at', 'is', null);
+    return query.orderBy('sort').orderBy('name_key').execute();
+  },
+
+  async create(
+    db: Database,
+    ctx: HouseholdContext,
+    input: { name: string; colorIndex: number },
+  ): Promise<Category> {
+    assertCanWrite(ctx);
+    const name = cleanName(input.name);
+    return orConflict(
+      () =>
+        inTransaction(db, async (trx) => {
+          const last = await trx
+            .selectFrom('categories')
+            .select((eb) => eb.fn.max('sort').as('last'))
+            .where('household_id', '=', ctx.householdId)
+            .executeTakeFirst();
+          return trx
+            .insertInto('categories')
+            .values({
+              household_id: ctx.householdId,
+              name,
+              name_key: keyOf(name),
+              color_index: input.colorIndex,
+              sort: (last?.last ?? -1) + 1,
+              archived_at: null,
+            })
+            .returningAll()
+            .executeTakeFirstOrThrow();
+        }),
+      `A category named "${name}" already exists`,
+    );
+  },
+
+  async rename(db: Database, ctx: HouseholdContext, id: string, name: string): Promise<void> {
+    assertCanWrite(ctx);
+    const clean = cleanName(name);
+    const result = await orConflict(
+      () =>
+        db
+          .updateTable('categories')
+          .set({ name: clean, name_key: keyOf(clean) })
+          .where('id', '=', id)
+          .where('household_id', '=', ctx.householdId)
+          .executeTakeFirst(),
+      `A category named "${clean}" already exists`,
+    );
+    mustHaveChanged(result.numUpdatedRows, 'Category');
+  },
+
+  async setColor(
+    db: Database,
+    ctx: HouseholdContext,
+    id: string,
+    colorIndex: number,
+  ): Promise<void> {
+    assertCanWrite(ctx);
+    const result = await db
+      .updateTable('categories')
+      .set({ color_index: colorIndex })
+      .where('id', '=', id)
+      .where('household_id', '=', ctx.householdId)
+      .executeTakeFirst();
+    mustHaveChanged(result.numUpdatedRows, 'Category');
+  },
+
+  /** `ids` in the new order; every id must belong to the household. */
+  async reorder(db: Database, ctx: HouseholdContext, ids: string[]): Promise<void> {
+    assertCanWrite(ctx);
+    if (ids.length === 0) return;
+    await inTransaction(db, async (trx) => {
+      const mine = await trx
+        .selectFrom('categories')
+        .select('id')
+        .where('household_id', '=', ctx.householdId)
+        .where('id', 'in', ids)
+        .execute();
+      if (mine.length !== new Set(ids).size) throw new NotFound('Category not found');
+      for (const [index, id] of ids.entries()) {
+        await trx
+          .updateTable('categories')
+          .set({ sort: index })
+          .where('id', '=', id)
+          .where('household_id', '=', ctx.householdId)
+          .execute();
+      }
+    });
+  },
+
+  async archive(db: Database, ctx: HouseholdContext, id: string): Promise<void> {
+    assertCanWrite(ctx);
+    const result = await db
+      .updateTable('categories')
+      .set({ archived_at: new Date() })
+      .where('id', '=', id)
+      .where('household_id', '=', ctx.householdId)
+      .executeTakeFirst();
+    mustHaveChanged(result.numUpdatedRows, 'Category');
+  },
+};
