@@ -12,11 +12,21 @@ function fakeAuth(): AuthClient {
   };
 }
 
+const PENDING = {
+  id: 'inv-1',
+  name: 'Pat',
+  email: 'pat@example.com',
+  status: 'pending' as const,
+  daysLeft: 7,
+};
+
 function setup(signUp: (input: unknown) => Promise<unknown> = () => Promise.resolve({})) {
   const auth = fakeAuth();
   const props = {
     auth,
     signUp: vi.fn(signUp),
+    invitePartner: vi.fn(() => Promise.resolve(PENDING)),
+    resendInvite: vi.fn(() => Promise.resolve(PENDING)),
     onSignedIn: vi.fn(),
     onShowSignIn: vi.fn(),
     timeZone: 'America/Chicago',

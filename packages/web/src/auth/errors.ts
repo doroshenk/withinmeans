@@ -20,3 +20,17 @@ export function authErrorMessage(error: unknown): string {
       return GENERIC_ERROR;
   }
 }
+
+const SHOWN_CODES = new Set(['BAD_REQUEST', 'CONFLICT', 'FORBIDDEN', 'NOT_FOUND']);
+
+/**
+ * Words for an API error. The API only sends a message for a rule the user can act on (such as
+ * "An invite is already waiting"); everything else stays generic.
+ */
+export function apiErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.name === 'TRPCClientError') {
+    const code = (error as { data?: { code?: string } }).data?.code;
+    if (code !== undefined && SHOWN_CODES.has(code)) return error.message;
+  }
+  return GENERIC_ERROR;
+}

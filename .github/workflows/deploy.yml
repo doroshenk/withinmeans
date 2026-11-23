@@ -50,7 +50,7 @@ jobs:
       - name: Deploy auth, database and API
         run: |
           pnpm --filter @withinmeans/infra exec cdk deploy \
-            AuthStack-${{ inputs.stage }} DataStack-${{ inputs.stage }} ApiStack-${{ inputs.stage }} \
+            EmailStack AuthStack-${{ inputs.stage }} DataStack-${{ inputs.stage }} ApiStack-${{ inputs.stage }} \
             --context stage=${{ inputs.stage }} --context certificateArn=$CERTIFICATE_ARN \
             --require-approval never --outputs-file "$RUNNER_TEMP/outputs.json"
 

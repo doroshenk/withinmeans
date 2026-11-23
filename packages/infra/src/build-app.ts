@@ -3,6 +3,7 @@ import { ApiStack } from './api-stack.js';
 import { AuthStack } from './auth-stack.js';
 import { CiStack } from './ci-stack.js';
 import { DataStack, type Stage } from './data-stack.js';
+import { EmailStack } from './email-stack.js';
 import { WebStack } from './web-stack.js';
 
 const STAGES: readonly Stage[] = ['dev', 'prod'];
@@ -36,6 +37,8 @@ export function buildApp(
     env,
     githubSubjectPrefix: 'repo:doroshenk@26264461/withinmeans@1464146358',
   });
+  // One sending identity per account, shared by both stages, so it is not stage-scoped.
+  new EmailStack(app, 'EmailStack', { env });
   for (const s of STAGES.filter((s) => stage === undefined || s === stage)) {
     const auth = new AuthStack(app, `AuthStack-${s}`, { env, stage: s });
     const data = new DataStack(app, `DataStack-${s}`, {

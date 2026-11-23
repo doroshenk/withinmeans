@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { Conflict, InvalidInput } from '../context.js';
+import { Conflict, InvalidInput, NotFound } from '../context.js';
 import { clearAll, seedHousehold, type Seeded } from '../testing/fixtures.js';
 import { createTestDb, type TestDb } from '../testing/harness.js';
 import { accounts } from './accounts.js';
@@ -260,6 +260,35 @@ describe('P1-01 invites', () => {
         expiresAt: new Date('2026-11-25T00:00:00Z'),
       }),
     ).rejects.toBeInstanceOf(Conflict);
+  });
+});
+
+describe('P1-03 invite reissue (Resend)', () => {
+  const next = { token: 'tok-new', expiresAt: new Date('2026-12-02T00:00:00Z') };
+
+  it('P1-03: Resend swaps in a new token and expiry; the old token no longer finds the invite', async () => {
+    const reissued = await invites.reissue(t.db, A.ctx(), A.inviteId, next);
+    expect(reissued).toMatchObject({ id: A.inviteId, token: 'tok-new', accepted_at: null });
+    expect(reissued.expires_at).toEqual(next.expiresAt);
+    expect(await invites.findByToken(t.db, A.inviteToken)).toBeUndefined();
+    expect((await invites.findByToken(t.db, 'tok-new'))?.id).toBe(A.inviteId);
+  });
+
+  it('P1-03: an accepted invite cannot be resent', async () => {
+    await t.db
+      .updateTable('invites')
+      .set({ accepted_at: new Date('2026-11-20T00:00:00Z') })
+      .where('id', '=', A.inviteId)
+      .execute();
+    await expect(invites.reissue(t.db, A.ctx(), A.inviteId, next)).rejects.toBeInstanceOf(NotFound);
+    expect((await invites.findByToken(t.db, A.inviteToken))?.id).toBe(A.inviteId);
+  });
+
+  it('P1-03: a token another invite already uses is a Conflict and changes nothing', async () => {
+    await expect(
+      invites.reissue(t.db, A.ctx(), A.inviteId, { ...next, token: B.inviteToken }),
+    ).rejects.toBeInstanceOf(Conflict);
+    expect((await invites.findByToken(t.db, A.inviteToken))?.id).toBe(A.inviteId);
   });
 });
 

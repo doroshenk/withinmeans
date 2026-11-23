@@ -1,6 +1,8 @@
 import { fixedClock } from '@withinmeans/domain';
 import { Temporal } from 'temporal-polyfill';
 import type { TokenVerifier } from './auth.js';
+import type { InviteDeps } from './context.js';
+import type { InviteEmail, InviteEmailSender } from './emailSender.js';
 import type { IdentityProvider } from './identityProvider.js';
 import { createLogger, type Logger } from './logger.js';
 
@@ -42,5 +44,32 @@ export function fakeIdentityProvider(): FakeIdentityProvider {
       deleted.push(email);
       logins.delete(email);
     },
+  };
+}
+
+export interface FakeEmailSender extends InviteEmailSender {
+  sent: InviteEmail[];
+  /** Makes the next sends fail, like an SES outage. */
+  failWith?: Error;
+}
+
+export function fakeEmailSender(): FakeEmailSender {
+  const sender: FakeEmailSender = {
+    sent: [],
+    async sendInvite(email) {
+      if (sender.failWith !== undefined) throw sender.failWith;
+      sender.sent.push(email);
+    },
+  };
+  return sender;
+}
+
+/** Tokens are `token-1`, `token-2`, �; the site is `https://app.test`. */
+export function fakeInviteDeps(): InviteDeps & { emailSender: FakeEmailSender } {
+  let n = 0;
+  return {
+    emailSender: fakeEmailSender(),
+    newToken: () => `token-${String(++n)}`,
+    appUrl: 'https://app.test',
   };
 }

@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { SignUpInput } from '@withinmeans/domain';
+import type { InvitePartnerInput, SignUpInput } from '@withinmeans/domain';
 import type { AuthClient } from './auth/types';
 import { Hello, type HelloProps } from './pages/Hello';
 import { SignIn } from './pages/SignIn';
-import { SignUp } from './pages/SignUp';
+import { SignUp, type PendingInvite } from './pages/SignUp';
 
 export interface AppProps {
   auth: AuthClient;
   /** Builds the API client; injected so tests can supply a fake. */
   createClient: (auth: AuthClient) => HelloProps['client'] & {
     signUp: { mutate: (input: SignUpInput) => Promise<unknown> };
+    invitePartner: { mutate: (input: InvitePartnerInput) => Promise<PendingInvite> };
+    resendInvite: { mutate: (input: { inviteId: string }) => Promise<PendingInvite> };
   };
 }
 
@@ -30,6 +32,8 @@ export function App({ auth, createClient }: AppProps) {
       <SignUp
         auth={auth}
         signUp={(input) => client.signUp.mutate(input)}
+        invitePartner={(input) => client.invitePartner.mutate(input)}
+        resendInvite={(input) => client.resendInvite.mutate(input)}
         onSignedIn={() => setView('hello')}
         onShowSignIn={() => setView('sign-in')}
       />
