@@ -291,3 +291,32 @@ describe('P1-01 months and memberships', () => {
     ]);
   });
 });
+
+describe('P1-01 review fixes', () => {
+  it('P1-01: pending invites never expose the secret token, even to a view-only member', async () => {
+    const owner = await invites.listPending(t.db, A.ctx());
+    const viewer = await invites.listPending(t.db, A.ctx('view'));
+    for (const list of [owner, viewer]) {
+      expect(list).toHaveLength(1);
+      expect(JSON.stringify(list)).not.toContain(A.inviteToken);
+      expect(list[0]).not.toHaveProperty('token');
+    }
+  });
+
+  it('P1-01: reordering with no ids is a no-op, not a SQL error', async () => {
+    await expect(categories.reorder(t.db, A.ctx(), [])).resolves.toBeUndefined();
+  });
+
+  it('P1-01: an archived account cannot become the primary checking account', async () => {
+    await accounts.archive(t.db, A.ctx(), A.accountId);
+    await expect(accounts.setPrimaryChecking(t.db, A.ctx(), A.accountId)).rejects.toBeInstanceOf(
+      InvalidInput,
+    );
+  });
+
+  it('P1-01: a recurring bill can be detached from its account', async () => {
+    await recurringBills.update(t.db, A.ctx(), A.recurringBillId, { accountId: null });
+    const bill = (await recurringBills.list(t.db, A.ctx()))[0];
+    expect(bill?.account_id).toBeNull();
+  });
+});
