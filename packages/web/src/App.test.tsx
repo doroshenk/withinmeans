@@ -9,6 +9,8 @@ function setup(token: string | undefined, location?: { pathname: string; search:
   const auth: AuthClient = {
     signIn: vi.fn(() => Promise.resolve()),
     signOut: vi.fn(),
+    forgotPassword: vi.fn(() => Promise.resolve()),
+    resetPassword: vi.fn(() => Promise.resolve()),
     getAccessToken: vi.fn(() => Promise.resolve(token)),
   };
   const me: MeResult = { user: { name: 'Sam', email: 'sam@example.com' }, household: null };
@@ -166,6 +168,28 @@ describe('App accept invite', () => {
   it('P1-04: the accept screen can switch to sign-in', async () => {
     const { user } = setup(undefined, { pathname: '/accept', search: '' });
     await user.click(await screen.findByRole('button', { name: 'Sign in' }));
+    expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
+  });
+});
+
+describe('App routes', () => {
+  it.each(['/', '/bills', '/paychecks', '/settings/household', '/accept-not'])(
+    'P1-05: a signed-out user on %s lands on sign-in',
+    async (pathname) => {
+      setup(undefined, { pathname, search: '' });
+
+      expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: /Hello/ })).not.toBeInTheDocument();
+    },
+  );
+
+  it('P1-05: forgot password opens from sign-in and returns to it', async () => {
+    const { user } = setup(undefined);
+
+    await user.click(await screen.findByRole('button', { name: 'Forgot password?' }));
+    expect(screen.getByRole('heading', { name: 'Reset your password' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Back to sign in' }));
     expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
   });
 });

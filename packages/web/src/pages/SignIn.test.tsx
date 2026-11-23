@@ -8,6 +8,8 @@ function fakeAuth(signIn: AuthClient['signIn']): AuthClient {
   return {
     signIn,
     signOut: vi.fn(),
+    forgotPassword: vi.fn(() => Promise.resolve()),
+    resetPassword: vi.fn(() => Promise.resolve()),
     getAccessToken: vi.fn(() => Promise.resolve(undefined)),
   };
 }
@@ -28,7 +30,14 @@ describe('SignIn', () => {
     const signIn = vi.fn(() =>
       Promise.reject(cognitoError('NotAuthorizedException', 'Incorrect username or password.')),
     );
-    render(<SignIn auth={fakeAuth(signIn)} onSignedIn={vi.fn()} onShowSignUp={vi.fn()} />);
+    render(
+      <SignIn
+        auth={fakeAuth(signIn)}
+        onSignedIn={vi.fn()}
+        onShowSignUp={vi.fn()}
+        onForgotPassword={vi.fn()}
+      />,
+    );
 
     await fillAndSubmit(user);
 
@@ -40,7 +49,14 @@ describe('SignIn', () => {
     const signIn = vi.fn(() =>
       Promise.reject(cognitoError('UserNotFoundException', 'User does not exist.')),
     );
-    render(<SignIn auth={fakeAuth(signIn)} onSignedIn={vi.fn()} onShowSignUp={vi.fn()} />);
+    render(
+      <SignIn
+        auth={fakeAuth(signIn)}
+        onSignedIn={vi.fn()}
+        onShowSignUp={vi.fn()}
+        onForgotPassword={vi.fn()}
+      />,
+    );
 
     await fillAndSubmit(user);
 
@@ -52,7 +68,14 @@ describe('SignIn', () => {
   it('shows a generic message for an error it does not recognise', async () => {
     const user = userEvent.setup();
     const signIn = vi.fn(() => Promise.reject(new Error('socket hang up')));
-    render(<SignIn auth={fakeAuth(signIn)} onSignedIn={vi.fn()} onShowSignUp={vi.fn()} />);
+    render(
+      <SignIn
+        auth={fakeAuth(signIn)}
+        onSignedIn={vi.fn()}
+        onShowSignUp={vi.fn()}
+        onForgotPassword={vi.fn()}
+      />,
+    );
 
     await fillAndSubmit(user);
 
@@ -65,7 +88,14 @@ describe('SignIn', () => {
     const user = userEvent.setup();
     const signIn = vi.fn(() => Promise.resolve());
     const onSignedIn = vi.fn();
-    render(<SignIn auth={fakeAuth(signIn)} onSignedIn={onSignedIn} onShowSignUp={vi.fn()} />);
+    render(
+      <SignIn
+        auth={fakeAuth(signIn)}
+        onSignedIn={onSignedIn}
+        onShowSignUp={vi.fn()}
+        onForgotPassword={vi.fn()}
+      />,
+    );
 
     await user.click(screen.getByLabelText('Keep me signed in on this device'));
     await fillAndSubmit(user);
@@ -78,7 +108,14 @@ describe('SignIn', () => {
   it('does not keep the user signed in unless asked', async () => {
     const user = userEvent.setup();
     const signIn = vi.fn(() => Promise.resolve());
-    render(<SignIn auth={fakeAuth(signIn)} onSignedIn={vi.fn()} onShowSignUp={vi.fn()} />);
+    render(
+      <SignIn
+        auth={fakeAuth(signIn)}
+        onSignedIn={vi.fn()}
+        onShowSignUp={vi.fn()}
+        onForgotPassword={vi.fn()}
+      />,
+    );
 
     await fillAndSubmit(user);
 
@@ -93,11 +130,29 @@ describe('SignIn', () => {
         auth={fakeAuth(() => Promise.resolve())}
         onSignedIn={vi.fn()}
         onShowSignUp={onShowSignUp}
+        onForgotPassword={vi.fn()}
       />,
     );
 
     await user.click(screen.getByRole('button', { name: 'Create an account' }));
 
     expect(onShowSignUp).toHaveBeenCalledOnce();
+  });
+
+  it('links to forgot password', async () => {
+    const user = userEvent.setup();
+    const onForgotPassword = vi.fn();
+    render(
+      <SignIn
+        auth={fakeAuth(() => Promise.resolve())}
+        onSignedIn={vi.fn()}
+        onShowSignUp={vi.fn()}
+        onForgotPassword={onForgotPassword}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Forgot password?' }));
+
+    expect(onForgotPassword).toHaveBeenCalledOnce();
   });
 });

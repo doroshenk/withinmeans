@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { AcceptInviteInput, InvitePartnerInput, SignUpInput } from '@withinmeans/domain';
 import type { AuthClient } from './auth/types';
 import { Accept, type InviteDetails } from './pages/Accept';
+import { ForgotPassword } from './pages/ForgotPassword';
 import { Hello, type HelloProps } from './pages/Hello';
 import { SignIn } from './pages/SignIn';
 import { SignUp, type PendingInvite } from './pages/SignUp';
@@ -20,7 +21,7 @@ export interface AppProps {
   location?: { pathname: string; search: string };
 }
 
-type View = 'checking' | 'sign-in' | 'sign-up' | 'hello' | 'accept';
+type View = 'checking' | 'forgot' | 'sign-in' | 'sign-up' | 'hello' | 'accept';
 
 /** The secret from an invite link (`/accept?token=…`); undefined on any other page. */
 function inviteToken(location: { pathname: string; search: string }): string | undefined {
@@ -64,12 +65,14 @@ export function App({ auth, createClient, location = window.location }: AppProps
       />
     );
   }
+  if (view === 'forgot') return <ForgotPassword auth={auth} onBack={() => setView('sign-in')} />;
   if (view === 'sign-in') {
     return (
       <SignIn
         auth={auth}
         onSignedIn={() => setView('hello')}
         onShowSignUp={() => setView('sign-up')}
+        onForgotPassword={() => setView('forgot')}
       />
     );
   }

@@ -14,6 +14,12 @@ export function authErrorMessage(error: unknown): string {
     case 'TooManyRequestsException':
     case 'LimitExceededException':
       return 'Too many attempts. Wait a few minutes and try again.';
+    case 'CodeMismatchException':
+      return "That code isn't right. Check it and try again.";
+    case 'ExpiredCodeException':
+      return 'That code has expired. Go back and request a new one.';
+    case 'InvalidPasswordException':
+      return 'Choose a stronger password.';
     case 'PasswordResetRequiredException':
       return 'You need to reset your password.';
     default:
