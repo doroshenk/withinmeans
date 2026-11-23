@@ -25,7 +25,9 @@ export class AuthStack extends Stack {
     // monthly users). Console: the pool → Authentication → Sign-in / Password policy.
     const pool = new UserPool(this, 'UserPool', {
       featurePlan: FeaturePlan.ESSENTIALS,
-      selfSignUpEnabled: true,
+      // Closed to the public SignUp call: our API creates logins (P1-02), so the answer never
+      // reveals which emails exist.
+      selfSignUpEnabled: false,
       signInAliases: { email: true },
       autoVerify: { email: true },
       signInCaseSensitive: false,

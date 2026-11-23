@@ -179,6 +179,11 @@ const cases: Case[] = [
   },
 ];
 
+/**
+ * `signUp.createHousehold` is deliberately not in this table: it runs before any household
+ * exists, takes no HouseholdContext and only inserts brand-new rows (see repos/signUp.ts).
+ */
+
 /** Looked up by a secret token, not by household: covered by its own tests in core.test.ts. */
 const NOT_HOUSEHOLD_SCOPED = ['invites.findByToken'];
 
