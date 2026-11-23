@@ -19,7 +19,16 @@ const signedIn = t.middleware(({ ctx, next }) => {
 
 export const protectedProcedure = t.procedure.use(signedIn);
 
+export const publicProcedure = t.procedure;
+
 export const appRouter = t.router({
+  /** Creates a login, a household and the owner's membership. Open to anyone; see signUp.ts. */
+  signUp: publicProcedure
+    .input((v: unknown) => v)
+    .mutation((): { status: 'created' } => {
+      throw new Error('not implemented');
+    }),
+
   /** Who am I? A signed-in user may have no profile or no household yet. */
   me: protectedProcedure.query(({ ctx }) => ({
     user:

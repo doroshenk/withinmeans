@@ -2,7 +2,7 @@ import { createTestDb, type TestDb } from '@withinmeans/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createContextFactory } from './context.js';
 import { appRouter } from './router.js';
-import { captureLogger, fakeVerifier } from './testing.js';
+import { captureLogger, fakeIdentityProvider, fakeVerifier, testClock } from './testing.js';
 
 let t: TestDb;
 const H1 = '11111111-1111-4111-8111-111111111111';
@@ -39,7 +39,13 @@ afterAll(async () => {
 
 function factory() {
   const { logger } = captureLogger();
-  return createContextFactory({ db: t.db, verifier: fakeVerifier, logger });
+  return createContextFactory({
+    db: t.db,
+    verifier: fakeVerifier,
+    logger,
+    identityProvider: fakeIdentityProvider(),
+    clock: testClock,
+  });
 }
 
 async function callMe(authorization: string | undefined) {

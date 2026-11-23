@@ -2,7 +2,7 @@ import type { Database } from '@withinmeans/db';
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 import { describe, expect, it } from 'vitest';
 import { createHandler } from './handler.js';
-import { captureLogger, fakeVerifier } from './testing.js';
+import { captureLogger, fakeIdentityProvider, fakeVerifier, testClock } from './testing.js';
 
 function event(path: string, token?: string, method = 'GET'): APIGatewayProxyEventV2 {
   return {
@@ -28,7 +28,16 @@ const brokenDb = {
 
 function setup() {
   const { logger, lines } = captureLogger();
-  return { handler: createHandler({ db: brokenDb, verifier: fakeVerifier, logger }), lines };
+  return {
+    handler: createHandler({
+      db: brokenDb,
+      verifier: fakeVerifier,
+      logger,
+      identityProvider: fakeIdentityProvider(),
+      clock: testClock,
+    }),
+    lines,
+  };
 }
 
 describe('P0-09: handler', () => {
@@ -64,7 +73,13 @@ describe('P0-09: handler', () => {
       },
     } as unknown as Database;
     const { logger, lines } = captureLogger();
-    const handler = createHandler({ db, verifier: fakeVerifier, logger });
+    const handler = createHandler({
+      db,
+      verifier: fakeVerifier,
+      logger,
+      identityProvider: fakeIdentityProvider(),
+      clock: testClock,
+    });
     await handler(event('/me', 'good:sub-x'));
     const logged = lines.join('\n');
     expect(logged).toContain('invalid input syntax');

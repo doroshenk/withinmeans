@@ -11,6 +11,7 @@ The owner is learning AWS: when you touch infrastructure, explain what each reso
 ## Workflow
 
 - One ticket = one conversation = one branch = one PR. Start a ticket with `/work-ticket <ticket ID or issue number>`.
+- **No plan sign-off needed.** Write the ticket plan (files, tests, open questions) and show it, then keep going without waiting for approval. Only stop for a real spec ambiguity or a decision that is the owner's to make; otherwise pick the sensible default and list it in the PR.
 - **Test first, always.** Write the ticket's "tests to write first", run them, show them failing, commit them as `test: …`. Then implement until green (`feat: …`), then refactor (`refactor: …`). Bug fixes start with a failing test that reproduces the bug.
 - Never weaken, skip (`.skip`, `.only`) or delete a test to make CI pass. If a test seems wrong, stop and ask.
 - Before saying a ticket is done: `pnpm lint && pnpm typecheck && pnpm test && pnpm coverage` all pass, and every box in the ticket and in the plan's Definition of done (§9) is ticked.
