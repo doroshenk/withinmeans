@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AcceptInviteInput, InvitePartnerInput, SignUpInput } from '@withinmeans/domain';
 import type { AuthClient } from './auth/types';
-import type { InviteDetails } from './pages/Accept';
+import { Accept, type InviteDetails } from './pages/Accept';
 import { Hello, type HelloProps } from './pages/Hello';
 import { SignIn } from './pages/SignIn';
 import { SignUp, type PendingInvite } from './pages/SignUp';
@@ -20,18 +20,38 @@ export interface AppProps {
   location?: { pathname: string; search: string };
 }
 
-type View = 'checking' | 'sign-in' | 'sign-up' | 'hello';
+type View = 'checking' | 'sign-in' | 'sign-up' | 'hello' | 'accept';
 
-export function App({ auth, createClient }: AppProps) {
-  const [view, setView] = useState<View>('checking');
+/** The secret from an invite link (`/accept?token=…`); undefined on any other page. */
+function inviteToken(location: { pathname: string; search: string }): string | undefined {
+  if (location.pathname !== '/accept') return undefined;
+  return new URLSearchParams(location.search).get('token') ?? '';
+}
+
+export function App({ auth, createClient, location = window.location }: AppProps) {
+  const token = inviteToken(location);
+  const [view, setView] = useState<View>(token === undefined ? 'checking' : 'accept');
   const client = useMemo(() => createClient(auth), [auth, createClient]);
 
   // Already signed in (a saved session)? Go straight to the app.
   useEffect(() => {
+    if (token !== undefined) return;
     void auth.getAccessToken().then((token) => setView(token ? 'hello' : 'sign-in'));
-  }, [auth]);
+  }, [auth, token]);
 
   if (view === 'checking') return <p role="status">Loading…</p>;
+  if (view === 'accept' && token !== undefined) {
+    return (
+      <Accept
+        auth={auth}
+        token={token}
+        inviteDetails={(input) => client.inviteDetails.query(input)}
+        acceptInvite={(input) => client.acceptInvite.mutate(input)}
+        onSignedIn={() => setView('hello')}
+        onShowSignIn={() => setView('sign-in')}
+      />
+    );
+  }
   if (view === 'sign-up') {
     return (
       <SignUp

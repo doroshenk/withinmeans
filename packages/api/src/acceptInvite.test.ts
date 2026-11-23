@@ -205,7 +205,8 @@ describe('P1-04: acceptInvite', () => {
   it('P1-04: if our database already has the email, the new login is removed and the error is the same', async () => {
     await invitePat();
 
-    // Sam's own email is taken in our database, but has no Cognito login in this fake.
+    // Sam's email is taken in our database, but Cognito (this fake) has no login for it.
+    provider.logins.delete('sam@example.test');
     await expect(
       (await caller()).acceptInvite({ ...accept, email: 'sam@example.test' }),
     ).rejects.toMatchObject({
