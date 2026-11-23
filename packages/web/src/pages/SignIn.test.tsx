@@ -7,7 +7,6 @@ import { SignIn } from './SignIn';
 function fakeAuth(signIn: AuthClient['signIn']): AuthClient {
   return {
     signIn,
-    signUp: vi.fn(),
     signOut: vi.fn(),
     getAccessToken: vi.fn(() => Promise.resolve(undefined)),
   };

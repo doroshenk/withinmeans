@@ -49,6 +49,7 @@ export function buildApp(
       clusterArn: data.cluster.attrResourceArn,
       clusterEndpoint: data.cluster.attrEndpoint,
       userPoolId: auth.userPool.userPoolId,
+      userPoolArn: auth.userPool.userPoolArn,
       userPoolClientId: auth.client.userPoolClientId,
     });
     new WebStack(app, `WebStack-${s}`, {

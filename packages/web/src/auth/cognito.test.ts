@@ -93,12 +93,6 @@ describe('createCognitoAuth', () => {
     });
   });
 
-  it('does not call Cognito SignUp from the browser (no email enumeration)', async () => {
-    await expect(
-      auth().signUp({ name: 'Sam', email: 'a@b.c', password: 'password1' }),
-    ).rejects.toThrow('not available yet');
-  });
-
   it('signs out of both storages', () => {
     fakeCurrentUser(localStorage);
     fakeCurrentUser(sessionStorage);

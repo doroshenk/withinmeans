@@ -1,5 +1,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
+import { signUpInput } from '@withinmeans/domain';
 import type { Context } from './context.js';
+import { signUp } from './signUp.js';
 
 const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
 
@@ -23,11 +25,7 @@ export const publicProcedure = t.procedure;
 
 export const appRouter = t.router({
   /** Creates a login, a household and the owner's membership. Open to anyone; see signUp.ts. */
-  signUp: publicProcedure
-    .input((v: unknown) => v)
-    .mutation((): { status: 'created' } => {
-      throw new Error('not implemented');
-    }),
+  signUp: publicProcedure.input(signUpInput).mutation(({ ctx, input }) => signUp(ctx, input)),
 
   /** Who am I? A signed-in user may have no profile or no household yet. */
   me: protectedProcedure.query(({ ctx }) => ({

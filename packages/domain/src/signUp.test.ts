@@ -21,7 +21,7 @@ describe('signUpInput (spec §3 step 2)', () => {
     );
     const ok = signUpInput.safeParse({ ...solo, mode: 'partner', householdName: ' The Examples ' });
     expect(ok.success).toBe(true);
-    expect(ok.data?.householdName).toBe('The Examples');
+    expect(ok.data).toMatchObject({ householdName: 'The Examples' });
   });
 
   it('P1-02: a password under 8 characters is rejected, 8 is accepted', () => {
@@ -49,5 +49,19 @@ describe('signUpInput (spec §3 step 2)', () => {
 
   it('P1-02: an unknown mode is rejected', () => {
     expect(signUpInput.safeParse({ ...solo, mode: 'trio' }).success).toBe(false);
+  });
+
+  it('P1-02: each rejection says what to fix (shown on the sign-up form)', () => {
+    const message = (over: object) => {
+      const r = signUpInput.safeParse({ ...solo, ...over });
+      return r.success ? undefined : r.error.issues.map((i) => i.message);
+    };
+    expect(message({ name: ' ' })).toEqual(['Enter your first name.']);
+    expect(message({ email: 'nope' })).toEqual(['Enter a valid email address.']);
+    expect(message({ password: 'short' })).toEqual(['Your password needs at least 8 characters.']);
+    expect(message({ timeZone: 'Mars/Olympus' })).toEqual(['Unknown time zone.']);
+    expect(message({ mode: 'partner', householdName: '' })).toEqual([
+      'Give your household a name.',
+    ]);
   });
 });

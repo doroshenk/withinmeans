@@ -5,7 +5,6 @@ import { createApiClient } from './trpc';
 function authWithToken(token: string | undefined): AuthClient {
   return {
     signIn: vi.fn(),
-    signUp: vi.fn(),
     signOut: vi.fn(),
     getAccessToken: vi.fn(() => Promise.resolve(token)),
   };

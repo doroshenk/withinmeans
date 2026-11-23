@@ -8,12 +8,14 @@ import type { MeResult } from './pages/Hello';
 function setup(token: string | undefined) {
   const auth: AuthClient = {
     signIn: vi.fn(() => Promise.resolve()),
-    signUp: vi.fn(() => Promise.resolve()),
     signOut: vi.fn(),
     getAccessToken: vi.fn(() => Promise.resolve(token)),
   };
   const me: MeResult = { user: { name: 'Sam', email: 'sam@example.com' }, household: null };
-  const createClient = vi.fn(() => ({ me: { query: () => Promise.resolve(me) } }));
+  const createClient = vi.fn(() => ({
+    me: { query: () => Promise.resolve(me) },
+    signUp: { mutate: () => Promise.resolve({ status: 'created' }) },
+  }));
   render(<App auth={auth} createClient={createClient} />);
   return { auth, user: userEvent.setup() };
 }
@@ -39,7 +41,7 @@ describe('App', () => {
     const { user } = setup(undefined);
 
     await user.click(await screen.findByRole('button', { name: 'Create an account' }));
-    expect(screen.getByRole('heading', { name: 'Create your login' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: "Who's managing the money?" })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
@@ -52,5 +54,22 @@ describe('App', () => {
 
     expect(auth.signOut).toHaveBeenCalledOnce();
     expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
+  });
+});
+
+describe('App sign-up', () => {
+  it('P1-02: after signing up, Start setting up signs in and lands in the app', async () => {
+    const { auth, user } = setup(undefined);
+    await user.click(await screen.findByRole('button', { name: 'Create an account' }));
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await user.type(screen.getByLabelText('First name'), 'Sam');
+    await user.type(screen.getByLabelText('Email'), 'sam@example.com');
+    await user.type(screen.getByLabelText('Password'), 'abcd1234');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    await user.click(await screen.findByRole('button', { name: 'Start setting up' }));
+
+    expect(auth.signIn).toHaveBeenCalledWith('sam@example.com', 'abcd1234', false);
+    expect(await screen.findByRole('heading', { name: 'Hello Sam' })).toBeInTheDocument();
   });
 });

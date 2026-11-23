@@ -15,6 +15,7 @@ export interface ApiStackProps extends StackProps {
   readonly clusterArn: string;
   readonly clusterEndpoint: string;
   readonly userPoolId: string;
+  readonly userPoolArn: string;
   readonly userPoolClientId: string;
 }
 
@@ -75,6 +76,20 @@ export class ApiStack extends Stack {
     // nothing else beyond writing its own logs. Console: IAM → Roles → the ApiFunction role.
     fn.addToRolePolicy(
       new PolicyStatement({ actions: ['dsql:DbConnectAdmin'], resources: [props.clusterArn] }),
+    );
+
+    // Sign-up runs in the function (so it never reveals which emails exist), which therefore
+    // needs to create, set the password of and delete users in this stage's pool, and nothing
+    // else. Console: IAM -> Roles -> the ApiFunction role -> Permissions.
+    fn.addToRolePolicy(
+      new PolicyStatement({
+        actions: [
+          'cognito-idp:AdminCreateUser',
+          'cognito-idp:AdminSetUserPassword',
+          'cognito-idp:AdminDeleteUser',
+        ],
+        resources: [props.userPoolArn],
+      }),
     );
 
     // The HTTP API sends every route to the function. It has no authorizer on purpose: the

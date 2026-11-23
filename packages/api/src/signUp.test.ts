@@ -73,7 +73,9 @@ describe('P1-02: signUp', () => {
   });
 
   it('P1-02: partner sign-up requires a household name', async () => {
-    await expect((await caller()).signUp({ ...solo, mode: 'partner' })).rejects.toMatchObject({
+    await expect(
+      (await caller()).signUp({ ...solo, mode: 'partner' } as never),
+    ).rejects.toMatchObject({
       code: 'BAD_REQUEST',
     });
     expect(await t.db.selectFrom('households').selectAll().execute()).toHaveLength(0);

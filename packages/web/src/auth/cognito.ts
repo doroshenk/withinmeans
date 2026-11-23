@@ -44,12 +44,6 @@ export function createCognitoAuth(config: CognitoConfig): AuthClient {
       });
     },
 
-    // Sign-up must not call Cognito SignUp from the browser: it would reveal which emails have
-    // accounts. P1-05 routes it through our API, which always answers the same way.
-    signUp() {
-      return Promise.reject(new Error('Sign-up is not available yet.'));
-    },
-
     signOut() {
       persistent.getCurrentUser()?.signOut();
       sessionOnly.getCurrentUser()?.signOut();
