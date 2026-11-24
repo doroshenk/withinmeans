@@ -99,6 +99,13 @@ export interface RecurringBillsTable {
   created_at: Generated<Date>;
 }
 
+export interface SetupProgressTable {
+  household_id: string;
+  step: number;
+  status: 'done' | 'skipped';
+  updated_at: Generated<Date>;
+}
+
 export interface DB {
   households: HouseholdsTable;
   users: UsersTable;
@@ -109,6 +116,7 @@ export interface DB {
   accounts: AccountsTable;
   balance_snapshots: BalanceSnapshotsTable;
   recurring_bills: RecurringBillsTable;
+  setup_progress: SetupProgressTable;
 }
 
 export type Database = Kysely<DB>;

@@ -5,23 +5,26 @@ import { Accept, type InviteDetails } from './pages/Accept';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Hello, type HelloProps } from './pages/Hello';
 import { SignIn } from './pages/SignIn';
+import { SetupPage } from './pages/SetupPage';
+import type { SetupClient } from './pages/SetupWizard';
 import { SignUp, type PendingInvite } from './pages/SignUp';
 
 export interface AppProps {
   auth: AuthClient;
   /** Builds the API client; injected so tests can supply a fake. */
-  createClient: (auth: AuthClient) => HelloProps['client'] & {
-    signUp: { mutate: (input: SignUpInput) => Promise<unknown> };
-    invitePartner: { mutate: (input: InvitePartnerInput) => Promise<PendingInvite> };
-    resendInvite: { mutate: (input: { inviteId: string }) => Promise<PendingInvite> };
-    inviteDetails: { query: (input: { token: string }) => Promise<InviteDetails> };
-    acceptInvite: { mutate: (input: AcceptInviteInput) => Promise<unknown> };
-  };
+  createClient: (auth: AuthClient) => HelloProps['client'] &
+    SetupClient & {
+      signUp: { mutate: (input: SignUpInput) => Promise<unknown> };
+      invitePartner: { mutate: (input: InvitePartnerInput) => Promise<PendingInvite> };
+      resendInvite: { mutate: (input: { inviteId: string }) => Promise<PendingInvite> };
+      inviteDetails: { query: (input: { token: string }) => Promise<InviteDetails> };
+      acceptInvite: { mutate: (input: AcceptInviteInput) => Promise<unknown> };
+    };
   /** The page address; injected so tests can open an invite link. Defaults to the browser's. */
   location?: { pathname: string; search: string };
 }
 
-type View = 'checking' | 'forgot' | 'sign-in' | 'sign-up' | 'hello' | 'accept';
+type View = 'checking' | 'forgot' | 'sign-in' | 'sign-up' | 'hello' | 'accept' | 'setup';
 
 /** The secret from an invite link (`/accept?token=…`); undefined on any other page. */
 function inviteToken(location: { pathname: string; search: string }): string | undefined {
@@ -65,6 +68,7 @@ export function App({ auth, createClient, location = window.location }: AppProps
       />
     );
   }
+  if (view === 'setup') return <SetupPage client={client} onExit={() => setView('hello')} />;
   if (view === 'forgot') return <ForgotPassword auth={auth} onBack={() => setView('sign-in')} />;
   if (view === 'sign-in') {
     return (
@@ -79,6 +83,7 @@ export function App({ auth, createClient, location = window.location }: AppProps
   return (
     <Hello
       client={client}
+      onStartSetup={() => setView('setup')}
       onSignOut={() => {
         auth.signOut();
         setView('sign-in');

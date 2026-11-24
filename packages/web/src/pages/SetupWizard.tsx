@@ -1,0 +1,233 @@
+import {
+  SETUP_STEPS,
+  markStep,
+  resumeStep,
+  reviewRows,
+  stepStatus,
+  type SetupProgress,
+} from '@withinmeans/domain';
+import { useEffect, useState } from 'react';
+import { GENERIC_ERROR } from '../auth/errors';
+import { useCan } from '../permissions';
+
+export interface SetupClient {
+  setupProgress: {
+    query: () => Promise<{ step: number; status: 'done' | 'skipped' }[]>;
+  };
+  saveSetupStep: {
+    mutate: (input: { step: number; status: 'done' | 'skipped' }) => Promise<unknown>;
+  };
+}
+
+export interface SetupWizardProps {
+  client: SetupClient;
+  householdName: string;
+  onExit: () => void;
+}
+
+type Load =
+  | { kind: 'loading' }
+  | { kind: 'error' }
+  | { kind: 'ready'; progress: SetupProgress; current: number };
+
+const LAST = SETUP_STEPS.length;
+
+/** Steps whose real screens have landed. Each setup ticket (P1-09 to P1-13) adds its step here. */
+const BUILT_STEPS: ReadonlySet<number> = new Set();
+
+const STATUS_LABEL = { todo: '', done: 'Done', skipped: 'Skipped' } as const;
+
+/** Spec §3: the first-time setup wizard. Saves on continue, resumes, jumps, skips optional steps. */
+export function SetupWizard({ client, householdName, onExit }: SetupWizardProps) {
+  const can = useCan();
+  const [load, setLoad] = useState<Load>({ kind: 'loading' });
+  const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    client.setupProgress.query().then(
+      (rows) => {
+        if (cancelled) return;
+        const progress: SetupProgress = Object.fromEntries(rows.map((r) => [r.step, r.status]));
+        setLoad({ kind: 'ready', progress, current: resumeStep(progress) });
+      },
+      () => !cancelled && setLoad({ kind: 'error' }),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
+
+  if (load.kind === 'loading') return <p role="status">Loading…</p>;
+  if (load.kind === 'error') return <p role="alert">{GENERIC_ERROR}</p>;
+
+  const { progress, current } = load;
+  const step = SETUP_STEPS[current - 1];
+  if (step === undefined) return null;
+  const doneCount = SETUP_STEPS.filter((s) => stepStatus(progress, s.id) === 'done').length;
+
+  const goTo = (id: number) => {
+    setSaveFailed(false);
+    setLoad({ kind: 'ready', progress, current: id });
+  };
+
+  const save = async (status: 'done' | 'skipped') => {
+    setSaving(true);
+    setSaveFailed(false);
+    try {
+      await client.saveSetupStep.mutate({ step: step.id, status });
+      if (step.id === LAST) {
+        onExit();
+        return;
+      }
+      setLoad({
+        kind: 'ready',
+        progress: markStep(progress, step.id, status),
+        current: Math.min(step.id + 1, LAST),
+      });
+    } catch {
+      setSaveFailed(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="wizard">
+      <aside className="wizard-side">
+        <p className="brand">{`Set up ${householdName}`}</p>
+        <p className="wizard-count">{`${doneCount} of ${LAST} steps done`}</p>
+        <div
+          className="wizard-bar"
+          role="progressbar"
+          aria-label="Setup progress"
+          aria-valuemin={0}
+          aria-valuemax={LAST}
+          aria-valuenow={doneCount}
+        >
+          <span style={{ width: `${(doneCount / LAST) * 100}%` }} />
+        </div>
+        <nav aria-label="Setup steps">
+          <ol className="wizard-steps">
+            {SETUP_STEPS.map((s) => {
+              const status = stepStatus(progress, s.id);
+              return (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    className={`wizard-step wizard-step-${status}`}
+                    aria-current={s.id === current ? 'step' : undefined}
+                    onClick={() => goTo(s.id)}
+                  >
+                    <span className="wizard-badge" aria-hidden="true">
+                      {status === 'done' ? '✓' : s.id}
+                    </span>
+                    <span>
+                      <strong>{s.title}</strong>
+                      <small>{status === 'todo' ? s.hint : STATUS_LABEL[status]}</small>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+        <p className="wizard-note">
+          <strong>Saved as you go.</strong> Leave any time and pick up where you stopped. Your
+          partner can help finish it once they join.
+        </p>
+        <button type="button" className="button button-quiet" onClick={onExit}>
+          Leave setup
+        </button>
+      </aside>
+
+      <main className="wizard-main">
+        <p className="wizard-kicker">{`Step ${step.id} of ${LAST}`}</p>
+        <h1>{step.title}</h1>
+        {!step.required && <p className="wizard-optional">Optional</p>}
+        <p className="wizard-lead">{step.hint}</p>
+
+        {step.id === LAST ? (
+          <ReviewList progress={progress} onJump={goTo} />
+        ) : (
+          !BUILT_STEPS.has(step.id) && <p className="wizard-soon">Coming soon</p>
+        )}
+
+        {saveFailed && <p role="alert">{GENERIC_ERROR}</p>}
+
+        <div className="wizard-actions">
+          {step.id > 1 && (
+            <button type="button" className="button button-quiet" onClick={() => goTo(step.id - 1)}>
+              ← Back
+            </button>
+          )}
+          <span className="wizard-actions-end">
+            {can.write && !step.required && (
+              <button
+                type="button"
+                className="button button-quiet"
+                disabled={saving}
+                onClick={() => void save('skipped')}
+              >
+                Skip for now
+              </button>
+            )}
+            {can.write && step.id < LAST && (
+              <button
+                type="button"
+                className="button"
+                disabled={saving}
+                onClick={() => void save('done')}
+              >
+                Save & continue
+              </button>
+            )}
+            {can.write && step.id === LAST && (
+              <button
+                type="button"
+                className="button"
+                disabled={saving}
+                onClick={() => void save('done')}
+              >
+                Finish setup
+              </button>
+            )}
+            {!can.write && step.id < LAST && (
+              <button type="button" className="button" onClick={() => goTo(step.id + 1)}>
+                Next →
+              </button>
+            )}
+          </span>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+const REVIEW_STATUS = { todo: 'Not started', done: 'Done', skipped: 'Skipped' } as const;
+
+/** Spec §3 step 9: each step with its state and Edit, Add now or Finish this. */
+function ReviewList({
+  progress,
+  onJump,
+}: {
+  progress: SetupProgress;
+  onJump: (id: number) => void;
+}) {
+  return (
+    <ul className="wizard-review" aria-label="Review">
+      {reviewRows(progress).map((row) => (
+        <li key={row.id}>
+          <span className="wizard-review-title">{row.title}</span>
+          <span className={`wizard-review-status wizard-review-${row.status}`}>
+            {REVIEW_STATUS[row.status]}
+          </span>
+          <button type="button" className="button button-quiet" onClick={() => onJump(row.id)}>
+            {row.action}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}

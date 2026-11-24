@@ -11,6 +11,7 @@ import { invites } from './invites.js';
 import { memberships } from './memberships.js';
 import { months } from './months.js';
 import { recurringBills } from './recurringBills.js';
+import { setupProgress } from './setupProgress.js';
 
 /**
  * The isolation suite (P1-01). Every function of every new repository is listed here once:
@@ -187,6 +188,18 @@ const cases: Case[] = [
     namesId: true,
     run: (db, ctx, t) => recurringBills.end(db, ctx, t.recurringBillId, '2027-01'),
   },
+
+  {
+    name: 'setupProgress.list',
+    write: false,
+    marker: (t) => `"step":${t.setupStep}`,
+    run: (db, ctx) => setupProgress.list(db, ctx),
+  },
+  {
+    name: 'setupProgress.save',
+    write: true,
+    run: (db, ctx) => setupProgress.save(db, ctx, 4, 'done'),
+  },
 ];
 
 /**
@@ -274,6 +287,7 @@ describe('P1-01 isolation: coverage of the table', () => {
       accounts,
       balanceSnapshots,
       recurringBills,
+      setupProgress,
     };
     const everyFunction = Object.entries(repos).flatMap(([repo, fns]) =>
       Object.keys(fns).map((fn) => `${repo}.${fn}`),
