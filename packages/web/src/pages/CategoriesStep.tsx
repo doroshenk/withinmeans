@@ -153,6 +153,7 @@ export function CategoriesStep({ client }: { client: CategoriesClient }) {
               readOnly={!can.write}
               onChange={(e) => setDrafts({ ...drafts, [row.id]: e.target.value })}
               onBlur={() => void rename(row)}
+              onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
             />
             <span className="category-count">{countText(row.billCount)}</span>
             {can.write && (
@@ -174,6 +175,10 @@ export function CategoriesStep({ client }: { client: CategoriesClient }) {
           </li>
         ))}
       </ul>
+
+      {rows.length === 0 && !can.write && (
+        <p>No categories yet. The owner or a full member will set them up.</p>
+      )}
 
       {notice !== null && <p role="status">{notice}</p>}
       {problem !== null && <p role="alert">{problem}</p>}
