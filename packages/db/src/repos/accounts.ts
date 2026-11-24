@@ -1,7 +1,7 @@
 import type { Selectable } from 'kysely';
 import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '../context.js';
 import type { AccountsTable, AccountType, Database } from '../db.js';
-import { cleanName, inTransaction, mustHaveChanged } from './shared.js';
+import { assertCents, assertDate, cleanName, inTransaction, mustHaveChanged } from './shared.js';
 
 export type Account = Selectable<AccountsTable>;
 export type AccountWithBalance = Account & { balance_cents: number | null };
@@ -44,20 +44,74 @@ export const accounts = {
   },
 
   /** Active accounts with their latest balance (null when there is no snapshot yet). */
-  async listWithBalance(_db: Database, _ctx: HouseholdContext): Promise<AccountWithBalance[]> {
-    throw new Error('not implemented');
+  async listWithBalance(db: Database, ctx: HouseholdContext): Promise<AccountWithBalance[]> {
+    const rows = await accounts.list(db, ctx);
+    if (rows.length === 0) return [];
+    const snapshots = await db
+      .selectFrom('balance_snapshots')
+      .select(['account_id', 'balance_cents'])
+      .where('household_id', '=', ctx.householdId)
+      .where(
+        'account_id',
+        'in',
+        rows.map((r) => r.id),
+      )
+      .orderBy('date', 'desc')
+      .orderBy('created_at', 'desc')
+      .execute();
+    return rows.map((account) => {
+      const latest = snapshots.find((s) => s.account_id === account.id);
+      return {
+        ...account,
+        balance_cents: latest === undefined ? null : Number(latest.balance_cents),
+      };
+    });
   },
 
   /**
-   * Spec section 3 step 2: the account and its first BalanceSnapshot in one transaction. The
-   * household's first checking account becomes the primary checking account.
+   * Spec �3 step 2: the account and its first BalanceSnapshot in one transaction. The household's
+   * first checking account becomes the primary checking account.
    */
   async createWithBalance(
-    _db: Database,
-    _ctx: HouseholdContext,
-    _input: NewAccountWithBalance,
+    db: Database,
+    ctx: HouseholdContext,
+    input: NewAccountWithBalance,
   ): Promise<Account> {
-    throw new Error('not implemented');
+    assertCanWrite(ctx);
+    const name = cleanName(input.name);
+    assertDate(input.date);
+    assertCents(input.balanceCents);
+    return inTransaction(db, async (trx) => {
+      const primary = await trx
+        .selectFrom('accounts')
+        .select('id')
+        .where('household_id', '=', ctx.householdId)
+        .where('is_primary_checking', '=', true)
+        .where('archived_at', 'is', null)
+        .executeTakeFirst();
+      const account = await trx
+        .insertInto('accounts')
+        .values({
+          household_id: ctx.householdId,
+          name,
+          type: input.type,
+          is_primary_checking: input.type === 'checking' && primary === undefined,
+          archived_at: null,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      await trx
+        .insertInto('balance_snapshots')
+        .values({
+          household_id: ctx.householdId,
+          account_id: account.id,
+          date: input.date,
+          balance_cents: input.balanceCents,
+          note: '',
+        })
+        .execute();
+      return account;
+    });
   },
 
   async rename(db: Database, ctx: HouseholdContext, id: string, name: string): Promise<void> {
@@ -103,14 +157,42 @@ export const accounts = {
     });
   },
 
+  /** Archives the account. If it was the primary checking account, the next checking one is. */
   async archive(db: Database, ctx: HouseholdContext, id: string): Promise<void> {
     assertCanWrite(ctx);
-    const result = await db
-      .updateTable('accounts')
-      .set({ archived_at: new Date() })
-      .where('id', '=', id)
-      .where('household_id', '=', ctx.householdId)
-      .executeTakeFirst();
-    mustHaveChanged(result.numUpdatedRows, 'Account');
+    await inTransaction(db, async (trx) => {
+      const result = await trx
+        .updateTable('accounts')
+        .set({ archived_at: new Date(), is_primary_checking: false })
+        .where('id', '=', id)
+        .where('household_id', '=', ctx.householdId)
+        .returning('id')
+        .executeTakeFirst();
+      if (result === undefined) throw new NotFound('Account not found');
+      const stillPrimary = await trx
+        .selectFrom('accounts')
+        .select('id')
+        .where('household_id', '=', ctx.householdId)
+        .where('is_primary_checking', '=', true)
+        .where('archived_at', 'is', null)
+        .executeTakeFirst();
+      if (stillPrimary !== undefined) return;
+      const next = await trx
+        .selectFrom('accounts')
+        .select('id')
+        .where('household_id', '=', ctx.householdId)
+        .where('type', '=', 'checking')
+        .where('archived_at', 'is', null)
+        .orderBy('created_at')
+        .orderBy('id')
+        .executeTakeFirst();
+      if (next === undefined) return;
+      await trx
+        .updateTable('accounts')
+        .set({ is_primary_checking: true })
+        .where('id', '=', next.id)
+        .where('household_id', '=', ctx.householdId)
+        .execute();
+    });
   },
 };

@@ -30,6 +30,7 @@ import { firstMonthOptions, startFirstMonth } from './firstMonth.js';
 import { invitePartner, resendInvite } from './invitePartner.js';
 import {
   addSetupAccount,
+  requireAccounts,
   listSetupAccounts,
   removeSetupAccount,
   saveCushion,
@@ -114,6 +115,7 @@ export const appRouter = t.router({
 
   /** Spec §3 wizard: saved when the user continues or skips. */
   saveSetupStep: writeProcedure.input(saveSetupStepInput).mutation(async ({ ctx, input }) => {
+    if (input.step === 2 && input.status === 'done') await requireAccounts(ctx);
     const row = await setupProgress.save(ctx.db, ctx.household, input.step, input.status);
     return { step: row.step, status: row.status };
   }),

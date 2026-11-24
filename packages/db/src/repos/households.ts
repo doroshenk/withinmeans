@@ -1,8 +1,8 @@
 import type { Selectable } from 'kysely';
-import { assertCanWrite, Conflict, type HouseholdContext } from '../context.js';
+import { assertCanWrite, Conflict, InvalidInput, type HouseholdContext } from '../context.js';
 import type { Database, HouseholdsTable } from '../db.js';
 import { openMonthIn } from './openMonth.js';
-import { assertYm, inTransaction } from './shared.js';
+import { assertCents, assertYm, inTransaction } from './shared.js';
 
 export const households = {
   async getMine(
@@ -52,8 +52,15 @@ export const households = {
   },
 
   /** Spec section 3 step 2: the checking cushion, in whole cents, never negative. */
-  async setCushion(_db: Database, _ctx: HouseholdContext, _cushionCents: number): Promise<void> {
-    throw new Error('not implemented');
+  async setCushion(db: Database, ctx: HouseholdContext, cushionCents: number): Promise<void> {
+    assertCanWrite(ctx);
+    assertCents(cushionCents);
+    if (cushionCents < 0) throw new InvalidInput('the cushion cannot be negative');
+    await db
+      .updateTable('households')
+      .set({ cushion_cents: cushionCents })
+      .where('id', '=', ctx.householdId)
+      .execute();
   },
 
   async remove(db: Database, ctx: HouseholdContext): Promise<void> {

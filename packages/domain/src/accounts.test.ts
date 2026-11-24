@@ -3,6 +3,7 @@ import {
   accountDraftError,
   addAccountInput,
   becomesPrimaryChecking,
+  dollarText,
   parseDollars,
   setCushionInput,
   setupAccountsError,
@@ -24,6 +25,25 @@ describe('P1-10 parseDollars', () => {
 
   it.each(['', '   ', 'abc', '12.345', '1.2.3', '$', '--5', '1e3'])('rejects %j', (text) => {
     expect(parseDollars(text)).toBeUndefined();
+  });
+});
+
+describe('P1-10 dollarText', () => {
+  it.each([
+    [100_000, '1000.00'],
+    [123_456, '1234.56'],
+    [5, '0.05'],
+    [0, '0.00'],
+    [-1_480, '-14.80'],
+    [-5, '-0.05'],
+  ])('shows %d cents as %s', (cents, text) => {
+    expect(dollarText(cents)).toBe(text);
+  });
+
+  it('round-trips through parseDollars', () => {
+    for (const cents of [0, 7, 100, 123_456, -1_480]) {
+      expect(parseDollars(dollarText(cents))).toBe(cents);
+    }
   });
 });
 

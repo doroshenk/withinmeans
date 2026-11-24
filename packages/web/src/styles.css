@@ -777,3 +777,85 @@ button.category-swatch {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Setup step 2: bank accounts and the cushion. */
+.account-list {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.account-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+
+.account-main {
+  display: grid;
+}
+
+.account-main small {
+  color: var(--color-ink-2);
+}
+
+.account-balance {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.account-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: var(--color-sidebar);
+}
+
+.account-add label,
+.account-cushion label {
+  display: grid;
+  gap: 4px;
+  font-weight: 700;
+}
+
+.account-add input,
+.account-add select,
+.account-cushion input {
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border-input);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 18px;
+}
+
+.account-cushion {
+  margin-top: 24px;
+  max-width: 320px;
+}
+
+.account-help {
+  color: var(--color-ink-2);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+@media (max-width: 720px) {
+  .account-add {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
