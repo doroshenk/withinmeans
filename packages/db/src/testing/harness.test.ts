@@ -4,7 +4,8 @@ import { createTestDb, type TestDb } from './harness.js';
 
 const made: TestDb[] = [];
 afterAll(async () => {
-  await Promise.all(made.map((t) => t.destroy()));
+  // One at a time: on DSQL, concurrent DROPs conflict on the catalog (OC001) until retries run out.
+  for (const t of made) await t.destroy();
 });
 
 describe('test harness', () => {

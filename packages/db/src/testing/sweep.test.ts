@@ -6,7 +6,8 @@ import { sweepTestSchemas } from './sweep.js';
 
 const made: TestDb[] = [];
 afterAll(async () => {
-  await Promise.all(made.map((t) => t.destroy()));
+  // One at a time: concurrent DROPs on DSQL conflict on the catalog (OC001).
+  for (const t of made) await t.destroy();
 });
 
 const schemas = async (t: TestDb): Promise<string[]> =>
