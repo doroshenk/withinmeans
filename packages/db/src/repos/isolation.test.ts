@@ -106,6 +106,33 @@ const cases: Case[] = [
     run: (db, ctx, t) => categories.reorder(db, ctx, [t.categoryId]),
   },
   {
+    name: 'categories.listWithUsage',
+    write: false,
+    run: (db, ctx) => categories.listWithUsage(db, ctx),
+  },
+  {
+    name: 'categories.seedDefaults',
+    write: true,
+    run: async (db, ctx) => {
+      // It only seeds an empty household, so empty this one first (not for the view role: that
+      // call must change nothing, so the repo's own role check has to be what stops it).
+      if (ctx.role !== 'view') {
+        await db.deleteFrom('categories').where('household_id', '=', ctx.householdId).execute();
+      }
+      return categories.seedDefaults(db, ctx, ['Housing']);
+    },
+  },
+  {
+    name: 'categories.remove',
+    write: true,
+    namesId: true,
+    run: async (db, ctx, t) => {
+      // Needs a second category to move bills to, since the last one cannot be deleted.
+      await categories.create(db, ctx, { name: 'Spare', colorIndex: 4 });
+      return categories.remove(db, ctx, t.categoryId);
+    },
+  },
+  {
     name: 'categories.archive',
     write: true,
     namesId: true,

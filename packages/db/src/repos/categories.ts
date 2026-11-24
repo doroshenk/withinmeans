@@ -4,6 +4,12 @@ import type { CategoriesTable, Database } from '../db.js';
 import { cleanName, inTransaction, mustHaveChanged, orConflict } from './shared.js';
 
 export type Category = Selectable<CategoriesTable>;
+export type CategoryWithUsage = Category & { bill_count: number };
+export interface RemovedCategory {
+  movedCount: number;
+  movedToId: string;
+  movedToName: string;
+}
 
 /** The unique key: names match ignoring case (the name is already trimmed). */
 const keyOf = (name: string): string => name.toLowerCase();
@@ -115,5 +121,24 @@ export const categories = {
       .where('household_id', '=', ctx.householdId)
       .executeTakeFirst();
     mustHaveChanged(result.numUpdatedRows, 'Category');
+  },
+
+  /** Only when the household has no categories at all: creates `defaults` in order. */
+  async seedDefaults(
+    _db: Database,
+    _ctx: HouseholdContext,
+    _defaults: readonly string[],
+  ): Promise<void> {
+    throw new Error('not implemented');
+  },
+
+  /** Active categories with how many recurring bills use each. */
+  async listWithUsage(_db: Database, _ctx: HouseholdContext): Promise<CategoryWithUsage[]> {
+    throw new Error('not implemented');
+  },
+
+  /** Deletes a category; its recurring bills move to the first remaining one. Never the last. */
+  async remove(_db: Database, _ctx: HouseholdContext, _id: string): Promise<RemovedCategory> {
+    throw new Error('not implemented');
   },
 };

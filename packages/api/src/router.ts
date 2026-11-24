@@ -1,7 +1,12 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import {
   acceptInviteInput,
+  createCategoryInput,
+  deleteCategoryInput,
   invitePartnerInput,
+  recolorCategoryInput,
+  seedCategoriesInput,
+  renameCategoryInput,
   saveSetupStepInput,
   signUpInput,
 } from '@withinmeans/domain';
@@ -92,6 +97,33 @@ export const appRouter = t.router({
   saveSetupStep: writeProcedure.input(saveSetupStepInput).mutation(async ({ ctx, input }) => {
     const row = await setupProgress.save(ctx.db, ctx.household, input.step, input.status);
     return { step: row.step, status: row.status };
+  }),
+
+  /** Spec §3 step 4: categories with how many recurring bills use each. */
+  categories: memberProcedure.query(() => {
+    throw new Error('not implemented');
+  }),
+
+  /** Spec §3 step 4: the 7 starting categories, only when the household has none yet. */
+  seedDefaultCategories: writeProcedure.input(seedCategoriesInput).mutation(() => {
+    throw new Error('not implemented');
+  }),
+
+  createCategory: writeProcedure.input(createCategoryInput).mutation(() => {
+    throw new Error('not implemented');
+  }),
+
+  renameCategory: writeProcedure.input(renameCategoryInput).mutation(() => {
+    throw new Error('not implemented');
+  }),
+
+  recolorCategory: writeProcedure.input(recolorCategoryInput).mutation(() => {
+    throw new Error('not implemented');
+  }),
+
+  /** Spec §3 step 4 / T18: bills move to the first remaining category. */
+  deleteCategory: writeProcedure.input(deleteCategoryInput).mutation(() => {
+    throw new Error('not implemented');
   }),
 
   /** Who am I? A signed-in user may have no profile or no household yet. */

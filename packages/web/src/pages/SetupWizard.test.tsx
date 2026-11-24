@@ -21,6 +21,16 @@ function fakeClient(initial: Row[] = []) {
         ),
     },
     saveSetupStep: { mutate: save },
+    categories: {
+      query: () => Promise.resolve([{ id: 'c1', name: 'Housing', colorIndex: 0, billCount: 0 }]),
+    },
+    seedDefaultCategories: { mutate: () => Promise.resolve({}) },
+    createCategory: { mutate: () => Promise.resolve({ id: 'c2' }) },
+    renameCategory: { mutate: () => Promise.resolve({}) },
+    recolorCategory: { mutate: () => Promise.resolve({}) },
+    deleteCategory: {
+      mutate: () => Promise.resolve({ movedCount: 0, movedToName: '', message: null }),
+    },
   };
   return { client, save };
 }
@@ -133,6 +143,16 @@ describe('P1-08 setup wizard', () => {
     await user.click(stepButton(/^Credit cards/));
 
     expect(screen.getByText('Coming soon')).toBeInTheDocument();
+  });
+
+  it('P1-11: step 4 shows the bill categories instead of "Coming soon"', async () => {
+    const { user } = open(fakeClient().client);
+    await screen.findByText('Step 1 of 9');
+
+    await user.click(stepButton(/^Bill categories/));
+
+    expect(await screen.findByRole('textbox', { name: 'Name of Housing' })).toBeInTheDocument();
+    expect(screen.queryByText('Coming soon')).not.toBeInTheDocument();
   });
 
   it('only optional steps can be skipped', async () => {
