@@ -22,7 +22,7 @@ The owner is learning AWS: when you touch infrastructure, explain what each reso
 
 - `packages/domain`: every rule in spec §5 lives here as **pure functions**. No database, no AWS SDK, no network, no `Date`, no `Math.random`, no reading the clock. "Today" is always a parameter.
 - `packages/db`: the **only** package that may import `pg`, Kysely's dialects or the DSQL connector. Every repository function takes a `HouseholdContext { householdId, userId, role }` and scopes every query by `household_id`. Writes reject `role: 'view'`.
-- `packages/api`: tRPC procedures. Build `HouseholdContext` only from the verified Cognito token and the user's Membership, **never** from request input. Validate input with Zod schemas from `packages/domain`.
+- `packages/api`: tRPC procedures. Every write procedure is built on `writeProcedure` (FORBIDDEN for view-only, before input parsing) and added to the T21 table in `permissions.test.ts` (a test fails if it's missing); the web hides write controls with `useCan().write`. Build `HouseholdContext` only from the verified Cognito token and the user's Membership, **never** from request input. Validate input with Zod schemas from `packages/domain`.
 - `packages/web`: React. Imports `domain` and the tRPC **types** from `api` only. Every number shown comes from `domain` functions; pages never recompute rules.
 - `packages/infra`: AWS CDK. Every stack has assertion tests.
 
