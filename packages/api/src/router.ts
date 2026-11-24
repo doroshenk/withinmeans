@@ -36,6 +36,20 @@ const inHousehold = t.middleware(({ ctx, next }) => {
 
 export const memberProcedure = protectedProcedure.use(inHousehold);
 
+/**
+ * Spec §3: view-only members cannot create, edit or delete. Every write procedure is built on
+ * this, and the check runs before input is parsed. Add new write procedures to the T21 table in
+ * permissions.test.ts.
+ */
+const canWrite = t.middleware(({ ctx, next }) => {
+  if (ctx.household?.role === 'view') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'View-only members cannot make changes.' });
+  }
+  return next();
+});
+
+export const writeProcedure = memberProcedure.use(canWrite);
+
 export const publicProcedure = t.procedure;
 
 export const appRouter = t.router({
@@ -53,12 +67,12 @@ export const appRouter = t.router({
     .mutation(({ ctx, input }) => acceptInvite(ctx, input)),
 
   /** Spec §3 step 3: stores the invite and emails the accept link. */
-  invitePartner: memberProcedure
+  invitePartner: writeProcedure
     .input(invitePartnerInput)
     .mutation(({ ctx, input }) => invitePartner(ctx, input)),
 
   /** Resend: a new link and a fresh 7 days; the old link stops working. */
-  resendInvite: memberProcedure
+  resendInvite: writeProcedure
     .input(z.object({ inviteId: z.uuid() }))
     .mutation(({ ctx, input }) => resendInvite(ctx, input.inviteId)),
 

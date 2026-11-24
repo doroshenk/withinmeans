@@ -1,11 +1,25 @@
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 
 export type Role = 'owner' | 'full' | 'view';
 
-export function RoleProvider(_props: { role: Role | undefined; children: ReactNode }): ReactNode {
-  throw new Error('not implemented');
+const RoleContext = createContext<Role | undefined>(undefined);
+
+/** Provides the signed-in member's role (from `me`) to everything below it. */
+export function RoleProvider({
+  role,
+  children,
+}: {
+  role: Role | undefined;
+  children: ReactNode;
+}): ReactNode {
+  return <RoleContext.Provider value={role}>{children}</RoleContext.Provider>;
 }
 
+/**
+ * Spec §3: what the signed-in member may do. Hide create/edit/delete controls unless `write`.
+ * Unknown role (loading, no household, no provider) means no write: the API enforces it anyway.
+ */
 export function useCan(): { write: boolean } {
-  throw new Error('not implemented');
+  const role = useContext(RoleContext);
+  return { write: role === 'owner' || role === 'full' };
 }
