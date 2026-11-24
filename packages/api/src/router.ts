@@ -1,13 +1,26 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import {
   acceptInviteInput,
+  createCategoryInput,
+  deleteCategoryInput,
   invitePartnerInput,
+  recolorCategoryInput,
+  seedCategoriesInput,
+  renameCategoryInput,
   saveSetupStepInput,
   signUpInput,
 } from '@withinmeans/domain';
 import { setupProgress } from '@withinmeans/db';
 import { z } from 'zod';
 import { acceptInvite, inviteDetails } from './acceptInvite.js';
+import {
+  createCategory,
+  deleteCategory,
+  listCategories,
+  recolorCategory,
+  renameCategory,
+  seedDefaultCategories,
+} from './categories.js';
 import type { Context } from './context.js';
 import { invitePartner, resendInvite } from './invitePartner.js';
 import { signUp } from './signUp.js';
@@ -93,6 +106,31 @@ export const appRouter = t.router({
     const row = await setupProgress.save(ctx.db, ctx.household, input.step, input.status);
     return { step: row.step, status: row.status };
   }),
+
+  /** Spec §3 step 4: categories with how many recurring bills use each. */
+  categories: memberProcedure.query(({ ctx }) => listCategories(ctx)),
+
+  /** Spec §3 step 4: the 7 starting categories, only when the household has none yet. */
+  seedDefaultCategories: writeProcedure
+    .input(seedCategoriesInput)
+    .mutation(({ ctx }) => seedDefaultCategories(ctx)),
+
+  createCategory: writeProcedure
+    .input(createCategoryInput)
+    .mutation(({ ctx, input }) => createCategory(ctx, input)),
+
+  renameCategory: writeProcedure
+    .input(renameCategoryInput)
+    .mutation(({ ctx, input }) => renameCategory(ctx, input)),
+
+  recolorCategory: writeProcedure
+    .input(recolorCategoryInput)
+    .mutation(({ ctx, input }) => recolorCategory(ctx, input)),
+
+  /** Spec §3 step 4 / T18: bills move to the first remaining category. */
+  deleteCategory: writeProcedure
+    .input(deleteCategoryInput)
+    .mutation(({ ctx, input }) => deleteCategory(ctx, input)),
 
   /** Who am I? A signed-in user may have no profile or no household yet. */
   me: protectedProcedure.query(({ ctx }) => ({

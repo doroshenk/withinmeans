@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider, type Role } from '../permissions';
+import { categoriesStub } from './categoriesStub';
 import { SetupWizard, type SetupClient } from './SetupWizard';
 
 type Row = { step: number; status: 'done' | 'skipped' };
@@ -21,6 +22,7 @@ function fakeClient(initial: Row[] = []) {
         ),
     },
     saveSetupStep: { mutate: save },
+    ...categoriesStub,
   };
   return { client, save };
 }
@@ -135,6 +137,16 @@ describe('P1-08 setup wizard', () => {
     expect(screen.getByText('Coming soon')).toBeInTheDocument();
   });
 
+  it('P1-11: step 4 shows the bill categories instead of "Coming soon"', async () => {
+    const { user } = open(fakeClient().client);
+    await screen.findByText('Step 1 of 9');
+
+    await user.click(stepButton(/^Bill categories/));
+
+    expect(await screen.findByRole('textbox', { name: 'Name of Housing' })).toBeInTheDocument();
+    expect(screen.queryByText('Coming soon')).not.toBeInTheDocument();
+  });
+
   it('only optional steps can be skipped', async () => {
     const { user } = open(fakeClient().client);
     await screen.findByText('Step 1 of 9');
@@ -216,6 +228,7 @@ describe('P1-08 setup wizard', () => {
 
   it('shows "Loading…" first and a generic error if progress cannot be loaded', async () => {
     const client: SetupClient = {
+      ...categoriesStub,
       setupProgress: { query: () => Promise.reject(new Error('boom')) },
       saveSetupStep: { mutate: vi.fn() },
     };

@@ -1,15 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import {
-  assertCanWrite,
-  Conflict,
-  Forbidden,
-  households,
-  InvalidInput,
-  invites,
-  memberships,
-  NotFound,
-  type Invite,
-} from '@withinmeans/db';
+import { assertCanWrite, households, invites, memberships, type Invite } from '@withinmeans/db';
 import {
   inviteDaysLeft,
   inviteExpiry,
@@ -18,6 +8,7 @@ import {
 } from '@withinmeans/domain';
 import { Temporal } from 'temporal-polyfill';
 import type { Context } from './context.js';
+import { translated } from './errors.js';
 
 /** What the screen shows about an invite. The secret token never leaves the server. */
 export interface InviteStatus {
@@ -35,21 +26,6 @@ export type MemberContext = Pick<Context, 'db' | 'clock' | 'invites'> & {
     membership: NonNullable<NonNullable<Context['identity']>['membership']>;
   };
 };
-
-/** Repository errors become the codes the screens understand. */
-async function translated<T>(fn: () => Promise<T>): Promise<T> {
-  try {
-    return await fn();
-  } catch (err) {
-    if (err instanceof Forbidden) throw new TRPCError({ code: 'FORBIDDEN', message: err.message });
-    if (err instanceof NotFound) throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
-    if (err instanceof Conflict) throw new TRPCError({ code: 'CONFLICT', message: err.message });
-    if (err instanceof InvalidInput) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: err.message });
-    }
-    throw err;
-  }
-}
 
 const expiryOf = (invite: Invite): Temporal.Instant =>
   Temporal.Instant.fromEpochMilliseconds(invite.expires_at.getTime());

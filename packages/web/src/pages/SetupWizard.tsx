@@ -9,8 +9,9 @@ import {
 import { useEffect, useState } from 'react';
 import { GENERIC_ERROR } from '../auth/errors';
 import { useCan } from '../permissions';
+import { CategoriesStep, type CategoriesClient } from './CategoriesStep';
 
-export interface SetupClient {
+export interface SetupClient extends CategoriesClient {
   setupProgress: {
     query: () => Promise<{ step: number; status: 'done' | 'skipped' }[]>;
   };
@@ -33,7 +34,7 @@ type Load =
 const LAST = SETUP_STEPS.length;
 
 /** Steps whose real screens have landed. Each setup ticket (P1-09 to P1-13) adds its step here. */
-const BUILT_STEPS: ReadonlySet<number> = new Set();
+const BUILT_STEPS: ReadonlySet<number> = new Set([4]);
 
 const STATUS_LABEL = { todo: '', done: 'Done', skipped: 'Skipped' } as const;
 
@@ -150,6 +151,8 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
 
         {step.id === LAST ? (
           <ReviewList progress={progress} onJump={goTo} />
+        ) : step.id === 4 ? (
+          <CategoriesStep client={client} />
         ) : (
           !BUILT_STEPS.has(step.id) && <p className="wizard-soon">Coming soon</p>
         )}

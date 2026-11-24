@@ -16,7 +16,16 @@ import {
  * Every later ticket that adds a write procedure adds a row to WRITE_PROCEDURES. The completeness
  * test below fails until it does.
  */
-const WRITE_PROCEDURES = ['invitePartner', 'resendInvite', 'saveSetupStep'] as const;
+const WRITE_PROCEDURES = [
+  'invitePartner',
+  'resendInvite',
+  'saveSetupStep',
+  'seedDefaultCategories',
+  'createCategory',
+  'renameCategory',
+  'recolorCategory',
+  'deleteCategory',
+] as const;
 
 /** Mutations that need no membership: anyone may call them (the token or the new login is the credential). */
 const PUBLIC_MUTATIONS = ['signUp', 'acceptInvite'];
