@@ -28,10 +28,15 @@ export const SETUP_STEPS: readonly SetupStep[] = [
 const LAST_STEP = SETUP_STEPS.length;
 
 /** The input of the "save a step" call: a step 1..9, finished or skipped. */
-export const saveSetupStepInput = z.object({
-  step: z.number().int().min(1).max(LAST_STEP),
-  status: z.enum(['done', 'skipped']),
-});
+export const saveSetupStepInput = z
+  .object({
+    step: z.number().int().min(1).max(LAST_STEP),
+    status: z.enum(['done', 'skipped']),
+  })
+  .refine((v) => v.status === 'done' || SETUP_STEPS[v.step - 1]?.required === false, {
+    message: 'Only optional steps can be skipped.',
+    path: ['status'],
+  });
 
 export function stepStatus(progress: SetupProgress, id: number): StepStatus {
   return progress[id] ?? 'todo';

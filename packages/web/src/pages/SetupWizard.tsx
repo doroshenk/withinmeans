@@ -77,6 +77,10 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
     setSaveFailed(false);
     try {
       await client.saveSetupStep.mutate({ step: step.id, status });
+      if (step.id === LAST) {
+        onExit();
+        return;
+      }
       setLoad({
         kind: 'ready',
         progress: markStep(progress, step.id, status),
@@ -177,6 +181,16 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
                 onClick={() => void save('done')}
               >
                 Save & continue
+              </button>
+            )}
+            {can.write && step.id === LAST && (
+              <button
+                type="button"
+                className="button"
+                disabled={saving}
+                onClick={() => void save('done')}
+              >
+                Finish setup
               </button>
             )}
             {!can.write && step.id < LAST && (
