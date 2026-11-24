@@ -23,31 +23,37 @@ export interface WelcomeStepProps {
   done: boolean;
   choice: FirstMonthChoice;
   onChoice: (choice: FirstMonthChoice) => void;
+  /** Tells the wizard the month is already open, so saving the step must not open it again. */
+  onOpened?: (opened: boolean) => void;
 }
 
 type Load = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; options: FirstMonthOptions };
 
 /** Spec §3 step 1: this month (catch up from the 1st) or next month (start fresh). */
-export function WelcomeStep({ client, done, choice, onChoice }: WelcomeStepProps) {
+export function WelcomeStep({ client, done, choice, onChoice, onOpened }: WelcomeStepProps) {
   const can = useCan();
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
 
   useEffect(() => {
     let cancelled = false;
     client.firstMonthOptions.query().then(
-      (options) => !cancelled && setLoad({ kind: 'ready', options }),
+      (options) => {
+        if (cancelled) return;
+        setLoad({ kind: 'ready', options });
+        onOpened?.(options.opened);
+      },
       () => !cancelled && setLoad({ kind: 'error' }),
     );
     return () => {
       cancelled = true;
     };
-  }, [client]);
+  }, [client, onOpened]);
 
   if (load.kind === 'loading') return <p role="status">Loading…</p>;
   if (load.kind === 'error') return <p role="alert">{GENERIC_ERROR}</p>;
   const { options } = load;
 
-  if (done) {
+  if (done || options.opened) {
     return <p>{`Your first month is ${monthLabel(options.firstMonth)}.`}</p>;
   }
 

@@ -73,6 +73,25 @@ describe('P1-09 setup step 1: first month', () => {
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
   });
 
+  it('if the month is already open (an earlier save failed), shows it instead of the choice', async () => {
+    const client: WelcomeClient = {
+      ...welcomeStub,
+      firstMonthOptions: {
+        query: () =>
+          Promise.resolve({
+            thisMonth: '2026-11',
+            nextMonth: '2026-12',
+            firstMonth: '2026-12',
+            opened: true,
+          }),
+      },
+    };
+    show({ client, done: false });
+
+    expect(await screen.findByText(/Your first month is December 2026/)).toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+  });
+
   it('a view-only member sees the options but cannot change them', async () => {
     show({}, 'view');
 

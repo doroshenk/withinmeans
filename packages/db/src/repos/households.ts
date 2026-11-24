@@ -22,7 +22,7 @@ export const households = {
   },
 
   /**
-   * Spec �3 step 1: sets `first_month` and opens that month, in one transaction. Choosing the same
+   * Spec §3 step 1: sets `first_month` and opens that month, in one transaction. Choosing the same
    * month again is fine; a different month once one is open is a Conflict.
    */
   async startFirstMonth(

@@ -46,6 +46,7 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [firstOpened, setFirstOpened] = useState(false);
   const [firstChoice, setFirstChoice] = useState<FirstMonthChoice>('this');
 
   useEffect(() => {
@@ -81,7 +82,12 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
     setSaveFailed(false);
     try {
       // Step 1 commits the month first; once it is saved the choice is final.
-      if (step.id === 1 && status === 'done' && stepStatus(progress, 1) !== 'done') {
+      if (
+        step.id === 1 &&
+        status === 'done' &&
+        stepStatus(progress, 1) !== 'done' &&
+        !firstOpened
+      ) {
         await client.startFirstMonth.mutate({ choice: firstChoice });
       }
       await client.saveSetupStep.mutate({ step: step.id, status });
@@ -164,6 +170,7 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
             done={stepStatus(progress, 1) === 'done'}
             choice={firstChoice}
             onChoice={setFirstChoice}
+            onOpened={setFirstOpened}
           />
         ) : step.id === 4 ? (
           <CategoriesStep client={client} />

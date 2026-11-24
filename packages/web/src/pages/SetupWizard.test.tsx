@@ -324,6 +324,26 @@ describe('P1-09 setup step 1: first month', () => {
     expect(start).not.toHaveBeenCalled();
   });
 
+  it('if the month is already open but step 1 is not saved, Save & continue only saves the step', async () => {
+    const { client, save, start } = withFirstMonth();
+    client.firstMonthOptions = {
+      query: () =>
+        Promise.resolve({
+          thisMonth: '2026-11',
+          nextMonth: '2026-12',
+          firstMonth: '2026-12',
+          opened: true,
+        }),
+    };
+    const { user } = open(client);
+    await screen.findByText(/Your first month is December 2026/);
+
+    await user.click(screen.getByRole('button', { name: 'Save & continue' }));
+
+    expect(start).not.toHaveBeenCalled();
+    expect(save).toHaveBeenCalledWith({ step: 1, status: 'done' });
+  });
+
   it('a view-only member does not open a month', async () => {
     const { client, start } = withFirstMonth();
     const { user } = open(client, 'view');
