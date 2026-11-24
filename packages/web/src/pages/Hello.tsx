@@ -10,6 +10,8 @@ export type MeResult = inferRouterOutputs<AppRouter>['me'];
 export interface HelloProps {
   client: { me: { query: () => Promise<MeResult> } };
   onSignOut?: () => void;
+  /** Opens the setup wizard (spec �3). */
+  onStartSetup?: () => void;
 }
 
 type State = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; me: MeResult };

@@ -14,6 +14,8 @@ export interface Seeded {
   recurringBillId: string;
   inviteId: string;
   inviteToken: string;
+  /** The one finished setup step seeded for this household (A: 1, B: 2). */
+  setupStep: number;
   /** Different per household so a month leak is detectable. */
   ym: string;
   ctx(role?: HouseholdContext['role']): HouseholdContext;
@@ -28,6 +30,7 @@ export const HOUSEHOLD_TABLES = [
   'accounts',
   'balance_snapshots',
   'recurring_bills',
+  'setup_progress',
 ] as const;
 
 export async function clearAll(db: Database): Promise<void> {
@@ -47,6 +50,7 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
     inviteId: randomUUID(),
     inviteToken: `token-${label}-${randomUUID()}`,
   };
+  const setupStep = label === 'A' ? 1 : 2;
   const ym = label === 'A' ? '2026-11' : '2026-10';
   const secret = `${label}-secret`;
   const h = ids.householdId;
@@ -142,9 +146,14 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
       invited_by: ids.userId,
     })
     .execute();
+  await db
+    .insertInto('setup_progress')
+    .values({ household_id: h, step: setupStep, status: 'done' })
+    .execute();
   return {
     label,
     ...ids,
+    setupStep,
     ym,
     ctx: (role = 'owner') => ({ householdId: h, userId: ids.userId, role }),
   };

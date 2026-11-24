@@ -1,5 +1,10 @@
 import { initTRPC, TRPCError } from '@trpc/server';
-import { acceptInviteInput, invitePartnerInput, signUpInput } from '@withinmeans/domain';
+import {
+  acceptInviteInput,
+  invitePartnerInput,
+  saveSetupStepInput,
+  signUpInput,
+} from '@withinmeans/domain';
 import { z } from 'zod';
 import { acceptInvite, inviteDetails } from './acceptInvite.js';
 import type { Context } from './context.js';
@@ -75,6 +80,18 @@ export const appRouter = t.router({
   resendInvite: writeProcedure
     .input(z.object({ inviteId: z.uuid() }))
     .mutation(({ ctx, input }) => resendInvite(ctx, input.inviteId)),
+
+  /** Spec �3 wizard: which steps are done or skipped. */
+  setupProgress: memberProcedure.query(
+    (): Promise<{ step: number; status: 'done' | 'skipped' }[]> => {
+      throw new Error('not implemented');
+    },
+  ),
+
+  /** Spec �3 wizard: saved when the user continues or skips. */
+  saveSetupStep: writeProcedure.input(saveSetupStepInput).mutation(() => {
+    throw new Error('not implemented');
+  }),
 
   /** Who am I? A signed-in user may have no profile or no household yet. */
   me: protectedProcedure.query(({ ctx }) => ({
