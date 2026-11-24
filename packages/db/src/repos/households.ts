@@ -51,7 +51,7 @@ export const households = {
     });
   },
 
-  /** Spec section 3 step 2: the checking cushion, in whole cents, never negative. */
+  /** Spec §3 step 2: the checking cushion, in whole cents, never negative. */
   async setCushion(db: Database, ctx: HouseholdContext, cushionCents: number): Promise<void> {
     assertCanWrite(ctx);
     assertCents(cushionCents);

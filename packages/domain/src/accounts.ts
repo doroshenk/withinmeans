@@ -44,14 +44,6 @@ export function setupAccountsError(accountCount: number): string | undefined {
   return accountCount < 1 ? 'Add at least one account.' : undefined;
 }
 
-/** Spec §3 step 2: the first checking account becomes the primary checking account. */
-export function becomesPrimaryChecking(
-  type: SetupAccountType,
-  hasPrimaryChecking: boolean,
-): boolean {
-  return type === 'checking' && !hasPrimaryChecking;
-}
-
 export const addAccountInput = z.object({
   name: z.string().trim().min(1),
   type: z.enum(['checking', 'savings', 'cash']),

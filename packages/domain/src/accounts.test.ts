@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   accountDraftError,
   addAccountInput,
-  becomesPrimaryChecking,
   dollarText,
   parseDollars,
   setCushionInput,
@@ -69,13 +68,6 @@ describe('P1-10 account checks', () => {
   it('at least one account is required', () => {
     expect(setupAccountsError(0)).toBe('Add at least one account.');
     expect(setupAccountsError(1)).toBeUndefined();
-  });
-
-  it('the first checking account becomes primary; later ones and other types do not', () => {
-    expect(becomesPrimaryChecking('checking', false)).toBe(true);
-    expect(becomesPrimaryChecking('checking', true)).toBe(false);
-    expect(becomesPrimaryChecking('savings', false)).toBe(false);
-    expect(becomesPrimaryChecking('cash', false)).toBe(false);
   });
 });
 

@@ -69,7 +69,7 @@ export const accounts = {
   },
 
   /**
-   * Spec �3 step 2: the account and its first BalanceSnapshot in one transaction. The household's
+   * Spec §3 step 2: the account and its first BalanceSnapshot in one transaction. The household's
    * first checking account becomes the primary checking account.
    */
   async createWithBalance(
@@ -82,6 +82,13 @@ export const accounts = {
     assertDate(input.date);
     assertCents(input.balanceCents);
     return inTransaction(db, async (trx) => {
+      // Touch the household row so two adds at once conflict and retry (DSQL optimistic
+      // concurrency); otherwise both could read "no primary yet" and both become primary.
+      await trx
+        .updateTable('households')
+        .set({ id: ctx.householdId })
+        .where('id', '=', ctx.householdId)
+        .execute();
       const primary = await trx
         .selectFrom('accounts')
         .select('id')
