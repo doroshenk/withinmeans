@@ -32,6 +32,12 @@ describe('Hello', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Loading');
   });
 
+  it('P1-07: the loading text is exactly "Loading…" (a real ellipsis, no corrupted character)', () => {
+    render(<Hello client={clientReturning(new Promise(() => {}))} />);
+
+    expect(screen.getByRole('status').textContent).toBe('Loading…');
+  });
+
   it('shows a generic error with role="alert" when me fails', async () => {
     render(<Hello client={clientReturning(Promise.reject(new Error('boom')))} />);
 
