@@ -13,7 +13,10 @@ function setup(token: string | undefined, location?: { pathname: string; search:
     resetPassword: vi.fn(() => Promise.resolve()),
     getAccessToken: vi.fn(() => Promise.resolve(token)),
   };
-  const me: MeResult = { user: { name: 'Sam', email: 'sam@example.com' }, household: null };
+  const me: MeResult = {
+    user: { name: 'Sam', email: 'sam@example.com' },
+    household: { name: 'The Examples', role: 'owner' },
+  };
   const pending = {
     id: 'inv-1',
     name: 'Pat',
@@ -40,6 +43,8 @@ function setup(token: string | undefined, location?: { pathname: string; search:
     resendInvite: { mutate: () => Promise.resolve(pending) },
     inviteDetails: { query: inviteDetails },
     acceptInvite: { mutate: acceptInvite },
+    setupProgress: { query: () => Promise.resolve([]) },
+    saveSetupStep: { mutate: () => Promise.resolve({}) },
   }));
   render(
     <App
@@ -52,6 +57,16 @@ function setup(token: string | undefined, location?: { pathname: string; search:
 }
 
 describe('App', () => {
+  it('P1-08: Start setting up opens the setup wizard, and Leave setup returns', async () => {
+    const { user } = setup('tok');
+
+    await user.click(await screen.findByRole('button', { name: 'Start setting up' }));
+    expect(await screen.findByText('Step 1 of 9')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Leave setup' }));
+    expect(await screen.findByRole('heading', { name: 'Hello Sam' })).toBeInTheDocument();
+  });
+
   it('goes straight to Hello when a saved session is still valid', async () => {
     setup('token');
 

@@ -16,6 +16,20 @@ describe('setup wizard (spec §3)', () => {
     expect(SETUP_STEPS[3]?.title).toBe('Bill categories');
   });
 
+  it('lists each step with its title, hint and whether it is required', () => {
+    expect(SETUP_STEPS.map((s) => [s.id, s.title, s.hint, s.required])).toEqual([
+      [1, 'Welcome', 'Pick your first month', true],
+      [2, 'Bank accounts', 'Balances and your cushion', true],
+      [3, 'Paychecks', 'When and how much', false],
+      [4, 'Bill categories', 'How you group your bills', true],
+      [5, 'Recurring bills', 'The bills that come every month', true],
+      [6, 'Credit cards', 'Nicknames and due days', false],
+      [7, 'Investments', 'Holdings and current prices', false],
+      [8, 'Where income goes', 'Your starting splits', true],
+      [9, 'Review & finish', 'Check everything over', true],
+    ]);
+  });
+
   it('resumes at step 1 when nothing is saved', () => {
     expect(resumeStep({})).toBe(1);
   });

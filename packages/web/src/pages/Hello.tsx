@@ -16,7 +16,7 @@ export interface HelloProps {
 
 type State = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; me: MeResult };
 
-export function Hello({ client, onSignOut }: HelloProps) {
+export function Hello({ client, onSignOut, onStartSetup }: HelloProps) {
   const [state, setState] = useState<State>({ kind: 'loading' });
 
   useEffect(() => {
@@ -40,6 +40,11 @@ export function Hello({ client, onSignOut }: HelloProps) {
             <>
               <h1>{`Hello ${state.me.user?.name ?? 'there'}`}</h1>
               {state.me.household && <p>{state.me.household.name}</p>}
+              {onStartSetup && state.me.household && state.me.household.role !== 'view' && (
+                <button type="button" className="button" onClick={onStartSetup}>
+                  Start setting up
+                </button>
+              )}
             </>
           )}
           {onSignOut && (

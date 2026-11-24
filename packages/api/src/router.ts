@@ -5,6 +5,7 @@ import {
   saveSetupStepInput,
   signUpInput,
 } from '@withinmeans/domain';
+import { setupProgress } from '@withinmeans/db';
 import { z } from 'zod';
 import { acceptInvite, inviteDetails } from './acceptInvite.js';
 import type { Context } from './context.js';
@@ -81,16 +82,16 @@ export const appRouter = t.router({
     .input(z.object({ inviteId: z.uuid() }))
     .mutation(({ ctx, input }) => resendInvite(ctx, input.inviteId)),
 
-  /** Spec �3 wizard: which steps are done or skipped. */
-  setupProgress: memberProcedure.query(
-    (): Promise<{ step: number; status: 'done' | 'skipped' }[]> => {
-      throw new Error('not implemented');
-    },
-  ),
+  /** Spec §3 wizard: which steps are done or skipped. */
+  setupProgress: memberProcedure.query(async ({ ctx }) => {
+    const rows = await setupProgress.list(ctx.db, ctx.household);
+    return rows.map((r) => ({ step: r.step, status: r.status }));
+  }),
 
-  /** Spec �3 wizard: saved when the user continues or skips. */
-  saveSetupStep: writeProcedure.input(saveSetupStepInput).mutation(() => {
-    throw new Error('not implemented');
+  /** Spec §3 wizard: saved when the user continues or skips. */
+  saveSetupStep: writeProcedure.input(saveSetupStepInput).mutation(async ({ ctx, input }) => {
+    const row = await setupProgress.save(ctx.db, ctx.household, input.step, input.status);
+    return { step: row.step, status: row.status };
   }),
 
   /** Who am I? A signed-in user may have no profile or no household yet. */

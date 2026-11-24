@@ -473,3 +473,194 @@ h2,
     font-size: 22px;
   }
 }
+
+/* Setup wizard (P1-08): sidebar stepper + one step at a time; stacks on phones. */
+.wizard {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 400px minmax(0, 1fr);
+}
+
+.wizard-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 32px 24px;
+  background: var(--color-sidebar);
+}
+
+.wizard-side .brand {
+  font-size: 28px;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.wizard-count {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-ink-2);
+}
+
+.wizard-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.wizard-bar span {
+  display: block;
+  height: 100%;
+  background: var(--color-primary);
+}
+
+.wizard-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.wizard-step {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 8px 14px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wizard-step strong,
+.wizard-step small {
+  display: block;
+}
+
+.wizard-step small {
+  font-size: 14px;
+  color: var(--color-ink-2);
+}
+
+.wizard-step[aria-current='step'] {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.wizard-badge {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-surface);
+  font-weight: 700;
+}
+
+.wizard-step-done .wizard-badge {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.wizard-note {
+  margin: auto 0 0;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--color-surface);
+  font-size: 15px;
+}
+
+.wizard-main {
+  padding: 48px 56px;
+  max-width: 960px;
+}
+
+.wizard-kicker {
+  margin: 0;
+  color: var(--color-ink-2);
+  font-weight: 700;
+}
+
+.wizard-optional {
+  display: inline-block;
+  margin: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-sidebar);
+  font-size: 14px;
+}
+
+.wizard-lead {
+  color: var(--color-ink-2);
+  font-size: 18px;
+}
+
+.wizard-soon {
+  padding: 24px;
+  border: 1px dashed var(--color-border);
+  border-radius: 14px;
+  color: var(--color-ink-2);
+}
+
+.wizard-review {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.wizard-review li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 8px 8px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.wizard-review-title {
+  font-weight: 700;
+}
+
+.wizard-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+.wizard-actions-end {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+}
+
+@media (max-width: 767px) {
+  .wizard {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wizard-main {
+    padding: 24px 16px;
+  }
+
+  .wizard-actions {
+    flex-wrap: wrap;
+  }
+
+  .wizard-review li {
+    grid-template-columns: 1fr auto;
+  }
+}
