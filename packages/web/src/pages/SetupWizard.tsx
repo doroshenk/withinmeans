@@ -1,5 +1,6 @@
 import {
   SETUP_STEPS,
+  type FirstMonthChoice,
   markStep,
   resumeStep,
   reviewRows,
@@ -10,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { GENERIC_ERROR } from '../auth/errors';
 import { useCan } from '../permissions';
 import { CategoriesStep, type CategoriesClient } from './CategoriesStep';
-import { type WelcomeClient } from './WelcomeStep';
+import { WelcomeStep, type WelcomeClient } from './WelcomeStep';
 
 export interface SetupClient extends CategoriesClient, WelcomeClient {
   setupProgress: {
@@ -35,7 +36,7 @@ type Load =
 const LAST = SETUP_STEPS.length;
 
 /** Steps whose real screens have landed. Each setup ticket (P1-09 to P1-13) adds its step here. */
-const BUILT_STEPS: ReadonlySet<number> = new Set([4]);
+const BUILT_STEPS: ReadonlySet<number> = new Set([1, 4]);
 
 const STATUS_LABEL = { todo: '', done: 'Done', skipped: 'Skipped' } as const;
 
@@ -45,6 +46,7 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [firstChoice, setFirstChoice] = useState<FirstMonthChoice>('this');
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +80,10 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
     setSaving(true);
     setSaveFailed(false);
     try {
+      // Step 1 commits the month first; once it is saved the choice is final.
+      if (step.id === 1 && status === 'done' && stepStatus(progress, 1) !== 'done') {
+        await client.startFirstMonth.mutate({ choice: firstChoice });
+      }
       await client.saveSetupStep.mutate({ step: step.id, status });
       if (step.id === LAST) {
         onExit();
@@ -152,6 +158,13 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
 
         {step.id === LAST ? (
           <ReviewList progress={progress} onJump={goTo} />
+        ) : step.id === 1 ? (
+          <WelcomeStep
+            client={client}
+            done={stepStatus(progress, 1) === 'done'}
+            choice={firstChoice}
+            onChoice={setFirstChoice}
+          />
         ) : step.id === 4 ? (
           <CategoriesStep client={client} />
         ) : (

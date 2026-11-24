@@ -132,7 +132,6 @@ describe('P1-08 setup wizard', () => {
   it('unbuilt steps say "Coming soon"', async () => {
     const { user } = open(fakeClient().client);
     await screen.findByText('Step 1 of 9');
-    expect(screen.getByText('Coming soon')).toBeInTheDocument();
 
     await user.click(stepButton(/^Credit cards/));
 
@@ -231,6 +230,7 @@ describe('P1-08 setup wizard', () => {
   it('shows "Loading…" first and a generic error if progress cannot be loaded', async () => {
     const client: SetupClient = {
       ...categoriesStub,
+      ...welcomeStub,
       setupProgress: { query: () => Promise.reject(new Error('boom')) },
       saveSetupStep: { mutate: vi.fn() },
     };
