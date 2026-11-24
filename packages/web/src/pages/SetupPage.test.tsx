@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { MeResult } from './Hello';
 import { accountsStub } from './accountsStub';
 import { categoriesStub } from './categoriesStub';
+import { recurringBillsStub } from './recurringBillsStub';
 import { welcomeStub } from './welcomeStub';
 import { SetupPage } from './SetupPage';
 
@@ -10,6 +11,7 @@ function client(me: Promise<MeResult>) {
   return {
     ...accountsStub,
     ...categoriesStub,
+    ...recurringBillsStub,
     ...welcomeStub,
     me: { query: () => me },
     setupProgress: { query: () => Promise.resolve([]) },

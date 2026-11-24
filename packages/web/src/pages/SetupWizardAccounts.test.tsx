@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider } from '../permissions';
 import { accountsStub } from './accountsStub';
 import { categoriesStub } from './categoriesStub';
+import { recurringBillsStub } from './recurringBillsStub';
 import { SetupWizard, type SetupClient } from './SetupWizard';
 import { welcomeStub } from './welcomeStub';
 
@@ -15,6 +16,7 @@ function fakeClient(accountCount: number) {
     setupProgress: { query: () => Promise.resolve([{ step: 1, status: 'done' as const }]) },
     saveSetupStep: { mutate: save },
     ...categoriesStub,
+    ...recurringBillsStub,
     ...welcomeStub,
     ...accountsStub,
     setupAccounts: {

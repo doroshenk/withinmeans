@@ -117,6 +117,11 @@ export const recurringBills = {
     mustHaveChanged(result.numUpdatedRows, 'Recurring bill');
   },
 
+  /** Setup only: drops a bill that has no month rows yet. Later it must end the bill instead. */
+  async remove(_db: Database, _ctx: HouseholdContext, _id: string): Promise<void> {
+    throw new Error('not implemented');
+  },
+
   /** Ends the bill from `endYm`; past months keep their rows. */
   async end(db: Database, ctx: HouseholdContext, id: string, endYm: string): Promise<void> {
     assertCanWrite(ctx);

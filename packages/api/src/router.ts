@@ -2,6 +2,8 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import {
   acceptInviteInput,
   addAccountInput,
+  addRecurringBillInput,
+  removeRecurringBillInput,
   removeAccountInput,
   setCushionInput,
   createCategoryInput,
@@ -35,6 +37,7 @@ import {
   removeSetupAccount,
   saveCushion,
 } from './setupAccounts.js';
+import { addSetupBill, listSetupBills, removeSetupBill } from './setupBills.js';
 import { signUp } from './signUp.js';
 
 const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
@@ -167,6 +170,17 @@ export const appRouter = t.router({
   deleteCategory: writeProcedure
     .input(deleteCategoryInput)
     .mutation(({ ctx, input }) => deleteCategory(ctx, input)),
+
+  /** Spec §3 step 5: recurring bills, the monthly total and take-home (null until paychecks exist). */
+  setupBills: memberProcedure.query(({ ctx }) => listSetupBills(ctx)),
+
+  addRecurringBill: writeProcedure
+    .input(addRecurringBillInput)
+    .mutation(({ ctx, input }) => addSetupBill(ctx, input)),
+
+  removeRecurringBill: writeProcedure
+    .input(removeRecurringBillInput)
+    .mutation(({ ctx, input }) => removeSetupBill(ctx, input)),
 
   /** Who am I? A signed-in user may have no profile or no household yet. */
   me: protectedProcedure.query(({ ctx }) => ({
