@@ -287,6 +287,27 @@ describe('P1-11 bill categories step', () => {
     expect(nameBox('Home')).toBeInTheDocument();
   });
 
+  it('pressing Enter in a name field saves the rename', async () => {
+    const { client, calls } = fakeClient({ names: ['Housing', 'Home'] });
+    const user = open(client);
+    await screen.findByRole('textbox', { name: 'Name of Home' });
+
+    await user.clear(nameBox('Home'));
+    await user.type(nameBox('Home'), 'House{Enter}');
+
+    await waitFor(() =>
+      expect(calls.rename).toHaveBeenCalledWith({ id: 'id-Home', name: 'House' }),
+    );
+  });
+
+  it('a view-only member with no categories yet is told the owner sets them up', async () => {
+    const { client, calls } = fakeClient();
+    open(client, 'view');
+
+    expect(await screen.findByText(/No categories yet/)).toBeInTheDocument();
+    expect(calls.seed).not.toHaveBeenCalled();
+  });
+
   it('a view-only member sees the categories but no way to change them', async () => {
     const { client, calls } = fakeClient({ names: ['Housing', 'Home'] });
     open(client, 'view');
