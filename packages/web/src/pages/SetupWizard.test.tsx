@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider, type Role } from '../permissions';
 import { categoriesStub } from './categoriesStub';
+import { welcomeStub } from './welcomeStub';
 import { SetupWizard, type SetupClient } from './SetupWizard';
 
 type Row = { step: number; status: 'done' | 'skipped' };
@@ -23,6 +24,7 @@ function fakeClient(initial: Row[] = []) {
     },
     saveSetupStep: { mutate: save },
     ...categoriesStub,
+    ...welcomeStub,
   };
   return { client, save };
 }
@@ -249,5 +251,86 @@ describe('P1-08 setup wizard', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Leave setup' }));
 
     expect(onExit).toHaveBeenCalledOnce();
+  });
+});
+
+describe('P1-09 setup step 1: first month', () => {
+  function withFirstMonth(initial: Row[] = []) {
+    const { client, save } = fakeClient(initial);
+    const start = vi.fn((input: { choice: 'this' | 'next' }) =>
+      Promise.resolve({ firstMonth: input.choice === 'this' ? '2026-11' : '2026-12' }),
+    );
+    client.startFirstMonth = { mutate: start };
+    return { client, save, start };
+  }
+
+  it('step 1 shows the first-month choice instead of "Coming soon"', async () => {
+    const { client } = withFirstMonth();
+    open(client);
+
+    expect(await screen.findByRole('radio', { name: /This month/ })).toBeChecked();
+    expect(screen.queryByText('Coming soon')).not.toBeInTheDocument();
+  });
+
+  it('"This month" is the default: Save & continue opens it, then saves the step', async () => {
+    const { client, save, start } = withFirstMonth();
+    const { user } = open(client);
+    await screen.findByRole('radio', { name: /This month/ });
+
+    await user.click(screen.getByRole('button', { name: 'Save & continue' }));
+
+    expect(start).toHaveBeenCalledWith({ choice: 'this' });
+    expect(save).toHaveBeenCalledWith({ step: 1, status: 'done' });
+    expect(start.mock.invocationCallOrder[0]).toBeLessThan(save.mock.invocationCallOrder[0] ?? 0);
+    expect(await screen.findByText('Step 2 of 9')).toBeInTheDocument();
+  });
+
+  it('choosing Next month opens next month', async () => {
+    const { client, start } = withFirstMonth();
+    const { user } = open(client);
+
+    await user.click(await screen.findByRole('radio', { name: /Next month/ }));
+    await user.click(screen.getByRole('button', { name: 'Save & continue' }));
+
+    expect(start).toHaveBeenCalledWith({ choice: 'next' });
+    expect(await screen.findByText('Step 2 of 9')).toBeInTheDocument();
+  });
+
+  it('if opening the month fails, shows an error, saves nothing and stays on step 1', async () => {
+    const { client, save, start } = withFirstMonth();
+    start.mockRejectedValueOnce(new Error('boom'));
+    const { user } = open(client);
+    await screen.findByRole('radio', { name: /This month/ });
+
+    await user.click(screen.getByRole('button', { name: 'Save & continue' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Something went wrong. Please try again.',
+    );
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByText('Step 1 of 9')).toBeInTheDocument();
+  });
+
+  it('once step 1 is done, saving it again does not open a month again', async () => {
+    const { client, save, start } = withFirstMonth([{ step: 1, status: 'done' }]);
+    const { user } = open(client);
+    await screen.findByText('Step 2 of 9');
+
+    await user.click(stepButton(/^Welcome/));
+    expect(await screen.findByText(/Your first month is/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save & continue' }));
+
+    expect(save).toHaveBeenCalledWith({ step: 1, status: 'done' });
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it('a view-only member does not open a month', async () => {
+    const { client, start } = withFirstMonth();
+    const { user } = open(client, 'view');
+
+    expect(await screen.findByRole('radio', { name: /This month/ })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Next →' }));
+
+    expect(start).not.toHaveBeenCalled();
   });
 });

@@ -19,6 +19,19 @@ export const households = {
     await db.updateTable('households').set({ name }).where('id', '=', ctx.householdId).execute();
   },
 
+  /**
+   * Spec �3 step 1: sets `first_month` and opens that month, in one transaction. Choosing the same
+   * month again is fine; a different month once one is open is a Conflict.
+   */
+  async startFirstMonth(
+    _db: Database,
+    _ctx: HouseholdContext,
+    _ym: string,
+    _startedAt: Date,
+  ): Promise<{ created: boolean }> {
+    throw new Error('not implemented');
+  },
+
   async remove(db: Database, ctx: HouseholdContext): Promise<void> {
     assertCanWrite(ctx);
     await db.deleteFrom('households').where('id', '=', ctx.householdId).execute();

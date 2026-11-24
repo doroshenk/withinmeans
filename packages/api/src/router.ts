@@ -9,6 +9,7 @@ import {
   renameCategoryInput,
   saveSetupStepInput,
   signUpInput,
+  startFirstMonthInput,
 } from '@withinmeans/domain';
 import { setupProgress } from '@withinmeans/db';
 import { z } from 'zod';
@@ -22,6 +23,7 @@ import {
   seedDefaultCategories,
 } from './categories.js';
 import type { Context } from './context.js';
+import { firstMonthOptions, startFirstMonth } from './firstMonth.js';
 import { invitePartner, resendInvite } from './invitePartner.js';
 import { signUp } from './signUp.js';
 
@@ -106,6 +108,14 @@ export const appRouter = t.router({
     const row = await setupProgress.save(ctx.db, ctx.household, input.step, input.status);
     return { step: row.step, status: row.status };
   }),
+
+  /** Spec §3 step 1: this month and next month, and whether the first month is already open. */
+  firstMonthOptions: memberProcedure.query(({ ctx }) => firstMonthOptions(ctx)),
+
+  /** Spec §3 step 1: choose this month or next; calls openMonth. */
+  startFirstMonth: writeProcedure
+    .input(startFirstMonthInput)
+    .mutation(({ ctx, input }) => startFirstMonth(ctx, input)),
 
   /** Spec §3 step 4: categories with how many recurring bills use each. */
   categories: memberProcedure.query(({ ctx }) => listCategories(ctx)),
