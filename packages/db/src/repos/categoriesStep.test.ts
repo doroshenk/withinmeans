@@ -56,6 +56,17 @@ describe('P1-11 seedDefaults', () => {
     expect(await names()).toEqual(['Housing']);
   });
 
+  it('two seeds at the same moment (two tabs) leave one set of defaults and no error', async () => {
+    const defaults = ['Housing', 'Utilities', 'Home'];
+
+    await Promise.all([
+      categories.seedDefaults(t.db, A.ctx(), defaults),
+      categories.seedDefaults(t.db, A.ctx(), defaults),
+    ]);
+
+    expect(await names()).toEqual(defaults);
+  });
+
   it('rejects a view-only member', async () => {
     await expect(categories.seedDefaults(t.db, A.ctx('view'), ['Housing'])).rejects.toBeInstanceOf(
       Forbidden,

@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider, type Role } from '../permissions';
+import { categoriesStub } from './categoriesStub';
 import { SetupWizard, type SetupClient } from './SetupWizard';
 
 type Row = { step: number; status: 'done' | 'skipped' };
@@ -21,16 +22,7 @@ function fakeClient(initial: Row[] = []) {
         ),
     },
     saveSetupStep: { mutate: save },
-    categories: {
-      query: () => Promise.resolve([{ id: 'c1', name: 'Housing', colorIndex: 0, billCount: 0 }]),
-    },
-    seedDefaultCategories: { mutate: () => Promise.resolve({}) },
-    createCategory: { mutate: () => Promise.resolve({ id: 'c2' }) },
-    renameCategory: { mutate: () => Promise.resolve({}) },
-    recolorCategory: { mutate: () => Promise.resolve({}) },
-    deleteCategory: {
-      mutate: () => Promise.resolve({ movedCount: 0, movedToName: '', message: null }),
-    },
+    ...categoriesStub,
   };
   return { client, save };
 }
@@ -236,6 +228,7 @@ describe('P1-08 setup wizard', () => {
 
   it('shows "Loading…" first and a generic error if progress cannot be loaded', async () => {
     const client: SetupClient = {
+      ...categoriesStub,
       setupProgress: { query: () => Promise.reject(new Error('boom')) },
       saveSetupStep: { mutate: vi.fn() },
     };

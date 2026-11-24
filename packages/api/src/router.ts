@@ -13,6 +13,14 @@ import {
 import { setupProgress } from '@withinmeans/db';
 import { z } from 'zod';
 import { acceptInvite, inviteDetails } from './acceptInvite.js';
+import {
+  createCategory,
+  deleteCategory,
+  listCategories,
+  recolorCategory,
+  renameCategory,
+  seedDefaultCategories,
+} from './categories.js';
 import type { Context } from './context.js';
 import { invitePartner, resendInvite } from './invitePartner.js';
 import { signUp } from './signUp.js';
@@ -100,31 +108,29 @@ export const appRouter = t.router({
   }),
 
   /** Spec §3 step 4: categories with how many recurring bills use each. */
-  categories: memberProcedure.query(() => {
-    throw new Error('not implemented');
-  }),
+  categories: memberProcedure.query(({ ctx }) => listCategories(ctx)),
 
   /** Spec §3 step 4: the 7 starting categories, only when the household has none yet. */
-  seedDefaultCategories: writeProcedure.input(seedCategoriesInput).mutation(() => {
-    throw new Error('not implemented');
-  }),
+  seedDefaultCategories: writeProcedure
+    .input(seedCategoriesInput)
+    .mutation(({ ctx }) => seedDefaultCategories(ctx)),
 
-  createCategory: writeProcedure.input(createCategoryInput).mutation(() => {
-    throw new Error('not implemented');
-  }),
+  createCategory: writeProcedure
+    .input(createCategoryInput)
+    .mutation(({ ctx, input }) => createCategory(ctx, input)),
 
-  renameCategory: writeProcedure.input(renameCategoryInput).mutation(() => {
-    throw new Error('not implemented');
-  }),
+  renameCategory: writeProcedure
+    .input(renameCategoryInput)
+    .mutation(({ ctx, input }) => renameCategory(ctx, input)),
 
-  recolorCategory: writeProcedure.input(recolorCategoryInput).mutation(() => {
-    throw new Error('not implemented');
-  }),
+  recolorCategory: writeProcedure
+    .input(recolorCategoryInput)
+    .mutation(({ ctx, input }) => recolorCategory(ctx, input)),
 
   /** Spec §3 step 4 / T18: bills move to the first remaining category. */
-  deleteCategory: writeProcedure.input(deleteCategoryInput).mutation(() => {
-    throw new Error('not implemented');
-  }),
+  deleteCategory: writeProcedure
+    .input(deleteCategoryInput)
+    .mutation(({ ctx, input }) => deleteCategory(ctx, input)),
 
   /** Who am I? A signed-in user may have no profile or no household yet. */
   me: protectedProcedure.query(({ ctx }) => ({

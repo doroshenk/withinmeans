@@ -1,5 +1,5 @@
 import type { Selectable } from 'kysely';
-import { assertCanWrite, NotFound, type HouseholdContext } from '../context.js';
+import { assertCanWrite, Conflict, NotFound, type HouseholdContext } from '../context.js';
 import type { CategoriesTable, Database } from '../db.js';
 import { cleanName, inTransaction, mustHaveChanged, orConflict } from './shared.js';
 
@@ -125,20 +125,106 @@ export const categories = {
 
   /** Only when the household has no categories at all: creates `defaults` in order. */
   async seedDefaults(
-    _db: Database,
-    _ctx: HouseholdContext,
-    _defaults: readonly string[],
+    db: Database,
+    ctx: HouseholdContext,
+    defaults: readonly string[],
   ): Promise<void> {
-    throw new Error('not implemented');
+    assertCanWrite(ctx);
+    const names = defaults.map(cleanName);
+    try {
+      await orConflict(
+        () =>
+          inTransaction(db, async (trx) => {
+            const existing = await trx
+              .selectFrom('categories')
+              .select('id')
+              .where('household_id', '=', ctx.householdId)
+              .limit(1)
+              .executeTakeFirst();
+            if (existing !== undefined || names.length === 0) return;
+            await trx
+              .insertInto('categories')
+              .values(
+                names.map((name, index) => ({
+                  household_id: ctx.householdId,
+                  name,
+                  name_key: keyOf(name),
+                  color_index: index % 9,
+                  sort: index,
+                  archived_at: null,
+                })),
+              )
+              .execute();
+          }),
+        'Categories already exist',
+      );
+    } catch (err) {
+      // Two tabs seeding at once: the loser hits the unique name, and the winner's rows are there.
+      if (!(err instanceof Conflict)) throw err;
+    }
   },
 
   /** Active categories with how many recurring bills use each. */
-  async listWithUsage(_db: Database, _ctx: HouseholdContext): Promise<CategoryWithUsage[]> {
-    throw new Error('not implemented');
+  async listWithUsage(db: Database, ctx: HouseholdContext): Promise<CategoryWithUsage[]> {
+    const rows = await db
+      .selectFrom('categories')
+      .selectAll('categories')
+      .select((eb) =>
+        eb
+          .selectFrom('recurring_bills')
+          .select((e) => e.fn.countAll<string>().as('n'))
+          .whereRef('recurring_bills.category_id', '=', 'categories.id')
+          .where('recurring_bills.household_id', '=', ctx.householdId)
+          .as('bill_count'),
+      )
+      .where('categories.household_id', '=', ctx.householdId)
+      .where('categories.archived_at', 'is', null)
+      .orderBy('categories.sort')
+      .orderBy('categories.name_key')
+      .execute();
+    return rows.map((r) => ({ ...r, bill_count: Number(r.bill_count) }));
   },
 
-  /** Deletes a category; its recurring bills move to the first remaining one. Never the last. */
-  async remove(_db: Database, _ctx: HouseholdContext, _id: string): Promise<RemovedCategory> {
-    throw new Error('not implemented');
+  /**
+   * Deletes a category; its recurring bills move to the first remaining one (spec §3 step 4, T18).
+   * Never the last one. When the `bills` table lands, its rows must move here too.
+   */
+  async remove(db: Database, ctx: HouseholdContext, id: string): Promise<RemovedCategory> {
+    assertCanWrite(ctx);
+    return inTransaction(db, async (trx) => {
+      const mine = await trx
+        .selectFrom('categories')
+        .select('id')
+        .where('id', '=', id)
+        .where('household_id', '=', ctx.householdId)
+        .executeTakeFirst();
+      if (mine === undefined) throw new NotFound('Category not found');
+      const target = await trx
+        .selectFrom('categories')
+        .select(['id', 'name'])
+        .where('household_id', '=', ctx.householdId)
+        .where('archived_at', 'is', null)
+        .where('id', '<>', id)
+        .orderBy('sort')
+        .orderBy('name_key')
+        .executeTakeFirst();
+      if (target === undefined) throw new Conflict('At least one category is required');
+      const moved = await trx
+        .updateTable('recurring_bills')
+        .set({ category_id: target.id })
+        .where('household_id', '=', ctx.householdId)
+        .where('category_id', '=', id)
+        .executeTakeFirst();
+      await trx
+        .deleteFrom('categories')
+        .where('id', '=', id)
+        .where('household_id', '=', ctx.householdId)
+        .execute();
+      return {
+        movedCount: Number(moved.numUpdatedRows),
+        movedToId: target.id,
+        movedToName: target.name,
+      };
+    });
   },
 };

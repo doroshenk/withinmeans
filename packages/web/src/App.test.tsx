@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { categoriesStub } from './pages/categoriesStub';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from './App';
@@ -43,6 +44,7 @@ function setup(token: string | undefined, location?: { pathname: string; search:
     resendInvite: { mutate: () => Promise.resolve(pending) },
     inviteDetails: { query: inviteDetails },
     acceptInvite: { mutate: acceptInvite },
+    ...categoriesStub,
     setupProgress: { query: () => Promise.resolve([]) },
     saveSetupStep: { mutate: () => Promise.resolve({}) },
   }));
