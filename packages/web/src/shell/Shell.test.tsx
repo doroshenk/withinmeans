@@ -144,7 +144,7 @@ describe('P1-07: accessibility', () => {
   });
 
   it('draws a visible focus ring and never removes outlines', () => {
-    const css = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
+    const css = readFileSync(join(__dirname, '../styles.css'), 'utf8');
     expect(css).toMatch(/:focus-visible\s*{[^}]*outline:\s*2px solid/);
     expect(css).not.toMatch(/outline:\s*(none|0)/);
   });

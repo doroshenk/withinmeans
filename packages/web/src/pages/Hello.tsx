@@ -3,6 +3,7 @@ import type { AppRouter } from '@withinmeans/api';
 import { useEffect, useState } from 'react';
 import { GENERIC_ERROR } from '../auth/errors';
 import { RoleProvider } from '../permissions';
+import { Shell } from '../shell/Shell';
 
 export type MeResult = inferRouterOutputs<AppRouter>['me'];
 
@@ -33,8 +34,10 @@ export function Hello({ client, onSignOut }: HelloProps) {
       {state.kind === 'error' && <p role="alert">{GENERIC_ERROR}</p>}
       {state.kind === 'ready' && (
         <RoleProvider role={state.me.household?.role}>
-          <h1>{`Hello ${state.me.user?.name ?? 'there'}`}</h1>
-          {state.me.household && <p>{state.me.household.name}</p>}
+          <Shell route="dashboard" onNavigate={() => {}}>
+            <h1>{`Hello ${state.me.user?.name ?? 'there'}`}</h1>
+            {state.me.household && <p>{state.me.household.name}</p>}
+          </Shell>
         </RoleProvider>
       )}
       {onSignOut && (
