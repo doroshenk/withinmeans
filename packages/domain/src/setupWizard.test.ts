@@ -84,6 +84,7 @@ describe('setup wizard (spec §3)', () => {
     expect(saveSetupStepInput.safeParse({ step: 3, status: 'skipped' }).success).toBe(true);
     expect(saveSetupStepInput.safeParse({ step: 9, status: 'done' }).success).toBe(true);
     for (const bad of [
+      { step: 2, status: 'skipped' },
       { step: 0, status: 'done' },
       { step: 10, status: 'done' },
       { step: 1.5, status: 'done' },

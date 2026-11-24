@@ -182,6 +182,27 @@ describe('P1-08 setup wizard', () => {
     expect(screen.getByText('Step 1 of 9')).toBeInTheDocument();
   });
 
+  it('P1-08: step 9 has Finish setup, which saves it as done and leaves the wizard', async () => {
+    const onExit = vi.fn();
+    const { client, save } = fakeClient([{ step: 1, status: 'done' }]);
+    render(wizard(client, 'owner', onExit));
+    await screen.findByText('Step 2 of 9');
+    await userEvent.click(stepButton(/^Review & finish/));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Finish setup' }));
+
+    expect(save).toHaveBeenCalledWith({ step: 9, status: 'done' });
+    expect(onExit).toHaveBeenCalledOnce();
+  });
+
+  it('a view-only member sees no Finish setup button', async () => {
+    const { user } = open(fakeClient().client, 'view');
+    await screen.findByText('Step 1 of 9');
+    await user.click(stepButton(/^Review & finish/));
+
+    expect(screen.queryByRole('button', { name: 'Finish setup' })).not.toBeInTheDocument();
+  });
+
   it('a view-only member can look around but not save or skip', async () => {
     const { user } = open(fakeClient().client, 'view');
     await screen.findByText('Step 1 of 9');

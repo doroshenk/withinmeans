@@ -81,6 +81,17 @@ describe('P1-08 setup progress API', () => {
     });
   });
 
+  it('rejects skipping a required step, and a view-only member is stopped before input parsing', async () => {
+    const owner = await caller('sub-owner');
+    await expect(owner.saveSetupStep({ step: 2, status: 'skipped' })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+    const view = await caller('sub-view');
+    await expect(
+      view.saveSetupStep({ step: 99, status: 'skipped' } as never),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+
   it('rejects a step outside 1..9', async () => {
     const owner = await caller('sub-owner');
     await expect(owner.saveSetupStep({ step: 10, status: 'done' })).rejects.toMatchObject({
