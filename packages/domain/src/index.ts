@@ -6,3 +6,4 @@ export * from './invite';
 export * from './acceptInvite';
 export * from './setupWizard';
 export * from './categories';
+export * from './firstMonth';

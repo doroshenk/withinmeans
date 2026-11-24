@@ -20,6 +20,7 @@ const WRITE_PROCEDURES = [
   'invitePartner',
   'resendInvite',
   'saveSetupStep',
+  'startFirstMonth',
   'seedDefaultCategories',
   'createCategory',
   'renameCategory',

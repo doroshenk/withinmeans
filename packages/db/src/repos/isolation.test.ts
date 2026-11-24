@@ -10,6 +10,7 @@ import { categories } from './categories.js';
 import { invites } from './invites.js';
 import { memberships } from './memberships.js';
 import { months } from './months.js';
+import { openMonth } from './openMonth.js';
 import { recurringBills } from './recurringBills.js';
 import { setupProgress } from './setupProgress.js';
 
@@ -79,6 +80,11 @@ const cases: Case[] = [
     name: 'months.insert',
     write: true,
     run: (db, ctx) => months.insert(db, ctx, '2026-12', new Date('2026-12-01T12:00:00Z')),
+  },
+  {
+    name: 'months.openMonth',
+    write: true,
+    run: (db, ctx) => openMonth(db, ctx, '2026-12', new Date('2026-12-01T12:00:00Z')),
   },
 
   { name: 'categories.list', write: false, run: (db, ctx) => categories.list(db, ctx) },
@@ -309,7 +315,7 @@ describe('P1-01 isolation: coverage of the table', () => {
     const repos = {
       memberships,
       invites,
-      months,
+      months: { ...months, openMonth },
       categories,
       accounts,
       balanceSnapshots,

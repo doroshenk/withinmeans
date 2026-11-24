@@ -2,11 +2,13 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { MeResult } from './Hello';
 import { categoriesStub } from './categoriesStub';
+import { welcomeStub } from './welcomeStub';
 import { SetupPage } from './SetupPage';
 
 function client(me: Promise<MeResult>) {
   return {
     ...categoriesStub,
+    ...welcomeStub,
     me: { query: () => me },
     setupProgress: { query: () => Promise.resolve([]) },
     saveSetupStep: { mutate: vi.fn() },
