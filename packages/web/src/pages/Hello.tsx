@@ -29,22 +29,24 @@ export function Hello({ client, onSignOut }: HelloProps) {
   }, [client]);
 
   return (
-    <main className="hello">
-      {state.kind === 'loading' && <p role="status">Loading…</p>}
-      {state.kind === 'error' && <p role="alert">{GENERIC_ERROR}</p>}
-      {state.kind === 'ready' && (
-        <RoleProvider role={state.me.household?.role}>
-          <Shell route="dashboard" onNavigate={() => {}}>
-            <h1>{`Hello ${state.me.user?.name ?? 'there'}`}</h1>
-            {state.me.household && <p>{state.me.household.name}</p>}
-          </Shell>
-        </RoleProvider>
-      )}
-      {onSignOut && (
-        <button type="button" className="button button-quiet" onClick={onSignOut}>
-          Sign out
-        </button>
-      )}
-    </main>
+    <RoleProvider role={state.kind === 'ready' ? state.me.household?.role : undefined}>
+      <Shell route="dashboard" onNavigate={() => {}}>
+        <main className="hello">
+          {state.kind === 'loading' && <p role="status">Loading�</p>}
+          {state.kind === 'error' && <p role="alert">{GENERIC_ERROR}</p>}
+          {state.kind === 'ready' && (
+            <>
+              <h1>{`Hello ${state.me.user?.name ?? 'there'}`}</h1>
+              {state.me.household && <p>{state.me.household.name}</p>}
+            </>
+          )}
+          {onSignOut && (
+            <button type="button" className="button button-quiet" onClick={onSignOut}>
+              Sign out
+            </button>
+          )}
+        </main>
+      </Shell>
+    </RoleProvider>
   );
 }

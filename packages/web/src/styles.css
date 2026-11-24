@@ -300,6 +300,7 @@ h2,
   flex-direction: column;
   gap: 20px;
   padding: 24px 16px;
+  overflow-y: auto;
   background: var(--color-sidebar);
 }
 
@@ -365,6 +366,7 @@ h2,
 .month-nav {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -465,5 +467,9 @@ h2,
 
   .shell-main {
     padding: 20px 16px 96px;
+  }
+
+  .month-nav h2 {
+    font-size: 22px;
   }
 }
