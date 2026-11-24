@@ -51,6 +51,11 @@ export const households = {
     });
   },
 
+  /** Spec section 3 step 2: the checking cushion, in whole cents, never negative. */
+  async setCushion(_db: Database, _ctx: HouseholdContext, _cushionCents: number): Promise<void> {
+    throw new Error('not implemented');
+  },
+
   async remove(db: Database, ctx: HouseholdContext): Promise<void> {
     assertCanWrite(ctx);
     await db.deleteFrom('households').where('id', '=', ctx.householdId).execute();

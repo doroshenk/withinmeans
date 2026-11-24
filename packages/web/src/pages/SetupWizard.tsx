@@ -10,10 +10,11 @@ import {
 import { useEffect, useState } from 'react';
 import { GENERIC_ERROR } from '../auth/errors';
 import { useCan } from '../permissions';
+import { type AccountsClient } from './AccountsStep';
 import { CategoriesStep, type CategoriesClient } from './CategoriesStep';
 import { WelcomeStep, type WelcomeClient } from './WelcomeStep';
 
-export interface SetupClient extends CategoriesClient, WelcomeClient {
+export interface SetupClient extends AccountsClient, CategoriesClient, WelcomeClient {
   setupProgress: {
     query: () => Promise<{ step: number; status: 'done' | 'skipped' }[]>;
   };

@@ -152,6 +152,22 @@ const cases: Case[] = [
     run: (db, ctx) => accounts.create(db, ctx, { name: 'Savings', type: 'savings' }),
   },
   {
+    name: 'accounts.listWithBalance',
+    write: false,
+    run: (db, ctx) => accounts.listWithBalance(db, ctx),
+  },
+  {
+    name: 'accounts.createWithBalance',
+    write: true,
+    run: (db, ctx) =>
+      accounts.createWithBalance(db, ctx, {
+        name: 'Joint',
+        type: 'checking',
+        balanceCents: 5_000,
+        date: '2026-11-18',
+      }),
+  },
+  {
     name: 'accounts.rename',
     write: true,
     namesId: true,

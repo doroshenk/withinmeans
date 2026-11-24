@@ -1,6 +1,9 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import {
   acceptInviteInput,
+  addAccountInput,
+  removeAccountInput,
+  setCushionInput,
   createCategoryInput,
   deleteCategoryInput,
   invitePartnerInput,
@@ -25,6 +28,12 @@ import {
 import type { Context } from './context.js';
 import { firstMonthOptions, startFirstMonth } from './firstMonth.js';
 import { invitePartner, resendInvite } from './invitePartner.js';
+import {
+  addSetupAccount,
+  listSetupAccounts,
+  removeSetupAccount,
+  saveCushion,
+} from './setupAccounts.js';
 import { signUp } from './signUp.js';
 
 const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
@@ -108,6 +117,21 @@ export const appRouter = t.router({
     const row = await setupProgress.save(ctx.db, ctx.household, input.step, input.status);
     return { step: row.step, status: row.status };
   }),
+
+  /** Spec §3 step 2: accounts with their balance today, and the checking cushion. */
+  setupAccounts: memberProcedure.query(({ ctx }) => listSetupAccounts(ctx)),
+
+  addAccount: writeProcedure
+    .input(addAccountInput)
+    .mutation(({ ctx, input }) => addSetupAccount(ctx, input)),
+
+  removeAccount: writeProcedure
+    .input(removeAccountInput)
+    .mutation(({ ctx, input }) => removeSetupAccount(ctx, input)),
+
+  setCushion: writeProcedure
+    .input(setCushionInput)
+    .mutation(({ ctx, input }) => saveCushion(ctx, input)),
 
   /** Spec §3 step 1: this month and next month, and whether the first month is already open. */
   firstMonthOptions: memberProcedure.query(({ ctx }) => firstMonthOptions(ctx)),

@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider, type Role } from '../permissions';
+import { accountsStub } from './accountsStub';
 import { categoriesStub } from './categoriesStub';
 import { welcomeStub } from './welcomeStub';
 import { SetupWizard, type SetupClient } from './SetupWizard';
@@ -23,6 +24,7 @@ function fakeClient(initial: Row[] = []) {
         ),
     },
     saveSetupStep: { mutate: save },
+    ...accountsStub,
     ...categoriesStub,
     ...welcomeStub,
   };
@@ -229,6 +231,7 @@ describe('P1-08 setup wizard', () => {
 
   it('shows "Loading…" first and a generic error if progress cannot be loaded', async () => {
     const client: SetupClient = {
+      ...accountsStub,
       ...categoriesStub,
       ...welcomeStub,
       setupProgress: { query: () => Promise.reject(new Error('boom')) },

@@ -4,6 +4,15 @@ import type { AccountsTable, AccountType, Database } from '../db.js';
 import { cleanName, inTransaction, mustHaveChanged } from './shared.js';
 
 export type Account = Selectable<AccountsTable>;
+export type AccountWithBalance = Account & { balance_cents: number | null };
+
+export interface NewAccountWithBalance {
+  name: string;
+  type: AccountType;
+  balanceCents: number;
+  /** 'YYYY-MM-DD': the date of the first snapshot. */
+  date: string;
+}
 
 export const accounts = {
   async list(
@@ -32,6 +41,23 @@ export const accounts = {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
+  },
+
+  /** Active accounts with their latest balance (null when there is no snapshot yet). */
+  async listWithBalance(_db: Database, _ctx: HouseholdContext): Promise<AccountWithBalance[]> {
+    throw new Error('not implemented');
+  },
+
+  /**
+   * Spec section 3 step 2: the account and its first BalanceSnapshot in one transaction. The
+   * household's first checking account becomes the primary checking account.
+   */
+  async createWithBalance(
+    _db: Database,
+    _ctx: HouseholdContext,
+    _input: NewAccountWithBalance,
+  ): Promise<Account> {
+    throw new Error('not implemented');
   },
 
   async rename(db: Database, ctx: HouseholdContext, id: string, name: string): Promise<void> {
