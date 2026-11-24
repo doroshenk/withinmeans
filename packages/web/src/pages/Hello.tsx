@@ -32,7 +32,7 @@ export function Hello({ client, onSignOut }: HelloProps) {
     <RoleProvider role={state.kind === 'ready' ? state.me.household?.role : undefined}>
       <Shell route="dashboard" onNavigate={() => {}}>
         <main className="hello">
-          {state.kind === 'loading' && <p role="status">Loading�</p>}
+          {state.kind === 'loading' && <p role="status">Loading…</p>}
           {state.kind === 'error' && <p role="alert">{GENERIC_ERROR}</p>}
           {state.kind === 'ready' && (
             <>
