@@ -4,16 +4,18 @@ import {
   markStep,
   resumeStep,
   reviewRows,
+  setupAccountsError,
   stepStatus,
   type SetupProgress,
 } from '@withinmeans/domain';
 import { useEffect, useState } from 'react';
 import { GENERIC_ERROR } from '../auth/errors';
 import { useCan } from '../permissions';
+import { AccountsStep, type AccountsClient } from './AccountsStep';
 import { CategoriesStep, type CategoriesClient } from './CategoriesStep';
 import { WelcomeStep, type WelcomeClient } from './WelcomeStep';
 
-export interface SetupClient extends CategoriesClient, WelcomeClient {
+export interface SetupClient extends AccountsClient, CategoriesClient, WelcomeClient {
   setupProgress: {
     query: () => Promise<{ step: number; status: 'done' | 'skipped' }[]>;
   };
@@ -36,7 +38,7 @@ type Load =
 const LAST = SETUP_STEPS.length;
 
 /** Steps whose real screens have landed. Each setup ticket (P1-09 to P1-13) adds its step here. */
-const BUILT_STEPS: ReadonlySet<number> = new Set([1, 4]);
+const BUILT_STEPS: ReadonlySet<number> = new Set([1, 2, 4]);
 
 const STATUS_LABEL = { todo: '', done: 'Done', skipped: 'Skipped' } as const;
 
@@ -46,6 +48,7 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [blocked, setBlocked] = useState<string | null>(null);
   const [firstOpened, setFirstOpened] = useState(false);
   const [firstChoice, setFirstChoice] = useState<FirstMonthChoice>('this');
 
@@ -74,13 +77,24 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
 
   const goTo = (id: number) => {
     setSaveFailed(false);
+    setBlocked(null);
     setLoad({ kind: 'ready', progress, current: id });
   };
 
   const save = async (status: 'done' | 'skipped') => {
     setSaving(true);
     setSaveFailed(false);
+    setBlocked(null);
     try {
+      // Step 2 needs at least one account before it can be finished.
+      if (step.id === 2 && status === 'done') {
+        const { accounts } = await client.setupAccounts.query();
+        const problem = setupAccountsError(accounts.length);
+        if (problem !== undefined) {
+          setBlocked(problem);
+          return;
+        }
+      }
       // Step 1 commits the month first; once it is saved the choice is final.
       if (
         step.id === 1 &&
@@ -172,12 +186,15 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
             onChoice={setFirstChoice}
             onOpened={setFirstOpened}
           />
+        ) : step.id === 2 ? (
+          <AccountsStep client={client} />
         ) : step.id === 4 ? (
           <CategoriesStep client={client} />
         ) : (
           !BUILT_STEPS.has(step.id) && <p className="wizard-soon">Coming soon</p>
         )}
 
+        {blocked !== null && <p role="alert">{blocked}</p>}
         {saveFailed && <p role="alert">{GENERIC_ERROR}</p>}
 
         <div className="wizard-actions">

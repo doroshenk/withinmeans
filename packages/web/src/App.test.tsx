@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { accountsStub } from './pages/accountsStub';
 import { categoriesStub } from './pages/categoriesStub';
 import { welcomeStub } from './pages/welcomeStub';
 import userEvent from '@testing-library/user-event';
@@ -45,6 +46,7 @@ function setup(token: string | undefined, location?: { pathname: string; search:
     resendInvite: { mutate: () => Promise.resolve(pending) },
     inviteDetails: { query: inviteDetails },
     acceptInvite: { mutate: acceptInvite },
+    ...accountsStub,
     ...categoriesStub,
     ...welcomeStub,
     setupProgress: { query: () => Promise.resolve([]) },
