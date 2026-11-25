@@ -12,6 +12,8 @@ import { invites } from './invites.js';
 import { memberships } from './memberships.js';
 import { months } from './months.js';
 import { openMonth } from './openMonth.js';
+import { paychecks } from './paychecks.js';
+import { paySchedules } from './paySchedules.js';
 import { recurringBills } from './recurringBills.js';
 import { setupProgress } from './setupProgress.js';
 
@@ -245,6 +247,50 @@ const cases: Case[] = [
     run: (db, ctx, t) => recurringBills.remove(db, ctx, t.recurringBillId, '2026-11'),
   },
 
+  { name: 'paySchedules.list', write: false, run: (db, ctx) => paySchedules.list(db, ctx) },
+  {
+    name: 'paySchedules.create',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) =>
+      paySchedules.create(db, ctx, {
+        name: 'Side job',
+        frequency: 'weekly',
+        anchorDate: '2026-11-06',
+        usualCents: 10_000,
+        accountId: t.accountId,
+      }),
+  },
+  {
+    name: 'paySchedules.stop',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) => paySchedules.stop(db, ctx, t.payScheduleId, '2026-09-30'),
+  },
+  {
+    name: 'paySchedules.restart',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) => paySchedules.restart(db, ctx, t.stoppedScheduleId, '2026-11-18'),
+  },
+
+  {
+    name: 'paychecks.listForMonth',
+    write: false,
+    marker: (t) => t.paycheckId,
+    run: (db, ctx, t) => paychecks.listForMonth(db, ctx, t.ym),
+  },
+  {
+    name: 'paychecks.markReceived',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) =>
+      paychecks.markReceived(db, ctx, t.paycheckId, {
+        receivedCents: 201_000,
+        receivedDate: '2026-11-18',
+      }),
+  },
+
   {
     name: 'setupProgress.list',
     write: false,
@@ -349,6 +395,8 @@ describe('P1-01 isolation: coverage of the table', () => {
       accounts,
       balanceSnapshots,
       recurringBills,
+      paySchedules,
+      paychecks,
       setupProgress,
       householdExport,
     };

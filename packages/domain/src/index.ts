@@ -11,3 +11,4 @@ export * from './accounts';
 export * from './recurringBills';
 export * from './monthBills';
 export * from './paydays';
+export * from './paychecks';

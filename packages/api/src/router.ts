@@ -15,6 +15,10 @@ import {
   saveSetupStepInput,
   signUpInput,
   startFirstMonthInput,
+  addPayScheduleInput,
+  markPaycheckReceivedInput,
+  monthPaychecksInput,
+  payScheduleIdInput,
 } from '@withinmeans/domain';
 import { setupProgress } from '@withinmeans/db';
 import { z } from 'zod';
@@ -31,6 +35,14 @@ import type { Context } from './context.js';
 import { exportData } from './exportData.js';
 import { firstMonthOptions, startFirstMonth } from './firstMonth.js';
 import { invitePartner, resendInvite } from './invitePartner.js';
+import {
+  addPaySchedule,
+  listPaychecks,
+  listPaySchedules,
+  markPaycheckReceived,
+  restartPaySchedule,
+  stopPaySchedule,
+} from './paychecks.js';
 import {
   addSetupAccount,
   requireAccounts,
@@ -182,6 +194,32 @@ export const appRouter = t.router({
   removeRecurringBill: writeProcedure
     .input(removeRecurringBillInput)
     .mutation(({ ctx, input }) => removeSetupBill(ctx, input)),
+
+  /** Spec §5.9: pay schedules, running and stopped. */
+  paySchedules: memberProcedure.query(({ ctx }) => listPaySchedules(ctx)),
+
+  /** Spec §5.9: the paychecks expected in a month, received or not. */
+  paychecks: memberProcedure
+    .input(monthPaychecksInput)
+    .query(({ ctx, input }) => listPaychecks(ctx, input.ym)),
+
+  addPaySchedule: writeProcedure
+    .input(addPayScheduleInput)
+    .mutation(({ ctx, input }) => addPaySchedule(ctx, input)),
+
+  /** Spec §5.9 "Stop this paycheck": ends it today. */
+  stopPaySchedule: writeProcedure
+    .input(payScheduleIdInput)
+    .mutation(({ ctx, input }) => stopPaySchedule(ctx, input)),
+
+  restartPaySchedule: writeProcedure
+    .input(payScheduleIdInput)
+    .mutation(({ ctx, input }) => restartPaySchedule(ctx, input)),
+
+  /** Spec §5.9: the actual amount and date; replaces the expected amount. */
+  markPaycheckReceived: writeProcedure
+    .input(markPaycheckReceivedInput)
+    .mutation(({ ctx, input }) => markPaycheckReceived(ctx, input)),
 
   /** Spec §8: the household's full JSON export. A read, so view-only members may call it. */
   exportData: memberProcedure.query(({ ctx }) => exportData(ctx)),

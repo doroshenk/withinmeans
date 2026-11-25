@@ -13,6 +13,10 @@ export interface Seeded {
   snapshotId: string;
   recurringBillId: string;
   billId: string;
+  payScheduleId: string;
+  paycheckId: string;
+  /** A second schedule, already stopped, with no paychecks. */
+  stoppedScheduleId: string;
   inviteId: string;
   inviteToken: string;
   /** The one finished setup step seeded for this household (A: 1, B: 2). */
@@ -33,6 +37,8 @@ export const HOUSEHOLD_TABLES = [
   'recurring_bills',
   'setup_progress',
   'bills',
+  'pay_schedules',
+  'paychecks',
 ] as const;
 
 export async function clearAll(db: Database): Promise<void> {
@@ -50,6 +56,9 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
     snapshotId: randomUUID(),
     recurringBillId: randomUUID(),
     billId: randomUUID(),
+    payScheduleId: randomUUID(),
+    paycheckId: randomUUID(),
+    stoppedScheduleId: randomUUID(),
     inviteId: randomUUID(),
     inviteToken: `token-${label}-${randomUUID()}`,
   };
@@ -149,6 +158,48 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
       ym,
       started_at: new Date(`${ym}-01T12:00:00Z`),
       closed_at: null,
+    })
+    .execute();
+  await db
+    .insertInto('pay_schedules')
+    .values({
+      id: ids.payScheduleId,
+      household_id: h,
+      name: `${secret} job`,
+      frequency: 'monthly',
+      anchor_date: `${ym}-25`,
+      semimonthly_day_1: null,
+      semimonthly_day_2: null,
+      usual_cents: 200_000,
+      account_id: ids.accountId,
+      ended_on: null,
+    })
+    .execute();
+  await db
+    .insertInto('pay_schedules')
+    .values({
+      id: ids.stoppedScheduleId,
+      household_id: h,
+      name: `${secret} old job`,
+      frequency: 'monthly',
+      anchor_date: `${ym}-27`,
+      semimonthly_day_1: null,
+      semimonthly_day_2: null,
+      usual_cents: 100_000,
+      account_id: null,
+      ended_on: `${ym}-02`,
+    })
+    .execute();
+  await db
+    .insertInto('paychecks')
+    .values({
+      id: ids.paycheckId,
+      household_id: h,
+      schedule_id: ids.payScheduleId,
+      expected_date: `${ym}-25`,
+      expected_cents: 200_000,
+      received_date: null,
+      received_cents: null,
     })
     .execute();
   await db

@@ -102,6 +102,9 @@ describe('P1-14: household export', () => {
       B.snapshotId,
       B.recurringBillId,
       B.billId,
+      B.payScheduleId,
+      B.paycheckId,
+      B.stoppedScheduleId,
       B.inviteId,
       'b@example.test',
     ]) {
