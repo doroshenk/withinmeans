@@ -662,6 +662,17 @@ h2,
 
   .wizard-review li {
     grid-template-columns: 1fr auto;
+    row-gap: 0;
+  }
+
+  .wizard-review-status {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .wizard-review li .button {
+    grid-column: 2;
+    grid-row: 1 / span 2;
   }
 }
 

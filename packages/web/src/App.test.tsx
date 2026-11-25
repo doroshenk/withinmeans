@@ -75,6 +75,16 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Hello Sam' })).toBeInTheDocument();
   });
 
+  it('P1-13: finishing setup goes to the dashboard placeholder', async () => {
+    const { user } = setup('tok');
+    await user.click(await screen.findByRole('button', { name: 'Start setting up' }));
+    await user.click(await screen.findByRole('button', { name: /^Review & finish/ }));
+
+    await user.click(screen.getByRole('button', { name: 'Finish setup' }));
+
+    expect(await screen.findByText('Your dashboard is coming soon.')).toBeInTheDocument();
+  });
+
   it('goes straight to Hello when a saved session is still valid', async () => {
     setup('token');
 

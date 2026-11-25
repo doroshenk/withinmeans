@@ -360,3 +360,93 @@ describe('P1-09 setup step 1: first month', () => {
     expect(start).not.toHaveBeenCalled();
   });
 });
+
+describe('P1-13 setup step 9: review and finish', () => {
+  async function openReview(initial: Row[], role: Role = 'owner') {
+    const { client, save } = fakeClient(initial);
+    const { user } = open(client, role);
+    await screen.findByText(/^Step \d of 9$/);
+    await user.click(stepButton(/^Review & finish/));
+    return { user, save };
+  }
+
+  const reviewRow = (title: string) =>
+    within(screen.getByRole('list', { name: 'Review' }))
+      .getByText(title)
+      .closest('li') as HTMLElement;
+
+  const saved: Row[] = [
+    { step: 1, status: 'done' },
+    { step: 3, status: 'skipped' },
+    { step: 7, status: 'done' },
+  ];
+
+  it('P1-13: Review reflects saved, skipped and coming-soon steps correctly', async () => {
+    await openReview(saved);
+
+    const expected = [
+      ['Welcome', 'Done', 'Edit'],
+      ['Bank accounts', 'Not started', 'Finish this'],
+      ['Paychecks', 'Skipped · Coming soon', 'Add now'],
+      ['Bill categories', 'Not started', 'Finish this'],
+      ['Recurring bills', 'Not started', 'Finish this'],
+      ['Credit cards', 'Coming soon', 'Add now'],
+      ['Investments', 'Coming soon', 'Add now'],
+      ['Where income goes', 'Coming soon', 'Finish this'],
+    ] as const;
+    for (const [title, status, action] of expected) {
+      const row = reviewRow(title);
+      expect(within(row).getByText(status)).toBeInTheDocument();
+      expect(within(row).getByRole('button', { name: action })).toBeInTheDocument();
+    }
+  });
+
+  it('a coming-soon step never shows as done in the stepper or the count', async () => {
+    await openReview(saved);
+
+    expect(stepButton(/^Investments/)).not.toHaveTextContent('Done');
+    expect(stepButton(/^Investments/)).toHaveTextContent('Holdings and current prices');
+    expect(screen.getByText('1 of 9 steps done')).toBeInTheDocument();
+  });
+
+  it('an optional coming-soon step can be skipped or passed, never saved as done', async () => {
+    const { client, save } = fakeClient();
+    const { user } = open(client);
+    await screen.findByText('Step 1 of 9');
+    await user.click(stepButton(/^Credit cards/));
+
+    expect(screen.queryByRole('button', { name: 'Save & continue' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Skip for now' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Next →' }));
+
+    expect(screen.getByText('Step 7 of 9')).toBeInTheDocument();
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('the required coming-soon step 8 moves on to Review without saving', async () => {
+    const { client, save } = fakeClient();
+    const { user } = open(client);
+    await screen.findByText('Step 1 of 9');
+    await user.click(stepButton(/^Where income goes/));
+
+    expect(screen.queryByRole('button', { name: 'Save & continue' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Next →' }));
+
+    expect(screen.getByRole('list', { name: 'Review' })).toBeInTheDocument();
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('a view-only member can open each step from Review, with no editing words', async () => {
+    const { user } = await openReview(saved, 'view');
+
+    expect(screen.queryAllByRole('button', { name: /Edit|Add now|Finish this/ })).toHaveLength(0);
+    await user.click(within(reviewRow('Welcome')).getByRole('button', { name: 'View' }));
+    expect(screen.getByText('Step 1 of 9')).toBeInTheDocument();
+  });
+
+  it('reopening a finished setup does not land on a coming-soon step', async () => {
+    open(fakeClient([1, 2, 4, 5, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
+
+    expect(await screen.findByText('Step 9 of 9')).toBeInTheDocument();
+  });
+});

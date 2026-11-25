@@ -80,6 +80,35 @@ describe('setup wizard (spec §3)', () => {
     expect(rows[5]).toMatchObject({ id: 6, status: 'todo', action: 'Add now' });
   });
 
+  it('P1-13: Review reflects saved, skipped and coming-soon steps correctly', () => {
+    const progress: SetupProgress = { 1: 'done', 3: 'skipped', 7: 'done' };
+    const rows = reviewRows(progress, new Set([3, 6, 7, 8]));
+
+    expect(rows.map((r) => [r.id, r.status, r.comingSoon, r.action])).toEqual([
+      [1, 'done', false, 'Edit'],
+      [2, 'todo', false, 'Finish this'],
+      [3, 'skipped', true, 'Add now'],
+      [4, 'todo', false, 'Finish this'],
+      [5, 'todo', false, 'Finish this'],
+      [6, 'todo', true, 'Add now'],
+      // Saved as done before the screen exists: nothing was entered, so it is not done.
+      [7, 'todo', true, 'Add now'],
+      [8, 'todo', true, 'Finish this'],
+    ]);
+  });
+
+  it('P1-13: after finishing, resuming never lands on a coming-soon step', () => {
+    const comingSoon = new Set([3, 6, 7, 8]);
+    const finished: SetupProgress = { 1: 'done', 2: 'done', 4: 'done', 5: 'done', 9: 'done' };
+    expect(resumeStep(finished, comingSoon)).toBe(9);
+    // A real step that is still unfinished is where to go.
+    expect(resumeStep({ 1: 'done', 9: 'done' }, comingSoon)).toBe(2);
+  });
+
+  it('P1-13: no step is coming soon unless it is listed', () => {
+    expect(reviewRows({}).every((r) => !r.comingSoon)).toBe(true);
+  });
+
   it('the save input takes a step 1..9 and done or skipped', () => {
     expect(saveSetupStepInput.safeParse({ step: 3, status: 'skipped' }).success).toBe(true);
     expect(saveSetupStepInput.safeParse({ step: 9, status: 'done' }).success).toBe(true);

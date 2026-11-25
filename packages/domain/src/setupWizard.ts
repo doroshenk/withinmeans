@@ -42,9 +42,19 @@ export function stepStatus(progress: SetupProgress, id: number): StepStatus {
   return progress[id] ?? 'todo';
 }
 
-/** Where to resume: the first step that is neither done nor skipped (the last step when all are). */
-export function resumeStep(progress: SetupProgress): number {
-  return SETUP_STEPS.find((s) => stepStatus(progress, s.id) === 'todo')?.id ?? LAST_STEP;
+/**
+ * Where to resume: the first step that is neither done nor skipped (the last step when all are).
+ * Once setup has been finished, steps that are coming soon are passed over.
+ */
+export function resumeStep(
+  progress: SetupProgress,
+  comingSoon: ReadonlySet<number> = new Set(),
+): number {
+  const finished = stepStatus(progress, LAST_STEP) === 'done';
+  const next = SETUP_STEPS.find(
+    (s) => stepStatus(progress, s.id) === 'todo' && !(finished && comingSoon.has(s.id)),
+  );
+  return next?.id ?? LAST_STEP;
 }
 
 /** Returns a new progress with the step saved. Only optional steps may be skipped. */
@@ -59,19 +69,36 @@ export function markStep(
   return { ...progress, [id]: status };
 }
 
+/**
+ * The status to show. A step that is coming soon never shows as done: it has no screen yet, so
+ * nothing was entered. Skipping it still shows.
+ */
+export function shownStatus(
+  progress: SetupProgress,
+  id: number,
+  comingSoon: ReadonlySet<number>,
+): StepStatus {
+  const status = stepStatus(progress, id);
+  return status === 'done' && comingSoon.has(id) ? 'todo' : status;
+}
+
 export interface ReviewRow {
   id: number;
   title: string;
   status: StepStatus;
+  comingSoon: boolean;
   /** Edit a finished step, Add now for an optional one, Finish this for a required one. */
   action: 'Edit' | 'Add now' | 'Finish this';
 }
 
 /** Spec §3 step 9: every step except Review itself, with what to do about it. */
-export function reviewRows(progress: SetupProgress): ReviewRow[] {
+export function reviewRows(
+  progress: SetupProgress,
+  comingSoon: ReadonlySet<number> = new Set(),
+): ReviewRow[] {
   return SETUP_STEPS.filter((s) => s.id !== LAST_STEP).map((s) => {
-    const status = stepStatus(progress, s.id);
+    const status = shownStatus(progress, s.id, comingSoon);
     const action = status === 'done' ? 'Edit' : s.required ? 'Finish this' : 'Add now';
-    return { id: s.id, title: s.title, status, action };
+    return { id: s.id, title: s.title, status, comingSoon: comingSoon.has(s.id), action };
   });
 }
