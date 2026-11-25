@@ -14,11 +14,11 @@ const templateOf = (row: Selectable<RecurringBillsTable>): RecurringBillTemplate
 });
 
 /**
- * Months and recurring bills change each other's Bill rows but write different rows, so two
- * transactions could both commit without seeing each other. Each takes this lock first: Postgres
+ * Months, recurring bills and pay schedules change each other's Bill and Paycheck rows but write
+ * different rows, so two transactions could both commit without seeing each other. Each takes this lock first: Postgres
  * makes the second one wait, and DSQL fails one at commit so that it is retried.
  */
-export async function lockHouseholdBills(
+export async function lockHouseholdMonths(
   trx: Transaction<DB>,
   ctx: HouseholdContext,
 ): Promise<void> {

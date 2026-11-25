@@ -116,6 +116,35 @@ export interface BillsTable {
   created_at: Generated<Date>;
 }
 
+export interface PaySchedulesTable {
+  id: Generated<string>;
+  household_id: string;
+  name: string;
+  frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+  /** 'YYYY-MM-DD' */
+  anchor_date: string;
+  semimonthly_day_1: number | null;
+  semimonthly_day_2: number | null;
+  usual_cents: number;
+  account_id: string | null;
+  /** 'YYYY-MM-DD' */
+  ended_on: string | null;
+  created_at: Generated<Date>;
+}
+
+export interface PaychecksTable {
+  id: Generated<string>;
+  household_id: string;
+  schedule_id: string;
+  /** 'YYYY-MM-DD' */
+  expected_date: string;
+  expected_cents: number;
+  /** 'YYYY-MM-DD'; null until received, like received_cents. */
+  received_date: string | null;
+  received_cents: number | null;
+  created_at: Generated<Date>;
+}
+
 export interface SetupProgressTable {
   household_id: string;
   step: number;
@@ -135,6 +164,8 @@ export interface DB {
   recurring_bills: RecurringBillsTable;
   setup_progress: SetupProgressTable;
   bills: BillsTable;
+  pay_schedules: PaySchedulesTable;
+  paychecks: PaychecksTable;
 }
 
 export type Database = Kysely<DB>;

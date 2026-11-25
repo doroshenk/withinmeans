@@ -2,7 +2,7 @@ import { dueDateIn, lastKeptMonth } from '@withinmeans/domain';
 import type { Selectable, Transaction } from 'kysely';
 import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '../context.js';
 import type { Database, DB, RecurringBillsTable } from '../db.js';
-import { insertMonthBills, lockHouseholdBills } from './monthBills.js';
+import { insertMonthBills, lockHouseholdMonths } from './monthBills.js';
 import { assertCents, assertYm, cleanName, inTransaction } from './shared.js';
 
 export type RecurringBill = Selectable<RecurringBillsTable>;
@@ -183,7 +183,7 @@ export const recurringBills = {
     }
     await assertRefs(db, ctx, input);
     return inTransaction(db, async (trx) => {
-      await lockHouseholdBills(trx, ctx);
+      await lockHouseholdMonths(trx, ctx);
       const created = await trx
         .insertInto('recurring_bills')
         .values({
@@ -225,7 +225,7 @@ export const recurringBills = {
     if (fromYm !== undefined) assertYm(fromYm, 'current month');
     await assertRefs(db, ctx, patch);
     await inTransaction(db, async (trx) => {
-      await lockHouseholdBills(trx, ctx);
+      await lockHouseholdMonths(trx, ctx);
       const before = await mine(trx, ctx, id);
       const after = await trx
         .updateTable('recurring_bills')
@@ -255,7 +255,7 @@ export const recurringBills = {
     assertCanWrite(ctx);
     assertYm(currentYm, 'current month');
     await inTransaction(db, async (trx) => {
-      await lockHouseholdBills(trx, ctx);
+      await lockHouseholdMonths(trx, ctx);
       await mine(trx, ctx, id);
       await deleteUntouched(trx, ctx, id, { op: '>=', ym: currentYm });
       const last = await trx
@@ -286,7 +286,7 @@ export const recurringBills = {
     assertCanWrite(ctx);
     assertYm(currentYm, 'current month');
     await inTransaction(db, async (trx) => {
-      await lockHouseholdBills(trx, ctx);
+      await lockHouseholdMonths(trx, ctx);
       if ((await mine(trx, ctx, id)).end_ym !== null) return;
       const started = await trx
         .selectFrom('months')
@@ -310,7 +310,7 @@ export const recurringBills = {
     assertCanWrite(ctx);
     assertYm(currentYm, 'current month');
     await inTransaction(db, async (trx) => {
-      await lockHouseholdBills(trx, ctx);
+      await lockHouseholdMonths(trx, ctx);
       const bill = await mine(trx, ctx, id);
       if (bill.end_ym === null) return;
       await setEndYm(trx, ctx, id, null);

@@ -34,6 +34,10 @@ const WRITE_PROCEDURES = [
   'updateRecurringBill',
   'endRecurringBill',
   'restartRecurringBill',
+  'addPaySchedule',
+  'stopPaySchedule',
+  'restartPaySchedule',
+  'markPaycheckReceived',
 ] as const;
 
 /** Mutations that need no membership: anyone may call them (the token or the new login is the credential). */
