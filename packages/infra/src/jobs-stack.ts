@@ -1,14 +1,13 @@
-import { fileURLToPath } from 'node:url';
 import { CfnOutput, Duration, RemovalPolicy, Stack, Tags, type StackProps } from 'aws-cdk-lib';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
-import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { BlockPublicAccess, Bucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 import { Schedule, ScheduleExpression } from 'aws-cdk-lib/aws-scheduler';
 import { LambdaInvoke } from 'aws-cdk-lib/aws-scheduler-targets';
 import type { Construct } from 'constructs';
 import type { Stage } from './data-stack.js';
+import { nodeLambdaDefaults } from './node-lambda.js';
 
 export interface JobsStackProps extends StackProps {
   readonly stage: Stage;
@@ -16,9 +15,6 @@ export interface JobsStackProps extends StackProps {
   readonly clusterArn: string;
   readonly clusterEndpoint: string;
 }
-
-const fromRoot = (path: string): string =>
-  fileURLToPath(new URL(`../../../${path}`, import.meta.url));
 
 /**
  * Scheduled jobs for one stage. There is one: the nightly JSON export of every household
@@ -51,24 +47,11 @@ export class JobsStack extends Stack {
       removalPolicy: isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
     });
 
-    // The export function, bundled like the API's (see api-stack.ts).
+    // The export function (shared settings in node-lambda.ts).
     const fn = new NodejsFunction(this, 'ExportFunction', {
-      entry: fromRoot('packages/api/src/exportLambda.ts'),
-      depsLockFilePath: fromRoot('pnpm-lock.yaml'),
-      handler: 'handler',
-      runtime: Runtime.NODEJS_24_X,
-      architecture: Architecture.ARM_64,
-      memorySize: 512,
+      ...nodeLambdaDefaults('packages/api/src/exportLambda.ts'),
       timeout: Duration.minutes(5),
       logGroup,
-      bundling: {
-        format: OutputFormat.ESM,
-        minify: true,
-        sourceMap: true,
-        externalModules: ['pg-native'],
-        banner:
-          "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);",
-      },
       environment: {
         DSQL_ENDPOINT: props.clusterEndpoint,
         EXPORT_BUCKET: bucket.bucketName,
