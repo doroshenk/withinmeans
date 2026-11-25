@@ -10,3 +10,4 @@ export * from './firstMonth';
 export * from './accounts';
 export * from './recurringBills';
 export * from './monthBills';
+export * from './paydays';
