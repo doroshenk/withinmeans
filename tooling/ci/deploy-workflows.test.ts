@@ -126,6 +126,12 @@ describe('P0-13: deploy.yml (shared by both stages)', () => {
     expect(text()).not.toMatch(/DataStack-(dev|prod)\b/);
   });
 
+  it("P1-14: deploys the stage's scheduled jobs, before the migrations", () => {
+    const jobs = at(file, 'JobsStack-${{ inputs.stage }}');
+    expect(steps(file)[jobs]?.run).toContain('cdk deploy');
+    expect(jobs).toBeLessThan(at(file, 'pnpm migrate'));
+  });
+
   it('P0-13: builds the web app with the stage Cognito pool before the website stack uploads it', () => {
     const build = at(file, '@withinmeans/web build');
     const buildStep = steps(file)[build];

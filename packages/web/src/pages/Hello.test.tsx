@@ -1,11 +1,27 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { Hello, type MeResult } from './Hello';
+import { Hello, type ExportResult, type MeResult } from './Hello';
 
-function clientReturning(result: Promise<MeResult>) {
-  return { me: { query: vi.fn(() => result) } };
+const exported: ExportResult = {
+  version: 1,
+  exportedAt: '2026-11-18T12:00:00Z',
+  exportedOn: '2026-11-18',
+  tables: { households: [{ name: 'The Examples' }] },
+};
+
+function clientReturning(
+  result: Promise<MeResult>,
+  exportData: () => Promise<ExportResult> = () => Promise.resolve(exported),
+) {
+  return { me: { query: vi.fn(() => result) }, exportData: { query: vi.fn(exportData) } };
 }
+
+const member = (role: 'owner' | 'view') =>
+  Promise.resolve({
+    user: { name: 'Sam', email: 'sam@example.com' },
+    household: { name: 'The Examples', role },
+  } as MeResult);
 
 describe('Hello', () => {
   it('renders the name returned by me', async () => {
@@ -76,5 +92,56 @@ describe('Hello', () => {
 
     await screen.findByRole('heading', { name: 'Hello Vic' });
     expect(screen.queryByRole('button', { name: 'Start setting up' })).not.toBeInTheDocument();
+  });
+
+  it.each(['owner', 'view'] as const)(
+    'P1-14: Download my data saves the export as a dated JSON file (%s)',
+    async (role) => {
+      const client = clientReturning(member(role));
+      const saveFile = vi.fn((_name: string, _text: string) => {});
+      render(<Hello client={client} saveFile={saveFile} />);
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Download my data' }));
+
+      expect(client.exportData.query).toHaveBeenCalledOnce();
+      expect(saveFile).toHaveBeenCalledOnce();
+      const [name, text] = saveFile.mock.calls[0] ?? ['', ''];
+      expect(name).toBe('within-means-2026-11-18.json');
+      expect(JSON.parse(text)).toEqual(exported);
+    },
+  );
+
+  it('P1-14: no download without a household', async () => {
+    render(<Hello client={clientReturning(Promise.resolve({ user: null, household: null }))} />);
+
+    await screen.findByRole('heading', { name: 'Hello there' });
+    expect(screen.queryByRole('button', { name: 'Download my data' })).not.toBeInTheDocument();
+  });
+
+  it('P1-14: the button is off while the export is being prepared', async () => {
+    const client = clientReturning(member('owner'), () => new Promise(() => {}));
+    render(<Hello client={client} saveFile={vi.fn()} />);
+
+    const button = await screen.findByRole('button', { name: 'Download my data' });
+    await userEvent.click(button);
+
+    expect(button).toBeDisabled();
+  });
+
+  it('P1-14: a failed download shows an error and can be tried again', async () => {
+    let calls = 0;
+    const client = clientReturning(member('owner'), () =>
+      ++calls === 1 ? Promise.reject(new Error('boom')) : Promise.resolve(exported),
+    );
+    const saveFile = vi.fn();
+    render(<Hello client={client} saveFile={saveFile} />);
+    const button = await screen.findByRole('button', { name: 'Download my data' });
+
+    await userEvent.click(button);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong');
+
+    await userEvent.click(button);
+    expect(saveFile).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

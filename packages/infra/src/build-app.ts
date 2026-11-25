@@ -4,6 +4,7 @@ import { AuthStack } from './auth-stack.js';
 import { CiStack } from './ci-stack.js';
 import { DataStack, type Stage } from './data-stack.js';
 import { EmailStack } from './email-stack.js';
+import { JobsStack } from './jobs-stack.js';
 import { WebStack } from './web-stack.js';
 
 const STAGES: readonly Stage[] = ['dev', 'prod'];
@@ -54,6 +55,12 @@ export function buildApp(
       userPoolId: auth.userPool.userPoolId,
       userPoolArn: auth.userPool.userPoolArn,
       userPoolClientId: auth.client.userPoolClientId,
+    });
+    new JobsStack(app, `JobsStack-${s}`, {
+      env,
+      stage: s,
+      clusterArn: data.cluster.attrResourceArn,
+      clusterEndpoint: data.cluster.attrEndpoint,
     });
     new WebStack(app, `WebStack-${s}`, {
       env,

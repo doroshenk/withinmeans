@@ -55,6 +55,8 @@ describe('P0-07: buildApp data stacks', () => {
       'DataStack-dev',
       'DataStack-prod',
       'EmailStack',
+      'JobsStack-dev',
+      'JobsStack-prod',
       'WebStack-dev',
       'WebStack-prod',
     ]);
@@ -67,6 +69,7 @@ describe('P0-07: buildApp data stacks', () => {
       'CiStack',
       'DataStack-dev',
       'EmailStack',
+      'JobsStack-dev',
       'WebStack-dev',
     ]);
     expect(names('prod')).toEqual([
@@ -75,6 +78,7 @@ describe('P0-07: buildApp data stacks', () => {
       'CiStack',
       'DataStack-prod',
       'EmailStack',
+      'JobsStack-prod',
       'WebStack-prod',
     ]);
   });

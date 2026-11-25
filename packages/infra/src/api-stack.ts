@@ -1,15 +1,14 @@
-import { fileURLToPath } from 'node:url';
 import { CfnOutput, Duration, RemovalPolicy, Stack, Tags, type StackProps } from 'aws-cdk-lib';
 import { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
-import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import type { Construct } from 'constructs';
 import type { Stage } from './data-stack.js';
 import { domainForStage } from './domains.js';
 import { MAIL_DOMAIN } from './email-stack.js';
+import { nodeLambdaDefaults } from './node-lambda.js';
 
 export interface ApiStackProps extends StackProps {
   readonly stage: Stage;
@@ -20,9 +19,6 @@ export interface ApiStackProps extends StackProps {
   readonly userPoolArn: string;
   readonly userPoolClientId: string;
 }
-
-const fromRoot = (path: string): string =>
-  fileURLToPath(new URL(`../../../${path}`, import.meta.url));
 
 /**
  * The API for one stage: one Lambda running tRPC behind an HTTP API (ADR 0010).
@@ -42,28 +38,11 @@ export class ApiStack extends Stack {
       removalPolicy: isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
     });
 
-    // The function. esbuild bundles packages/api/src/lambda.ts and what it imports into one file.
-    // arm64 (Graviton) is the cheaper architecture; the Node 24 runtime matches local dev.
+    // The function (shared settings in node-lambda.ts).
     const fn = new NodejsFunction(this, 'ApiFunction', {
-      entry: fromRoot('packages/api/src/lambda.ts'),
-      depsLockFilePath: fromRoot('pnpm-lock.yaml'),
-      handler: 'handler',
-      runtime: Runtime.NODEJS_24_X,
-      architecture: Architecture.ARM_64,
-      memorySize: 512,
+      ...nodeLambdaDefaults('packages/api/src/lambda.ts'),
       timeout: Duration.seconds(10),
       logGroup,
-      // ESM output: our db package reads import.meta.url, which CommonJS output would empty.
-      // The banner gives bundled CommonJS dependencies (pg) a working require().
-      bundling: {
-        format: OutputFormat.ESM,
-        minify: true,
-        sourceMap: true,
-        // Bundle the AWS SDK too: the runtime does not ship the DSQL signer.
-        externalModules: ['pg-native'],
-        banner:
-          "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);",
-      },
       environment: {
         DSQL_ENDPOINT: props.clusterEndpoint,
         USER_POOL_ID: props.userPoolId,

@@ -16,10 +16,10 @@
   `dev.within.doroshenk.com` while that name's CNAME points at another (even deleted) distribution
   ("incorrectly configured DNS record that points to another CloudFront distribution"). Delete the CNAME
   at Network Solutions, deploy, then add the CNAME for the new `DistributionDomain`. The site is down in between.
-- **Stack outputs are imported across stacks.** `ApiStack` imports from `DataStack`, and `WebStack` from
-  `ApiStack`, so a stack can't be deleted (or its exported cluster/API value replaced) while the next one
-  uses it. Delete in the order Web, Api, Data. A backup vault must be emptied of recovery points before
-  its stack can be deleted.
+- **Stack outputs are imported across stacks.** `ApiStack` and `JobsStack` import from `DataStack`, and
+  `WebStack` from `ApiStack`, so a stack can't be deleted (or its exported cluster/API value replaced) while
+  another uses it. Delete in the order Web, Api, Jobs, Data. A backup vault must be emptied of recovery
+  points before its stack can be deleted, and the export bucket (all versions) before `JobsStack`.
 - **Deleting the cluster behind a stack leaves the stack unable to update** (CloudFormation reads the
   missing cluster and fails). After a restore drill, delete the *restored* cluster, never the original.
 - **Read the prod diff before tagging** (you run it, never deploy from a laptop):

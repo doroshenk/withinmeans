@@ -3,12 +3,21 @@ import type { AppRouter } from '@withinmeans/api';
 import { useEffect, useState } from 'react';
 import { GENERIC_ERROR } from '../auth/errors';
 import { RoleProvider } from '../permissions';
+import { saveFile as saveToDisk } from '../saveFile';
 import { Shell } from '../shell/Shell';
+import { DownloadData } from './DownloadData';
 
 export type MeResult = inferRouterOutputs<AppRouter>['me'];
 
+export type ExportResult = inferRouterOutputs<AppRouter>['exportData'];
+
 export interface HelloProps {
-  client: { me: { query: () => Promise<MeResult> } };
+  client: {
+    me: { query: () => Promise<MeResult> };
+    exportData: { query: () => Promise<ExportResult> };
+  };
+  /** Saves a downloaded file; injected so tests can watch it. */
+  saveFile?: (name: string, text: string) => void;
   onSignOut?: () => void;
   /** Opens the setup wizard (spec §3). */
   onStartSetup?: () => void;
@@ -16,7 +25,7 @@ export interface HelloProps {
 
 type State = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; me: MeResult };
 
-export function Hello({ client, onSignOut, onStartSetup }: HelloProps) {
+export function Hello({ client, onSignOut, onStartSetup, saveFile = saveToDisk }: HelloProps) {
   const [state, setState] = useState<State>({ kind: 'loading' });
 
   useEffect(() => {
@@ -46,6 +55,9 @@ export function Hello({ client, onSignOut, onStartSetup }: HelloProps) {
                 <button type="button" className="button" onClick={onStartSetup}>
                   Start setting up
                 </button>
+              )}
+              {state.me.household && (
+                <DownloadData exportData={() => client.exportData.query()} saveFile={saveFile} />
               )}
             </>
           )}
