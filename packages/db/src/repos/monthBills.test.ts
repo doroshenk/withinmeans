@@ -102,6 +102,51 @@ function failingOnce(db: Database, code: string) {
   return { db: proxy, failures: () => failures };
 }
 
+/**
+ * `db` whose first transaction stops just before committing, until `release` is called. `reached`
+ * resolves when it stops.
+ */
+function pausingBeforeCommit(db: Database) {
+  let release = () => {};
+  let arrived = () => {};
+  const released = new Promise<void>((resolve) => (release = resolve));
+  const reached = new Promise<void>((resolve) => (arrived = resolve));
+  let paused = false;
+  const proxy = new Proxy(db, {
+    get(target, prop) {
+      if (prop !== 'transaction') {
+        const value = Reflect.get(target, prop) as unknown;
+        return typeof value === 'function' ? (value as () => unknown).bind(target) : value;
+      }
+      return () => ({
+        execute: <T>(fn: (trx: never) => Promise<T>) =>
+          target.transaction().execute(async (trx) => {
+            const result = await fn(trx as never);
+            if (!paused) {
+              paused = true;
+              arrived();
+              await released;
+            }
+            return result;
+          }),
+      });
+    },
+  });
+  return { db: proxy, reached, release: () => release() };
+}
+
+/** Runs `other` while `openMonth(ym)` has read the recurring bills but not yet committed. */
+async function whileOpening(ym: string, other: () => Promise<unknown>) {
+  const slow = pausingBeforeCommit(t.db);
+  const opening = openMonth(slow.db, A.ctx(), ym, NOW);
+  await slow.reached;
+  const meanwhile = other();
+  // Long enough for `other` to finish if nothing makes it wait for the open.
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  slow.release();
+  await Promise.all([opening, meanwhile]);
+}
+
 describe('P2-01 openMonth creates the bills (spec §5.11)', () => {
   it('creates one unpaid Bill per recurring bill, at its estimate and due date', async () => {
     const rent = await add();
@@ -198,6 +243,21 @@ describe('P2-01 openMonth creates the bills (spec §5.11)', () => {
     expect(await summary()).toEqual(['2026-11 Rent']);
   });
 
+  it('a bill added while the month is being opened still gets its Bill', async () => {
+    await whileOpening('2026-11', () => add());
+
+    expect(await summary()).toEqual(['2026-11 Rent']);
+  });
+
+  it('a bill removed while the month is being opened leaves no Bill behind', async () => {
+    const rent = await add();
+
+    await whileOpening('2026-11', () => recurringBills.remove(t.db, A.ctx(), rent.id, '2026-11'));
+
+    expect(await billsOf(A)).toEqual([]);
+    expect(await recurringBills.list(t.db, A.ctx())).toEqual([]);
+  });
+
   it('opens nothing if the bills cannot be written', async () => {
     await add();
     const broken = failingOnce(t.db, 'XX000');
@@ -292,6 +352,22 @@ describe('P2-01 recurring bill changes and open months', () => {
     await expect(recurringBills.remove(t.db, A.ctx(), rent.id, 'Nov')).rejects.toThrow(
       /current month/,
     );
+  });
+
+  it('a removed bill that kept its history no longer counts against its category', async () => {
+    const rent = await add();
+    await open('2026-10');
+    await recurringBills.remove(t.db, A.ctx(), rent.id, '2026-11');
+    const spare = await categories.create(t.db, A.ctx(), { name: 'Spare', colorIndex: 1 });
+
+    const listed = await categories.listWithUsage(t.db, A.ctx());
+    expect(listed.find((c) => c.id === A.categoryId)?.bill_count).toBe(0);
+    const result = await categories.remove(t.db, A.ctx(), A.categoryId);
+
+    expect(result.movedCount).toBe(0);
+    // Its history still has to point at a category that exists.
+    expect((await billsOf(A)).map((b) => b.category_id)).toEqual([spare.id]);
+    expect((await recurringBills.list(t.db, A.ctx()))[0]?.category_id).toBe(spare.id);
   });
 
   it('deleting a category moves its Bills too, one-time ones included', async () => {
