@@ -97,6 +97,14 @@ describe('setup wizard (spec §3)', () => {
     ]);
   });
 
+  it('P1-13: after finishing, resuming never lands on a coming-soon step', () => {
+    const comingSoon = new Set([3, 6, 7, 8]);
+    const finished: SetupProgress = { 1: 'done', 2: 'done', 4: 'done', 5: 'done', 9: 'done' };
+    expect(resumeStep(finished, comingSoon)).toBe(9);
+    // A real step that is still unfinished is where to go.
+    expect(resumeStep({ 1: 'done', 9: 'done' }, comingSoon)).toBe(2);
+  });
+
   it('P1-13: no step is coming soon unless it is listed', () => {
     expect(reviewRows({}).every((r) => !r.comingSoon)).toBe(true);
   });

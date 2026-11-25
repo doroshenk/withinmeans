@@ -443,4 +443,10 @@ describe('P1-13 setup step 9: review and finish', () => {
     await user.click(within(reviewRow('Welcome')).getByRole('button', { name: 'View' }));
     expect(screen.getByText('Step 1 of 9')).toBeInTheDocument();
   });
+
+  it('reopening a finished setup does not land on a coming-soon step', async () => {
+    open(fakeClient([1, 2, 4, 5, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
+
+    expect(await screen.findByText('Step 9 of 9')).toBeInTheDocument();
+  });
 });
