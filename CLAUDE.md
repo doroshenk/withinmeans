@@ -25,13 +25,15 @@ Two clones of the repo sit side by side, so two tickets never share a working tr
 - **Main:** `C:\dev\WithinMeans\withinmeans`, for normal tickets.
 - **Side:** `C:\dev\WithinMeans\sideTickets`, for side tickets. Start one with `/work-ticket <ticket> sideTicket`.
 
-A request is a side ticket when it says `sideTicket` (any capitalisation) or the repo root is the side folder.
+`/work-ticket` starts a side ticket when `sideTicket` (any capitalisation) is a separate argument, or when it runs in the side folder. Merely mentioning the folder or this section does not. Compare folder paths ignoring case and slash style.
 
-- **Wrong folder:** if it says `sideTicket` and the repo root is not the side folder, change nothing (no branch, files or commands). Ask the owner to open `C:\dev\WithinMeans\sideTickets` in a new VS Code window and run the same command there.
+- **Wrong folder:** if `/work-ticket … sideTicket` runs outside the side folder, change nothing (no branch, files or commands). Ask the owner to open the side folder in a new VS Code window and run the same command there.
 - **Stay inside:** in the side folder, never edit files or run git, pnpm or scripts in the main folder, and the other way round.
-- **Start:** `git status` must be clean (otherwise stop and ask), then `git switch main`, `git pull --ff-only` and `pnpm install`. Check that no open PR or pushed branch is already working the same ticket.
-- **Shared dev AWS:** both folders use the same dev stage. From the side folder, never run `pnpm migrate`, `pnpm seed:dev`, reset scripts or `cdk deploy`; migrations reach dev when the PR merges.
-- **Overlap:** whichever PR merges second updates from `main` (`/sync <n>`), keeps both sides of any conflict (routers, `permissions.test.ts`, JSON export), and renumbers its own **unmerged** migration if the number is now taken. Rerun all checks afterwards.
+- **Starting a new ticket** (not when resuming one: stay on its branch): `git status` must be clean (otherwise stop and ask), then `git switch main`, `git pull --ff-only` and `pnpm install --frozen-lockfile`. Check that no open PR or pushed branch is on the same ticket, and ask the owner to confirm the other folder isn't working it (unpushed work is invisible from here).
+- **PR commands:** run `/sync <n>` and `/merge-pr <n>` only in the folder that holds that PR's branch. Otherwise stop and ask the owner to switch windows.
+- **Shared dev AWS:** both folders use the same dev stage. From the side folder, never run `pnpm migrate`, `pnpm seed:dev`, reset scripts or `cdk deploy`; migrations reach dev when the PR merges and the dev deploy succeeds.
+- **The second PR to merge** updates from `main`. If it is only `BEHIND`, use `/sync <n>`. If it has conflicts (`DIRTY`), in its own folder run `git fetch`, then `git merge origin/main` (never rebase: that needs a force-push), keep both tickets' additions in list-like files (routers, indexes, `permissions.test.ts`, JSON export), show the owner each resolution, regenerate `pnpm-lock.yaml` with `pnpm install`, and push normally. Either way, then rerun all checks.
+- **Migration numbers:** after updating, list `packages/db/migrations` even if there was no conflict. If this branch's unmerged migration shares a number, renumber it. If it was ever applied to dev, stop and ask first.
 
 ## Architecture rules (enforced by lint, dependency-cruiser and tests)
 
