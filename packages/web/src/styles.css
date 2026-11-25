@@ -859,3 +859,82 @@ button.category-swatch {
     align-items: stretch;
   }
 }
+
+/* Setup step 5: recurring bills. */
+.bill-list {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.bill-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+
+.bill-main {
+  display: grid;
+}
+
+.bill-main small {
+  color: var(--color-ink-2);
+}
+
+.bill-autopay {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.bill-estimate {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bill-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 40px;
+  margin: 0 0 20px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: var(--color-primary-soft);
+}
+
+.bill-totals dt {
+  color: var(--color-ink-2);
+  font-size: 14px;
+}
+
+.bill-totals dd {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bill-add .bill-autopay-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bill-add .bill-autopay-field input {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+}
+
+.suggestion-used {
+  text-decoration: line-through;
+  opacity: 0.5;
+  cursor: default;
+}

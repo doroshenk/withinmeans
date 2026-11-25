@@ -117,9 +117,18 @@ export const recurringBills = {
     mustHaveChanged(result.numUpdatedRows, 'Recurring bill');
   },
 
-  /** Setup only: drops a bill that has no month rows yet. Later it must end the bill instead. */
-  async remove(_db: Database, _ctx: HouseholdContext, _id: string): Promise<void> {
-    throw new Error('not implemented');
+  /**
+   * Setup only: drops a bill, before any month has been opened from it. Once `bills` rows exist
+   * (P2-01), removing must end the bill instead so past months keep their history.
+   */
+  async remove(db: Database, ctx: HouseholdContext, id: string): Promise<void> {
+    assertCanWrite(ctx);
+    const result = await db
+      .deleteFrom('recurring_bills')
+      .where('id', '=', id)
+      .where('household_id', '=', ctx.householdId)
+      .executeTakeFirst();
+    mustHaveChanged(result.numDeletedRows, 'Recurring bill');
   },
 
   /** Ends the bill from `endYm`; past months keep their rows. */

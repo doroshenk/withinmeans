@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider, type Role } from '../permissions';
@@ -204,8 +204,8 @@ describe('P1-12 recurring bills step', () => {
     await user.click(await screen.findByRole('button', { name: 'Remove Rent' }));
 
     expect(calls.remove).toHaveBeenCalledWith({ id: 'b-rent' });
-    await screen.findByText('Electric');
-    expect(screen.queryByText('Rent')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Remove Rent' })).toBeNull());
+    expect(screen.getByRole('button', { name: 'Remove Electric' })).toBeInTheDocument();
   });
 
   it('suggestions: tapping one fills the name; a used one is crossed out and disabled', async () => {

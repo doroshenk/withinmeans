@@ -3,6 +3,7 @@ import {
   SUGGESTED_BILLS,
   addRecurringBillInput,
   billDraftError,
+  dueDayLabel,
   isSuggestionUsed,
   monthlyBillsTotal,
   removeRecurringBillInput,
@@ -57,7 +58,7 @@ describe('P1-12 bill draft checks', () => {
     for (const dueDayText of ['0', '29', '31', '-1', '1.5', '', 'x']) {
       expect(billDraftError({ ...valid, dueDayText })).toBe(message);
     }
-    for (const dueDayText of ['1', '15', '28']) {
+    for (const dueDayText of ['1', '15', '28', ' 5 ']) {
       expect(billDraftError({ ...valid, dueDayText })).toBeUndefined();
     }
   });
@@ -109,5 +110,21 @@ describe('P1-12 API inputs', () => {
   it('remove takes a UUID', () => {
     expect(removeRecurringBillInput.safeParse({ id: ID }).success).toBe(true);
     expect(removeRecurringBillInput.safeParse({ id: 'x' }).success).toBe(false);
+  });
+});
+
+describe('P1-12 due day label', () => {
+  it('says the day with its ordinal ending', () => {
+    expect(dueDayLabel(1)).toBe('Due on the 1st');
+    expect(dueDayLabel(2)).toBe('Due on the 2nd');
+    expect(dueDayLabel(3)).toBe('Due on the 3rd');
+    expect(dueDayLabel(4)).toBe('Due on the 4th');
+    expect(dueDayLabel(11)).toBe('Due on the 11th');
+    expect(dueDayLabel(12)).toBe('Due on the 12th');
+    expect(dueDayLabel(13)).toBe('Due on the 13th');
+    expect(dueDayLabel(21)).toBe('Due on the 21st');
+    expect(dueDayLabel(22)).toBe('Due on the 22nd');
+    expect(dueDayLabel(23)).toBe('Due on the 23rd');
+    expect(dueDayLabel(28)).toBe('Due on the 28th');
   });
 });

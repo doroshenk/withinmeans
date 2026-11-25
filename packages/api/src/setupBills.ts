@@ -1,3 +1,6 @@
+import { categories, households, recurringBills } from '@withinmeans/db';
+import { monthlyBillsTotal } from '@withinmeans/domain';
+import { translated } from './errors.js';
 import type { MemberContext } from './invitePartner.js';
 
 type Ctx = Pick<MemberContext, 'db' | 'household'>;
@@ -15,26 +18,55 @@ export interface SetupBillView {
 export interface SetupBillsView {
   bills: SetupBillView[];
   totalCents: number;
+  /** Monthly take-home pay; null until pay schedules exist (setup step 3). */
   takeHomeCents: number | null;
 }
 
-export function listSetupBills(_ctx: Ctx): Promise<SetupBillsView> {
-  throw new Error('not implemented');
+/** Spec §3 step 5: active recurring bills (by due day), their total, and take-home for the share. */
+export async function listSetupBills(ctx: Ctx): Promise<SetupBillsView> {
+  const [rows, cats] = await Promise.all([
+    recurringBills.list(ctx.db, ctx.household),
+    categories.list(ctx.db, ctx.household, { includeArchived: true }),
+  ]);
+  const names = new Map(cats.map((c) => [c.id, c.name]));
+  const bills = rows
+    .filter((b) => b.end_ym === null)
+    .map((b) => ({
+      id: b.id,
+      name: b.name,
+      estimateCents: Number(b.estimate_cents),
+      dueDay: b.due_day,
+      categoryId: b.category_id,
+      categoryName: names.get(b.category_id) ?? '',
+      autopay: b.autopay,
+    }));
+  return {
+    bills,
+    totalCents: monthlyBillsTotal(bills.map((b) => b.estimateCents)),
+    takeHomeCents: null,
+  };
 }
 
-export function addSetupBill(
-  _ctx: Ctx,
-  _input: {
+/** Spec §3 step 5: the bill starts in the household's first month. */
+export const addSetupBill = (
+  ctx: Ctx,
+  input: {
     name: string;
     estimateCents: number;
     dueDay: number;
     categoryId: string;
     autopay: boolean;
   },
-): Promise<{ id: string }> {
-  throw new Error('not implemented');
-}
+) =>
+  translated(async () => {
+    const household = await households.getMine(ctx.db, ctx.household);
+    if (household === undefined) throw new Error('Household not found');
+    const row = await recurringBills.create(ctx.db, ctx.household, {
+      ...input,
+      startYm: household.first_month,
+    });
+    return { id: row.id };
+  });
 
-export function removeSetupBill(_ctx: Ctx, _input: { id: string }): Promise<void> {
-  throw new Error('not implemented');
-}
+export const removeSetupBill = (ctx: Ctx, input: { id: string }) =>
+  translated(() => recurringBills.remove(ctx.db, ctx.household, input.id));
