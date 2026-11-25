@@ -1,5 +1,8 @@
-import type { Week, YearMonth } from './dates';
-import type { Cents } from './money';
+import { Temporal } from 'temporal-polyfill';
+import { addMonths, monthOf, week, type Week, type YearMonth } from './dates';
+import { percentOf, type Cents } from './money';
+import { dueDateIn } from './monthBills';
+import { monthlyBillsTotal } from './recurringBills';
 
 /** A recurring bill as the Recurring bills page needs it. */
 export interface RecurringBillItem {
@@ -47,41 +50,108 @@ export interface CategoryTotal {
   totalCents: Cents;
 }
 
+const WEEKS: readonly Week[] = [1, 2, 3, 4];
+/** A bill due this many days from today, or sooner, is highlighted. */
+const SOON_DAYS = 3;
+
+/**
+ * The first due date on or after `today` ("YYYY-MM-DD"), and not before the month the bill starts.
+ */
 export function nextDueDate(
-  _bill: Pick<RecurringBillItem, 'dueDay' | 'startYm'>,
-  _today: string,
+  bill: Pick<RecurringBillItem, 'dueDay' | 'startYm'>,
+  today: string,
 ): string {
-  throw new Error('not implemented');
+  const thisMonth = monthOf(Temporal.PlainDate.from(today));
+  const first = bill.startYm > thisMonth ? bill.startYm : thisMonth;
+  const date = dueDateIn(first, bill.dueDay);
+  // "YYYY-MM-DD" strings sort in calendar order.
+  return date >= today ? date : dueDateIn(addMonths(first, 1), bill.dueDay);
 }
 
-export function dueInText(_daysUntil: number): { text: string; soon: boolean } {
-  throw new Error('not implemented');
+/** "Due today", "Tomorrow", "In 5 days"; `soon` for the next few days. */
+export function dueInText(daysUntil: number): { text: string; soon: boolean } {
+  const soon = daysUntil <= SOON_DAYS;
+  if (daysUntil === 0) return { text: 'Due today', soon };
+  if (daysUntil === 1) return { text: 'Tomorrow', soon };
+  return { text: `In ${daysUntil} days`, soon };
 }
 
+const byName = (a: RecurringBillItem, b: RecurringBillItem): number =>
+  a.name.localeCompare(b.name, 'en');
+
+const ORDER: Record<RecurringSort, (a: UpcomingBill, b: UpcomingBill) => number> = {
+  'next-due': (a, b) => a.daysUntil - b.daysUntil || byName(a, b),
+  amount: (a, b) => b.estimateCents - a.estimateCents || byName(a, b),
+  name: byName,
+};
+
+/** A sorted copy: soonest first, biggest first, or by name. */
+export function sortRecurring(bills: readonly UpcomingBill[], by: RecurringSort): UpcomingBill[] {
+  return [...bills].sort(ORDER[by]);
+}
+
+const totalOf = (bills: readonly RecurringBillItem[]): Cents =>
+  monthlyBillsTotal(bills.map((b) => b.estimateCents));
+
+/** Everything the Recurring bills page shows (spec §6.3); ended bills are only listed. */
 export function recurringOverview(
-  _bills: readonly RecurringBillItem[],
-  _today: string,
+  bills: readonly RecurringBillItem[],
+  today: string,
 ): RecurringOverview {
-  throw new Error('not implemented');
+  const from = Temporal.PlainDate.from(today);
+  const upcoming = bills
+    .filter((b) => b.endYm === null)
+    .map((b) => {
+      const nextDue = nextDueDate(b, today);
+      return { ...b, nextDue, daysUntil: from.until(nextDue).days };
+    });
+  const active = sortRecurring(upcoming, 'next-due');
+  const grouped = WEEKS.map((w) => {
+    const inWeek = active
+      .filter((b) => week(Temporal.PlainDate.from(b.nextDue)) === w)
+      .sort((a, b) => a.dueDay - b.dueDay || byName(a, b));
+    return { week: w, totalCents: totalOf(inWeek), bills: inWeek };
+  });
+  const biggest = grouped.reduce((max, w) => (w.totalCents > max ? w.totalCents : max), 0);
+  const autopayCount = active.filter((b) => b.autopay).length;
+  return {
+    totalCents: totalOf(active),
+    count: active.length,
+    autopayCount,
+    manualCount: active.length - autopayCount,
+    active,
+    ended: bills.filter((b) => b.endYm !== null).sort(byName),
+    nextUp: active[0] ?? null,
+    weeks: grouped.map((w) => ({
+      ...w,
+      barPercent: biggest === 0 ? 0 : percentOf(w.totalCents, biggest),
+    })),
+  };
 }
 
-export function sortRecurring(_bills: readonly UpcomingBill[], _by: RecurringSort): UpcomingBill[] {
-  throw new Error('not implemented');
-}
-
+/** How many bills that have not ended each category has, and what they add up to a month. */
 export function categoryTotals(
-  _bills: readonly RecurringBillItem[],
+  bills: readonly RecurringBillItem[],
 ): ReadonlyMap<string, CategoryTotal> {
-  throw new Error('not implemented');
+  const active = bills.filter((b) => b.endYm === null);
+  return new Map(
+    active.map((bill) => {
+      const same = active.filter((b) => b.categoryId === bill.categoryId);
+      return [bill.categoryId, { count: same.length, totalCents: totalOf(same) }];
+    }),
+  );
 }
 
-export function lastKeptMonth(
-  _openedMonths: readonly YearMonth[],
-  _currentYm: YearMonth,
-): YearMonth {
-  throw new Error('not implemented');
+/**
+ * The last month an ended bill stays in: the latest started month up to this one, so months started
+ * from now on get no bill. With none, the month before this one.
+ */
+export function lastKeptMonth(openedMonths: readonly YearMonth[], currentYm: YearMonth): YearMonth {
+  const started = openedMonths.filter((ym) => ym <= currentYm).sort();
+  return started.at(-1) ?? addMonths(currentYm, -1);
 }
 
-export function newBillStartMonth(_firstMonth: YearMonth, _currentYm: YearMonth): YearMonth {
-  throw new Error('not implemented');
+/** A new bill starts this month (past months get none), or in the first month if that is later. */
+export function newBillStartMonth(firstMonth: YearMonth, currentYm: YearMonth): YearMonth {
+  return firstMonth > currentYm ? firstMonth : currentYm;
 }

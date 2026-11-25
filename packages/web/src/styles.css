@@ -949,3 +949,493 @@ button.category-swatch {
   opacity: 0.5;
   cursor: default;
 }
+
+/* Recurring bills (P2-08, design/Recurring.png): tiles, weeks, categories and the bill table. */
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  gap: 24px;
+}
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.page-head h1 {
+  font-size: 40px;
+  line-height: 1.15;
+}
+
+.page-head p {
+  margin: 4px 0 0;
+  max-width: 640px;
+  color: var(--color-ink-2);
+}
+
+.page-head .page-kicker {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.card {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--color-border-card);
+  border-radius: 18px;
+  background: var(--color-surface);
+}
+
+.card h2 {
+  margin: 0;
+}
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.help {
+  margin: 4px 0 12px;
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.tiles,
+.empty-preview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.tile {
+  padding: 18px 22px;
+  border: 1px solid var(--color-border-card);
+  border-radius: 18px;
+  background: var(--color-surface);
+}
+
+.tile p {
+  margin: 0;
+}
+
+.tile-label,
+.tile-note {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.tile-value {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile-next {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.empty-preview {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  opacity: 0.6;
+}
+
+.empty-preview .tile {
+  border-style: dashed;
+}
+
+.weeks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.week {
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--color-bg);
+}
+
+.week p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.week .week-total {
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.week-bar {
+  height: 8px;
+  margin: 8px 0 12px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--color-border-card);
+}
+
+.week-bar span {
+  display: block;
+  height: 100%;
+  background: var(--color-expense);
+}
+
+.week-bills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.week-bills li {
+  padding: 2px 10px;
+  border: 1px solid var(--color-border-card);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.field input,
+.field select,
+.filters select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-input);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+}
+
+.bill-form-fields {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  align-items: end;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.check-field input {
+  width: 20px;
+  height: 20px;
+}
+
+.form-actions,
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.confirm p {
+  flex-basis: 100%;
+}
+
+.button-danger {
+  border: 1px solid var(--color-error-text);
+  background: var(--color-surface);
+  color: var(--color-error-text);
+}
+
+.icon-danger {
+  color: var(--color-error-text);
+}
+
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.category-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.category-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--color-bg);
+}
+
+.category-chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 2px solid;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.category-usage {
+  flex: 1;
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.category-panel {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+}
+
+.category-new {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding: 16px;
+  border: 1px dashed var(--color-border-input);
+  border-radius: 14px;
+}
+
+.category-new .field {
+  flex: 1 1 220px;
+}
+
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.color-choice {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+}
+
+.color-choice input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.color-choice span {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.color-choice input:checked + span {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.color-choice input:focus-visible + span {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.filter {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border-input);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.filter[aria-pressed='true'] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font-weight: 700;
+}
+
+.recurring-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.recurring-table th,
+.recurring-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border-card);
+  text-align: left;
+}
+
+.recurring-table thead th {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.recurring-table .amount {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.recurring-table small {
+  display: block;
+}
+
+.due-soon {
+  color: var(--color-warning-text);
+  font-weight: 700;
+}
+
+.due-later {
+  color: var(--color-muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.recurring-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--color-bg);
+}
+
+.ended-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ended-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ended-list strong {
+  flex: 1;
+}
+
+/* Below 1100px the four tiles and weeks go two by two. */
+@media (max-width: 1100px) {
+  .tiles,
+  .weeks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bill-form-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Phone, 390px: one column, and each table row becomes a card. */
+@media (max-width: 767px) {
+  .page-head h1 {
+    font-size: 30px;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .tiles,
+  .empty-preview,
+  .weeks,
+  .category-cards,
+  .bill-form-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .recurring-table thead {
+    display: none;
+  }
+
+  .recurring-table,
+  .recurring-table tbody,
+  .recurring-table tr,
+  .recurring-table th,
+  .recurring-table td {
+    display: block;
+  }
+
+  .recurring-table tr {
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border-card);
+    border-radius: 14px;
+  }
+
+  .recurring-table th,
+  .recurring-table td {
+    padding: 4px 0;
+    border: 0;
+  }
+
+  .recurring-table td[data-label] {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .recurring-table td[data-label]::before {
+    content: attr(data-label);
+    font-weight: 400;
+    color: var(--color-muted);
+  }
+}

@@ -70,4 +70,5 @@ export const seedCategoriesInput = z.object({ preset: z.literal('default') });
 export const createCategoryInput = z.object({ name, colorIndex });
 export const renameCategoryInput = z.object({ id, name });
 export const recolorCategoryInput = z.object({ id, colorIndex });
-export const deleteCategoryInput = z.object({ id });
+/** `moveToId`: where its bills go; without one they go to the first remaining category. */
+export const deleteCategoryInput = z.object({ id, moveToId: id.optional() });

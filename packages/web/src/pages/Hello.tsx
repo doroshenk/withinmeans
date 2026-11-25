@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { GENERIC_ERROR } from '../auth/errors';
 import { RoleProvider } from '../permissions';
 import { saveFile as saveToDisk } from '../saveFile';
-import { Shell } from '../shell/Shell';
+import { Shell, type Route } from '../shell/Shell';
 import { DownloadData } from './DownloadData';
 
 export type MeResult = inferRouterOutputs<AppRouter>['me'];
@@ -21,11 +21,19 @@ export interface HelloProps {
   onSignOut?: () => void;
   /** Opens the setup wizard (spec §3). */
   onStartSetup?: () => void;
+  /** The sidebar or tab bar asked for another page. */
+  onNavigate?: (route: Route) => void;
 }
 
 type State = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; me: MeResult };
 
-export function Hello({ client, onSignOut, onStartSetup, saveFile = saveToDisk }: HelloProps) {
+export function Hello({
+  client,
+  onSignOut,
+  onStartSetup,
+  onNavigate = () => {},
+  saveFile = saveToDisk,
+}: HelloProps) {
   const [state, setState] = useState<State>({ kind: 'loading' });
 
   useEffect(() => {
@@ -41,7 +49,7 @@ export function Hello({ client, onSignOut, onStartSetup, saveFile = saveToDisk }
 
   return (
     <RoleProvider role={state.kind === 'ready' ? state.me.household?.role : undefined}>
-      <Shell route="dashboard" onNavigate={() => {}}>
+      <Shell route="dashboard" onNavigate={onNavigate}>
         <main className="hello">
           {state.kind === 'loading' && <p role="status">Loading…</p>}
           {state.kind === 'error' && <p role="alert">{GENERIC_ERROR}</p>}

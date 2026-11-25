@@ -145,13 +145,15 @@ describe('P2-08 recurring bills API', () => {
   it("another household's bill looks missing", async () => {
     const other = await caller('sub-other');
 
-    for (const attempt of [
+    const attempts = [
       other.endRecurringBill({ id: rentId }),
       other.restartRecurringBill({ id: rentId }),
       other.updateRecurringBill({ id: rentId, ...rent() }),
-    ]) {
-      await expect(attempt).rejects.toMatchObject({ code: 'NOT_FOUND' });
-    }
+    ];
+
+    await Promise.all(
+      attempts.map((attempt) => expect(attempt).rejects.toMatchObject({ code: 'NOT_FOUND' })),
+    );
   });
 
   it('Category delete moves its bills to the chosen category and says so', async () => {
