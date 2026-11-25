@@ -28,6 +28,7 @@ import {
   seedDefaultCategories,
 } from './categories.js';
 import type { Context } from './context.js';
+import { exportData } from './exportData.js';
 import { firstMonthOptions, startFirstMonth } from './firstMonth.js';
 import { invitePartner, resendInvite } from './invitePartner.js';
 import {
@@ -181,6 +182,9 @@ export const appRouter = t.router({
   removeRecurringBill: writeProcedure
     .input(removeRecurringBillInput)
     .mutation(({ ctx, input }) => removeSetupBill(ctx, input)),
+
+  /** Spec §8: the household's full JSON export. A read, so view-only members may call it. */
+  exportData: memberProcedure.query(({ ctx }) => exportData(ctx)),
 
   /** Who am I? A signed-in user may have no profile or no household yet. */
   me: protectedProcedure.query(({ ctx }) => ({

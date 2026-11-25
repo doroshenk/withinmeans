@@ -42,6 +42,7 @@ function setup(token: string | undefined, location?: { pathname: string; search:
   const acceptInvite = vi.fn((_input: unknown) => Promise.resolve({ status: 'joined' }));
   const createClient = vi.fn(() => ({
     me: { query: () => Promise.resolve(me) },
+    exportData: { query: () => Promise.reject(new Error('not used here')) },
     signUp: { mutate: () => Promise.resolve({ status: 'created' }) },
     invitePartner: { mutate: invitePartner },
     resendInvite: { mutate: () => Promise.resolve(pending) },

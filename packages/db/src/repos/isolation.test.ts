@@ -7,6 +7,7 @@ import { createTestDb, type TestDb } from '../testing/harness.js';
 import { accounts } from './accounts.js';
 import { balanceSnapshots } from './balanceSnapshots.js';
 import { categories } from './categories.js';
+import { householdExport } from './householdExport.js';
 import { invites } from './invites.js';
 import { memberships } from './memberships.js';
 import { months } from './months.js';
@@ -255,6 +256,8 @@ const cases: Case[] = [
     write: true,
     run: (db, ctx) => setupProgress.save(db, ctx, 4, 'done'),
   },
+
+  { name: 'householdExport.read', write: false, run: (db, ctx) => householdExport.read(db, ctx) },
 ];
 
 /**
@@ -262,8 +265,12 @@ const cases: Case[] = [
  * exists, takes no HouseholdContext and only inserts brand-new rows (see repos/signUp.ts).
  */
 
-/** Looked up by a secret token, not by household: covered by its own tests in core.test.ts. */
-const NOT_HOUSEHOLD_SCOPED = ['invites.findByToken'];
+/**
+ * Not scoped to one household: `invites.findByToken` is looked up by a secret token (tests in
+ * core.test.ts); `householdExport.listContexts` is the nightly job's list of every household
+ * (tests in householdExport.test.ts).
+ */
+const NOT_HOUSEHOLD_SCOPED = ['invites.findByToken', 'householdExport.listContexts'];
 
 let t: TestDb;
 let A: Seeded;
@@ -343,6 +350,7 @@ describe('P1-01 isolation: coverage of the table', () => {
       balanceSnapshots,
       recurringBills,
       setupProgress,
+      householdExport,
     };
     const everyFunction = Object.entries(repos).flatMap(([repo, fns]) =>
       Object.keys(fns).map((fn) => `${repo}.${fn}`),

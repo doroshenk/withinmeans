@@ -14,6 +14,7 @@ export { migrate } from './migrate.js';
 export { accounts, type Account } from './repos/accounts.js';
 export { balanceSnapshots, type BalanceSnapshot } from './repos/balanceSnapshots.js';
 export { categories, type Category } from './repos/categories.js';
+export { householdExport, type HouseholdTables } from './repos/householdExport.js';
 export { households } from './repos/households.js';
 export { identity, type Identity } from './repos/identity.js';
 export { invites, type Invite, type NewInvite } from './repos/invites.js';
