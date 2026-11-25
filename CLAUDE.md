@@ -18,6 +18,21 @@ The owner is learning AWS: when you touch infrastructure, explain what each reso
 - If the spec is unclear or seems wrong, stop and ask. Don't guess, and don't silently change behavior.
 - **Pull requests:** before opening any PR, always run the `pr-reviewer` subagent (no need to ask) and fix or answer its blocking findings. The Claude GitHub Action reviews every PR. Address or answer every review comment; the owner resolves threads. Merge only with `/merge-pr <n>` (merge commit, never `--admin`); update branches with `/sync`. Branch protection on `main` is the real gate: never try to get around it.
 
+## Side tickets (a second ticket at the same time)
+
+Two clones of the repo sit side by side, so two tickets never share a working tree:
+
+- **Main:** `C:\dev\WithinMeans\withinmeans`, for normal tickets.
+- **Side:** `C:\dev\WithinMeans\sideTickets`, for side tickets. Start one with `/work-ticket <ticket> sideTicket`.
+
+A request is a side ticket when it says `sideTicket` (any capitalisation) or the repo root is the side folder.
+
+- **Wrong folder:** if it says `sideTicket` and the repo root is not the side folder, change nothing (no branch, files or commands). Ask the owner to open `C:\dev\WithinMeans\sideTickets` in a new VS Code window and run the same command there.
+- **Stay inside:** in the side folder, never edit files or run git, pnpm or scripts in the main folder, and the other way round.
+- **Start:** `git status` must be clean (otherwise stop and ask), then `git switch main`, `git pull --ff-only` and `pnpm install`. Check that no open PR or pushed branch is already working the same ticket.
+- **Shared dev AWS:** both folders use the same dev stage. From the side folder, never run `pnpm migrate`, `pnpm seed:dev`, reset scripts or `cdk deploy`; migrations reach dev when the PR merges.
+- **Overlap:** whichever PR merges second updates from `main` (`/sync <n>`), keeps both sides of any conflict (routers, `permissions.test.ts`, JSON export), and renumbers its own **unmerged** migration if the number is now taken. Rerun all checks afterwards.
+
 ## Architecture rules (enforced by lint, dependency-cruiser and tests)
 
 - `packages/domain`: every rule in spec §5 lives here as **pure functions**. No database, no AWS SDK, no network, no `Date`, no `Math.random`, no reading the clock. "Today" is always a parameter.
