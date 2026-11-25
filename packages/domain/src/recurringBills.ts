@@ -62,13 +62,12 @@ export function shareOfTakeHome(part: Cents, whole: Cents | null): string {
   return `${percent}%`;
 }
 
+const ORDINAL_ENDINGS: Readonly<Record<number, string>> = { 1: 'st', 2: 'nd', 3: 'rd' };
+
 /** "Due on the 1st", "Due on the 22nd": the due day as people say it. */
 export function dueDayLabel(day: number): string {
-  const lastTwo = day % 100;
-  const ending =
-    lastTwo >= 11 && lastTwo <= 13
-      ? 'th'
-      : (({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[day % 10] ?? 'th');
+  const teen = day % 100 >= 11 && day % 100 <= 13;
+  const ending = teen ? 'th' : (ORDINAL_ENDINGS[day % 10] ?? 'th');
   return `Due on the ${day}${ending}`;
 }
 
