@@ -99,6 +99,23 @@ export interface RecurringBillsTable {
   created_at: Generated<Date>;
 }
 
+export interface BillsTable {
+  id: Generated<string>;
+  household_id: string;
+  ym: string;
+  /** Null for a one-time bill. */
+  recurring_bill_id: string | null;
+  name: string;
+  category_id: string;
+  /** 'YYYY-MM-DD' */
+  due_date: string;
+  estimate_cents: number | null;
+  actual_cents: number | null;
+  paid_at: Date | null;
+  kind: 'recurring' | 'one_time';
+  created_at: Generated<Date>;
+}
+
 export interface SetupProgressTable {
   household_id: string;
   step: number;
@@ -117,6 +134,7 @@ export interface DB {
   balance_snapshots: BalanceSnapshotsTable;
   recurring_bills: RecurringBillsTable;
   setup_progress: SetupProgressTable;
+  bills: BillsTable;
 }
 
 export type Database = Kysely<DB>;

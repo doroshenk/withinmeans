@@ -12,6 +12,7 @@ export interface Seeded {
   accountId: string;
   snapshotId: string;
   recurringBillId: string;
+  billId: string;
   inviteId: string;
   inviteToken: string;
   /** The one finished setup step seeded for this household (A: 1, B: 2). */
@@ -31,6 +32,7 @@ export const HOUSEHOLD_TABLES = [
   'balance_snapshots',
   'recurring_bills',
   'setup_progress',
+  'bills',
 ] as const;
 
 export async function clearAll(db: Database): Promise<void> {
@@ -47,6 +49,7 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
     accountId: randomUUID(),
     snapshotId: randomUUID(),
     recurringBillId: randomUUID(),
+    billId: randomUUID(),
     inviteId: randomUUID(),
     inviteToken: `token-${label}-${randomUUID()}`,
   };
@@ -121,6 +124,22 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
       account_id: ids.accountId,
       start_ym: ym,
       end_ym: null,
+    })
+    .execute();
+  await db
+    .insertInto('bills')
+    .values({
+      id: ids.billId,
+      household_id: h,
+      ym,
+      recurring_bill_id: ids.recurringBillId,
+      name: `${secret} bill`,
+      category_id: ids.categoryId,
+      due_date: `${ym}-01`,
+      estimate_cents: 50_000,
+      actual_cents: null,
+      paid_at: null,
+      kind: 'recurring',
     })
     .execute();
   await db
