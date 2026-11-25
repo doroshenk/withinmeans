@@ -1,6 +1,8 @@
+import { Temporal } from 'temporal-polyfill';
 import { z } from 'zod';
-import type { YearMonth } from './dates';
-import type { Cents } from './money';
+import { parseYm, type YearMonth } from './dates';
+import { sumCents, type Cents } from './money';
+import { paydaysForMonth, type PaySchedule } from './paydays';
 
 export const PAY_FREQUENCIES = ['weekly', 'biweekly', 'semimonthly', 'monthly'] as const;
 export type PayFrequency = (typeof PAY_FREQUENCIES)[number];
@@ -31,22 +33,75 @@ export interface PaycheckAmounts {
   receivedCents: Cents | null;
 }
 
+function paydaySchedule(s: PayScheduleTemplate): PaySchedule {
+  if (s.frequency === 'semimonthly') {
+    return {
+      frequency: s.frequency,
+      ...(s.semimonthlyDays !== null && { days: s.semimonthlyDays }),
+    };
+  }
+  return { frequency: s.frequency, anchorDate: Temporal.PlainDate.from(s.anchorDate) };
+}
+
+/**
+ * Spec §5.9: the paychecks each schedule is expected to pay in `ym`, in date order. A stopped
+ * schedule expects nothing after the day it was stopped.
+ */
 export function paychecksForMonth(
-  _schedules: readonly PayScheduleTemplate[],
-  _ym: YearMonth,
+  schedules: readonly PayScheduleTemplate[],
+  ym: YearMonth,
 ): ExpectedPaycheck[] {
-  throw new Error('not implemented');
+  parseYm(ym);
+  return schedules
+    .flatMap((s) =>
+      paydaysForMonth(paydaySchedule(s), ym)
+        .map((date) => date.toString())
+        // "YYYY-MM-DD" strings sort in calendar order.
+        .filter((date) => s.endedOn === null || date <= s.endedOn)
+        .map((expectedDate) => ({
+          scheduleId: s.id,
+          expectedDate,
+          expectedCents: s.usualCents,
+        })),
+    )
+    .sort((a, b) => a.expectedDate.localeCompare(b.expectedDate));
 }
 
-export function paycheckCents(_paycheck: PaycheckAmounts): Cents {
-  throw new Error('not implemented');
+/** Spec §5.6: the received amount once there is one, else the expected amount; never both. */
+export function paycheckCents(paycheck: PaycheckAmounts): Cents {
+  return paycheck.receivedCents ?? paycheck.expectedCents;
 }
 
-export function paychecksTotalCents(_paychecks: readonly PaycheckAmounts[]): Cents {
-  throw new Error('not implemented');
+export function paychecksTotalCents(paychecks: readonly PaycheckAmounts[]): Cents {
+  return sumCents(paychecks.map(paycheckCents));
 }
 
-export const addPayScheduleInput = z.never();
-export const payScheduleIdInput = z.never();
-export const monthPaychecksInput = z.never();
-export const markPaycheckReceivedInput = z.never();
+const payDay = z.number().int().min(1).max(31);
+const positiveCents = z.number().int().positive();
+
+/** Spec §3 step 3: name, take-home > 0, a real date. */
+export const addPayScheduleInput = z
+  .object({
+    name: z.string().trim().min(1),
+    frequency: z.enum(PAY_FREQUENCIES),
+    anchorDate: z.iso.date(),
+    semimonthlyDays: z.tuple([payDay, payDay]).optional(),
+    usualCents: positiveCents,
+    accountId: z.uuid().optional(),
+  })
+  .refine(
+    ({ frequency, semimonthlyDays }) =>
+      semimonthlyDays === undefined ||
+      (frequency === 'semimonthly' && semimonthlyDays[0] !== semimonthlyDays[1]),
+    { path: ['semimonthlyDays'], message: 'Pick two different days, for semimonthly pay only.' },
+  );
+
+export const payScheduleIdInput = z.object({ id: z.uuid() });
+export const monthPaychecksInput = z.object({
+  ym: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+});
+export const markPaycheckReceivedInput = z.object({
+  id: z.uuid(),
+  receivedCents: positiveCents,
+  receivedDate: z.iso.date(),
+});

@@ -3,12 +3,13 @@ import { assertCanWrite, type HouseholdContext } from '../context.js';
 import type { Database, DB } from '../db.js';
 import { insertMonthBills, lockHouseholdBills } from './monthBills.js';
 import type { Month } from './months.js';
+import { insertMonthPaychecks } from './paychecks.js';
 import { assertYm, inTransaction } from './shared.js';
 
 /**
- * Inserts the Month row and its bills, or finds the month that is already there and adds nothing
- * (so a bill later taken out of it stays out). Runs inside the caller's transaction. Later tickets
- * add the paychecks and carry-ins here, so they open together.
+ * Inserts the Month row, its bills and its expected paychecks, or finds the month that is already
+ * there and adds nothing (so a bill later taken out of it stays out). Runs inside the caller's
+ * transaction. A later ticket adds the carry-ins here, so they open together.
  */
 export async function openMonthIn(
   trx: Transaction<DB>,
@@ -32,6 +33,12 @@ export async function openMonthIn(
       .where('household_id', '=', ctx.householdId)
       .execute();
     await insertMonthBills(trx, ctx, ym, recurring);
+    const schedules = await trx
+      .selectFrom('pay_schedules')
+      .selectAll()
+      .where('household_id', '=', ctx.householdId)
+      .execute();
+    await insertMonthPaychecks(trx, ctx, ym, schedules);
     return { month: inserted, created: true };
   }
   const month = await trx
