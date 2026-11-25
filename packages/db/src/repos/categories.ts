@@ -186,12 +186,22 @@ export const categories = {
     return rows.map((r) => ({ ...r, bill_count: Number(r.bill_count) }));
   },
 
+  /** Ids of the categories any bill uses: recurring (ended ones too) or a month's bill. */
+  async usedIds(_db: Database, _ctx: HouseholdContext): Promise<string[]> {
+    throw new Error('not implemented');
+  },
+
   /**
    * Deletes a category; its recurring bills and month Bills move to the first remaining one (spec
    * §3 step 4, T18). Never the last one. Ended bills move too, for their history, but
    * `movedCount` counts only recurring bills that have not ended, plus one-time bills.
    */
-  async remove(db: Database, ctx: HouseholdContext, id: string): Promise<RemovedCategory> {
+  async remove(
+    db: Database,
+    ctx: HouseholdContext,
+    id: string,
+    _moveToId?: string,
+  ): Promise<RemovedCategory> {
     assertCanWrite(ctx);
     return inTransaction(db, async (trx) => {
       const mine = await trx

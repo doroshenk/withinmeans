@@ -79,3 +79,13 @@ export const addRecurringBillInput = z.object({
   autopay: z.boolean(),
 });
 export const removeRecurringBillInput = z.object({ id: z.uuid() });
+
+/** 1 → "1st", 22 → "22nd". */
+export function ordinal(_day: number): string {
+  throw new Error('not implemented');
+}
+
+/** Filled in with the feature: for now it accepts nothing. */
+export const updateRecurringBillInput = z.never();
+export const endRecurringBillInput = z.object({ id: z.uuid() });
+export const restartRecurringBillInput = z.object({ id: z.uuid() });

@@ -109,7 +109,13 @@ export const recurringBills = {
     });
   },
 
-  async update(db: Database, ctx: HouseholdContext, id: string, patch: Patch): Promise<void> {
+  async update(
+    db: Database,
+    ctx: HouseholdContext,
+    id: string,
+    patch: Patch,
+    _options: { fromYm?: string } = {},
+  ): Promise<void> {
     assertCanWrite(ctx);
     if (patch.estimateCents !== undefined) assertCents(patch.estimateCents);
     if (patch.dueDay !== undefined) assertDueDay(patch.dueDay);
@@ -186,6 +192,26 @@ export const recurringBills = {
           .execute();
       }
     });
+  },
+
+  /** Spec §6.3 "End": months started from now on get no bill; bills already made stay. */
+  async stop(
+    _db: Database,
+    _ctx: HouseholdContext,
+    _id: string,
+    _currentYm: string,
+  ): Promise<void> {
+    throw new Error('not implemented');
+  },
+
+  /** Brings an ended bill back, from `currentYm` on. */
+  async restart(
+    _db: Database,
+    _ctx: HouseholdContext,
+    _id: string,
+    _currentYm: string,
+  ): Promise<void> {
+    throw new Error('not implemented');
   },
 
   /** Ends the bill from `endYm`; past months keep their rows. */

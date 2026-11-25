@@ -37,3 +37,8 @@ export function week(date: Temporal.PlainDate): Week {
   if (date.day <= 21) return 3;
   return 4;
 }
+
+/** "Wed, Nov 18" from "2026-11-18". */
+export function formatShortDate(_date: string): string {
+  throw new Error('not implemented');
+}
