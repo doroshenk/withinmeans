@@ -11,6 +11,7 @@ import {
 import { useId, useState } from 'react';
 import { useCan } from '../../permissions';
 import type { CategoryRow } from '../CategoriesStep';
+import { categoryChipStyle } from './categoryChipStyle';
 
 const SORTS: { value: RecurringSort; label: string }[] = [
   { value: 'next-due', label: 'Next due date' },
@@ -107,9 +108,7 @@ export function BillTable({ bills, categories, onEdit, onManageCategories }: Bil
                     {category && (
                       <span
                         className="category-chip"
-                        style={{
-                          borderColor: `var(--color-category-${category.colorIndex + 1})`,
-                        }}
+                        style={categoryChipStyle(category.colorIndex)}
                       >
                         {category.name}
                       </span>
@@ -120,8 +119,10 @@ export function BillTable({ bills, categories, onEdit, onManageCategories }: Bil
                   </td>
                   <td data-label="Due each month">{`The ${ordinal(bill.dueDay)}`}</td>
                   <td data-label="Next projected due">
-                    {formatShortDate(bill.nextDue)}
-                    <small className={due.soon ? 'due-soon' : 'due-later'}>{due.text}</small>
+                    <span>
+                      {formatShortDate(bill.nextDue)}
+                      <small className={due.soon ? 'due-soon' : 'due-later'}>{due.text}</small>
+                    </span>
                   </td>
                   <td data-label="Paid by">{bill.autopay ? 'Autopay' : 'You pay'}</td>
                   {can.write && (

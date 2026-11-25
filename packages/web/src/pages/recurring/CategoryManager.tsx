@@ -9,6 +9,7 @@ import {
 import { useId, useState } from 'react';
 import type { CategoryRow } from '../CategoriesStep';
 import type { RecurringClient } from '../RecurringPage';
+import { categoryChipStyle } from './categoryChipStyle';
 
 export interface CategoryManagerProps {
   client: RecurringClient;
@@ -139,10 +140,7 @@ export function CategoryManager({
           const used = row.billCount > 0 || usedCategoryIds.includes(row.id);
           return (
             <li key={row.id} className="category-card">
-              <span
-                className="category-chip"
-                style={{ borderColor: `var(--color-category-${row.colorIndex + 1})` }}
-              >
+              <span className="category-chip" style={categoryChipStyle(row.colorIndex)}>
                 {row.name}
               </span>
               <span className="category-usage">{usage(row.id)}</span>
