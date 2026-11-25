@@ -237,6 +237,12 @@ const cases: Case[] = [
     namesId: true,
     run: (db, ctx, t) => recurringBills.end(db, ctx, t.recurringBillId, '2027-01'),
   },
+  {
+    name: 'recurringBills.remove',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) => recurringBills.remove(db, ctx, t.recurringBillId),
+  },
 
   {
     name: 'setupProgress.list',

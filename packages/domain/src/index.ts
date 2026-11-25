@@ -8,3 +8,4 @@ export * from './setupWizard';
 export * from './categories';
 export * from './firstMonth';
 export * from './accounts';
+export * from './recurringBills';

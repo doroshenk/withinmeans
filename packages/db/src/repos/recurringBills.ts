@@ -117,6 +117,21 @@ export const recurringBills = {
     mustHaveChanged(result.numUpdatedRows, 'Recurring bill');
   },
 
+  /**
+   * Drops a bill for good. Safe only while there is no `bills` table: step 1 has usually opened the
+   * first month, but no month holds bill rows yet. P2-01 must change this to end a bill that has
+   * rows (past months keep their history), and create rows in the already-open first month.
+   */
+  async remove(db: Database, ctx: HouseholdContext, id: string): Promise<void> {
+    assertCanWrite(ctx);
+    const result = await db
+      .deleteFrom('recurring_bills')
+      .where('id', '=', id)
+      .where('household_id', '=', ctx.householdId)
+      .executeTakeFirst();
+    mustHaveChanged(result.numDeletedRows, 'Recurring bill');
+  },
+
   /** Ends the bill from `endYm`; past months keep their rows. */
   async end(db: Database, ctx: HouseholdContext, id: string, endYm: string): Promise<void> {
     assertCanWrite(ctx);

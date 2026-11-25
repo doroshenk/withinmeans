@@ -13,9 +13,11 @@ import { GENERIC_ERROR } from '../auth/errors';
 import { useCan } from '../permissions';
 import { AccountsStep, type AccountsClient } from './AccountsStep';
 import { CategoriesStep, type CategoriesClient } from './CategoriesStep';
+import { RecurringBillsStep, type RecurringBillsClient } from './RecurringBillsStep';
 import { WelcomeStep, type WelcomeClient } from './WelcomeStep';
 
-export interface SetupClient extends AccountsClient, CategoriesClient, WelcomeClient {
+export interface SetupClient
+  extends AccountsClient, CategoriesClient, RecurringBillsClient, WelcomeClient {
   setupProgress: {
     query: () => Promise<{ step: number; status: 'done' | 'skipped' }[]>;
   };
@@ -38,7 +40,7 @@ type Load =
 const LAST = SETUP_STEPS.length;
 
 /** Steps whose real screens have landed. Each setup ticket (P1-09 to P1-13) adds its step here. */
-const BUILT_STEPS: ReadonlySet<number> = new Set([1, 2, 4]);
+const BUILT_STEPS: ReadonlySet<number> = new Set([1, 2, 4, 5]);
 
 const STATUS_LABEL = { todo: '', done: 'Done', skipped: 'Skipped' } as const;
 
@@ -190,6 +192,8 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
           <AccountsStep client={client} />
         ) : step.id === 4 ? (
           <CategoriesStep client={client} />
+        ) : step.id === 5 ? (
+          <RecurringBillsStep client={client} />
         ) : (
           !BUILT_STEPS.has(step.id) && <p className="wizard-soon">Coming soon</p>
         )}

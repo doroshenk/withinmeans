@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider, type Role } from '../permissions';
 import { accountsStub } from './accountsStub';
 import { categoriesStub } from './categoriesStub';
+import { recurringBillsStub } from './recurringBillsStub';
 import { welcomeStub } from './welcomeStub';
 import { SetupWizard, type SetupClient } from './SetupWizard';
 
@@ -26,6 +27,7 @@ function fakeClient(initial: Row[] = []) {
     saveSetupStep: { mutate: save },
     ...accountsStub,
     ...categoriesStub,
+    ...recurringBillsStub,
     ...welcomeStub,
   };
   return { client, save };
@@ -233,6 +235,7 @@ describe('P1-08 setup wizard', () => {
     const client: SetupClient = {
       ...accountsStub,
       ...categoriesStub,
+      ...recurringBillsStub,
       ...welcomeStub,
       setupProgress: { query: () => Promise.reject(new Error('boom')) },
       saveSetupStep: { mutate: vi.fn() },

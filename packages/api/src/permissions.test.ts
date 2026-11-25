@@ -29,6 +29,8 @@ const WRITE_PROCEDURES = [
   'addAccount',
   'removeAccount',
   'setCushion',
+  'addRecurringBill',
+  'removeRecurringBill',
 ] as const;
 
 /** Mutations that need no membership: anyone may call them (the token or the new login is the credential). */
