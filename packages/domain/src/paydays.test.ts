@@ -119,6 +119,12 @@ describe('semimonthly paydays', () => {
     expect(days(adjacent, '2026-08')).toEqual(['2026-08-03']);
   });
 
+  it('lists a date once when last month rolls onto this month’s payday', () => {
+    const ends: PaySchedule = { frequency: 'semimonthly', days: [1, 31] };
+    // Jan 31 moves to Mon Feb 1, 2027, and Feb 28 moves out to Mar 1.
+    expect(days(ends, '2027-02')).toEqual(['2027-02-01']);
+  });
+
   it.each([
     [0, 15],
     [1, 32],
