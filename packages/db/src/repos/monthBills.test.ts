@@ -6,6 +6,7 @@ import { MIGRATIONS_DIR } from '../migrate.js';
 import { splitStatements } from '../sqlStatements.js';
 import { clearAll, seedHousehold, snapshotHousehold, type Seeded } from '../testing/fixtures.js';
 import { createTestDb, type TestDb } from '../testing/harness.js';
+import { pausingBeforeCommit } from '../testing/pausing.js';
 import { categories } from './categories.js';
 import { households } from './households.js';
 import { openMonth } from './openMonth.js';
@@ -100,39 +101,6 @@ function failingOnce(db: Database, code: string) {
     },
   });
   return { db: proxy, failures: () => failures };
-}
-
-/**
- * `db` whose first transaction stops just before committing, until `release` is called. `reached`
- * resolves when it stops.
- */
-function pausingBeforeCommit(db: Database) {
-  let release = () => {};
-  let arrived = () => {};
-  const released = new Promise<void>((resolve) => (release = resolve));
-  const reached = new Promise<void>((resolve) => (arrived = resolve));
-  let paused = false;
-  const proxy = new Proxy(db, {
-    get(target, prop) {
-      if (prop !== 'transaction') {
-        const value = Reflect.get(target, prop) as unknown;
-        return typeof value === 'function' ? (value as () => unknown).bind(target) : value;
-      }
-      return () => ({
-        execute: <T>(fn: (trx: never) => Promise<T>) =>
-          target.transaction().execute(async (trx) => {
-            const result = await fn(trx as never);
-            if (!paused) {
-              paused = true;
-              arrived();
-              await released;
-            }
-            return result;
-          }),
-      });
-    },
-  });
-  return { db: proxy, reached, release: () => release() };
 }
 
 /** Runs `other` while `openMonth(ym)` has read the recurring bills but not yet committed. */

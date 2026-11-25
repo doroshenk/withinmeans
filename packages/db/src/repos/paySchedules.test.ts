@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Conflict, InvalidInput, NotFound } from '../context.js';
 import { clearAll, seedHousehold, snapshotHousehold, type Seeded } from '../testing/fixtures.js';
 import { createTestDb, type TestDb } from '../testing/harness.js';
+import { pausingBeforeCommit } from '../testing/pausing.js';
 import { openMonth } from './openMonth.js';
 import { paychecks } from './paychecks.js';
 import { paySchedules, type NewPaySchedule } from './paySchedules.js';
@@ -371,5 +372,57 @@ describe('P2-03 stopping and restarting a schedule (spec §5.9)', () => {
     await expect(paySchedules.restart(t.db, A.ctx(), job.id, 'today')).rejects.toBeInstanceOf(
       InvalidInput,
     );
+  });
+});
+
+describe('P2-03 stopping and marking received at the same moment', () => {
+  /** Runs `second` while `first` has done its work but not yet committed. */
+  async function during(
+    first: (db: TestDb['db']) => Promise<unknown>,
+    second: () => Promise<unknown>,
+  ) {
+    const slow = pausingBeforeCommit(t.db);
+    const firstDone = first(slow.db);
+    await slow.reached;
+    const secondDone = Promise.allSettled([second()]);
+    // Long enough for `second` to get as far as it can without waiting.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    slow.release();
+    await firstDone;
+    const [result] = await secondDone;
+    return result;
+  }
+
+  async function novemberOpen() {
+    const job = await add();
+    await open('2026-11');
+    return { job, nov20: (await paycheckOn('2026-11-20')).id };
+  }
+
+  const markEarly = (db: TestDb['db'], id: string) =>
+    paychecks.markReceived(db, A.ctx(), id, { receivedCents: 322_500, receivedDate: TODAY });
+
+  it('a paycheck being marked received is not deleted by a stop', async () => {
+    const { job, nov20 } = await novemberOpen();
+
+    await during(
+      (db) => markEarly(db, nov20),
+      () => paySchedules.stop(t.db, A.ctx(), job.id, TODAY),
+    );
+
+    expect(await dates()).toEqual(['2026-11-06', '2026-11-20']);
+    expect((await paycheckOn('2026-11-20')).received_cents).toBe(322_500);
+  });
+
+  it('marking a paycheck that a stop is deleting is NotFound, not a silent success', async () => {
+    const { job, nov20 } = await novemberOpen();
+
+    const marked = await during(
+      (db) => paySchedules.stop(db, A.ctx(), job.id, TODAY),
+      () => markEarly(t.db, nov20),
+    );
+
+    expect(marked).toMatchObject({ status: 'rejected', reason: expect.any(NotFound) });
+    expect(await dates()).toEqual(['2026-11-06']);
   });
 });
