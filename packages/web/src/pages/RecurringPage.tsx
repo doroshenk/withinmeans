@@ -58,6 +58,7 @@ export function RecurringPage({ client }: { client: RecurringClient }) {
   const [managing, setManaging] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const [categoryProblem, setCategoryProblem] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const fetchAll = useCallback(async () => {
@@ -80,10 +81,14 @@ export function RecurringPage({ client }: { client: RecurringClient }) {
   }, [fetchAll]);
 
   /** Runs one change, then shows what the server now has. */
-  const act = async (change: () => Promise<unknown>): Promise<boolean> => {
+  const act = async (
+    change: () => Promise<unknown>,
+    report: (problem: string) => void = setProblem,
+  ): Promise<boolean> => {
     if (saving) return false;
     setSaving(true);
     setProblem(null);
+    setCategoryProblem(null);
     setNotice(null);
     try {
       const message = await change();
@@ -91,7 +96,9 @@ export function RecurringPage({ client }: { client: RecurringClient }) {
       if (typeof message === 'string') setNotice(message);
       return true;
     } catch (error) {
-      setProblem(apiErrorMessage(error));
+      report(apiErrorMessage(error));
+      // Part of the change may have been saved. If this reload fails too, keep what is shown.
+      await fetchAll().then(setLoad, () => {});
       return false;
     } finally {
       setSaving(false);
@@ -148,7 +155,6 @@ export function RecurringPage({ client }: { client: RecurringClient }) {
   return (
     <main className="page">
       {header}
-      {notice !== null && <p role="status">{notice}</p>}
       {problem !== null && (
         <p role="alert" className="error">
           {problem}
@@ -187,6 +193,9 @@ export function RecurringPage({ client }: { client: RecurringClient }) {
       {data.bills.length === 0 ? (
         <>
           <section className="card empty-state">
+            <span className="empty-icon" data-testid="empty-icon" aria-hidden="true">
+              ⟳
+            </span>
             <h2>No recurring bills yet</h2>
             <p>
               {can.write
@@ -230,9 +239,15 @@ export function RecurringPage({ client }: { client: RecurringClient }) {
           categories={categories}
           bills={data.bills}
           usedCategoryIds={data.usedCategoryIds}
-          act={act}
-          onProblem={setProblem}
-          onDone={() => setManaging(false)}
+          act={(change) => act(change, setCategoryProblem)}
+          onProblem={setCategoryProblem}
+          problem={categoryProblem}
+          notice={notice}
+          onDone={() => {
+            setManaging(false);
+            setCategoryProblem(null);
+            setNotice(null);
+          }}
         />
       )}
 

@@ -151,7 +151,15 @@ export function lastKeptMonth(openedMonths: readonly YearMonth[], currentYm: Yea
   return started.at(-1) ?? addMonths(currentYm, -1);
 }
 
-/** A new bill starts this month (past months get none), or in the first month if that is later. */
-export function newBillStartMonth(firstMonth: YearMonth, currentYm: YearMonth): YearMonth {
-  return firstMonth > currentYm ? firstMonth : currentYm;
+/**
+ * A new bill starts this month (past months get none), or in the first month if that is later. While
+ * no month after the first has been started, the household is still catching up on the first month
+ * (spec §3 step 1), so the bill starts there.
+ */
+export function newBillStartMonth(
+  firstMonth: YearMonth,
+  currentYm: YearMonth,
+  onlyFirstMonthStarted = false,
+): YearMonth {
+  return onlyFirstMonthStarted || firstMonth > currentYm ? firstMonth : currentYm;
 }

@@ -20,6 +20,9 @@ export interface CategoryManagerProps {
   /** Runs a change, reloads, and reports a failure; resolves to whether it worked. */
   act: (change: () => Promise<unknown>) => Promise<boolean>;
   onProblem: (problem: string) => void;
+  /** What went wrong, or was done, here: shown inside the panel, where the user is looking. */
+  problem: string | null;
+  notice: string | null;
   onDone: () => void;
 }
 
@@ -59,6 +62,8 @@ export function CategoryManager({
   usedCategoryIds,
   act,
   onProblem,
+  problem,
+  notice,
   onDone,
 }: CategoryManagerProps) {
   const id = useId();
@@ -134,6 +139,13 @@ export function CategoryManager({
           Done
         </button>
       </div>
+
+      {notice !== null && <p role="status">{notice}</p>}
+      {problem !== null && (
+        <p role="alert" className="error">
+          {problem}
+        </p>
+      )}
 
       <ul className="category-cards">
         {categories.map((row) => {

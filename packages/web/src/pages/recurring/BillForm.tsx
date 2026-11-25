@@ -32,9 +32,15 @@ export function BillForm({
   const [name, setName] = useState(bill?.name ?? '');
   const [estimate, setEstimate] = useState(bill ? dollarText(bill.estimateCents) : '');
   const [dueDay, setDueDay] = useState(bill ? String(bill.dueDay) : '');
-  const [categoryId, setCategoryId] = useState(bill?.categoryId ?? categories[0]?.id ?? '');
+  const [picked, setPicked] = useState<string>();
   const [autopay, setAutopay] = useState(bill?.autopay ?? false);
   const [confirming, setConfirming] = useState(false);
+  // Categories can change while the form is open: use the pick while it exists, else the bill's own
+  // category (where a deleted one's bills moved), else the first.
+  const categoryId =
+    [picked, bill?.categoryId].find((id) => categories.some((c) => c.id === id)) ??
+    categories[0]?.id ??
+    '';
   const title = bill ? `Edit ${bill.name}` : 'Add recurring bill';
 
   const submit = () => {
@@ -101,7 +107,7 @@ export function BillForm({
           <select
             id={`${id}-category`}
             value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
+            onChange={(e) => setPicked(e.target.value)}
           >
             {categories.map((c) => (
               <option key={c.id} value={c.id}>

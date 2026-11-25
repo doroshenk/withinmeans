@@ -1,4 +1,4 @@
-import { categories, households, recurringBills } from '@withinmeans/db';
+import { categories, households, months, recurringBills } from '@withinmeans/db';
 import { monthlyBillsTotal, monthOf, newBillStartMonth, today } from '@withinmeans/domain';
 import { translated } from './errors.js';
 import type { MemberContext } from './invitePartner.js';
@@ -54,8 +54,8 @@ export async function listSetupBills(ctx: BillsContext): Promise<SetupBillsView>
 }
 
 /**
- * Spec §3 step 5 and §6.3: the bill starts this month, or in the first month if that is later, so
- * months already past get no new bill.
+ * Spec §3 step 5 and §6.3: the bill starts this month, or in the first month if that is later or is
+ * still the only month started.
  */
 export const addSetupBill = (
   ctx: BillsContext,
@@ -70,9 +70,11 @@ export const addSetupBill = (
   translated(async () => {
     const household = await myHousehold(ctx);
     const currentYm = monthOf(today(ctx.clock, household.timezone));
+    const started = await months.list(ctx.db, ctx.household);
+    const onlyFirst = started.length > 0 && started.every((m) => m.ym === household.first_month);
     const row = await recurringBills.create(ctx.db, ctx.household, {
       ...input,
-      startYm: newBillStartMonth(household.first_month, currentYm),
+      startYm: newBillStartMonth(household.first_month, currentYm, onlyFirst),
     });
     return { id: row.id };
   });
