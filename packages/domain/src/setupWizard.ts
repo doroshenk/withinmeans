@@ -42,9 +42,19 @@ export function stepStatus(progress: SetupProgress, id: number): StepStatus {
   return progress[id] ?? 'todo';
 }
 
-/** Where to resume: the first step that is neither done nor skipped (the last step when all are). */
-export function resumeStep(progress: SetupProgress): number {
-  return SETUP_STEPS.find((s) => stepStatus(progress, s.id) === 'todo')?.id ?? LAST_STEP;
+/**
+ * Where to resume: the first step that is neither done nor skipped (the last step when all are).
+ * Once setup has been finished, steps that are coming soon are passed over.
+ */
+export function resumeStep(
+  progress: SetupProgress,
+  comingSoon: ReadonlySet<number> = new Set(),
+): number {
+  const finished = stepStatus(progress, LAST_STEP) === 'done';
+  const next = SETUP_STEPS.find(
+    (s) => stepStatus(progress, s.id) === 'todo' && !(finished && comingSoon.has(s.id)),
+  );
+  return next?.id ?? LAST_STEP;
 }
 
 /** Returns a new progress with the step saved. Only optional steps may be skipped. */

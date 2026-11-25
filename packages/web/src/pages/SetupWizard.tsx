@@ -62,7 +62,7 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
       (rows) => {
         if (cancelled) return;
         const progress: SetupProgress = Object.fromEntries(rows.map((r) => [r.step, r.status]));
-        setLoad({ kind: 'ready', progress, current: resumeStep(progress) });
+        setLoad({ kind: 'ready', progress, current: resumeStep(progress, COMING_SOON) });
       },
       () => !cancelled && setLoad({ kind: 'error' }),
     );
