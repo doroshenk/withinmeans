@@ -59,19 +59,36 @@ export function markStep(
   return { ...progress, [id]: status };
 }
 
+/**
+ * The status to show. A step that is coming soon never shows as done: it has no screen yet, so
+ * nothing was entered. Skipping it still shows.
+ */
+export function shownStatus(
+  progress: SetupProgress,
+  id: number,
+  comingSoon: ReadonlySet<number>,
+): StepStatus {
+  const status = stepStatus(progress, id);
+  return status === 'done' && comingSoon.has(id) ? 'todo' : status;
+}
+
 export interface ReviewRow {
   id: number;
   title: string;
   status: StepStatus;
+  comingSoon: boolean;
   /** Edit a finished step, Add now for an optional one, Finish this for a required one. */
   action: 'Edit' | 'Add now' | 'Finish this';
 }
 
 /** Spec §3 step 9: every step except Review itself, with what to do about it. */
-export function reviewRows(progress: SetupProgress): ReviewRow[] {
+export function reviewRows(
+  progress: SetupProgress,
+  comingSoon: ReadonlySet<number> = new Set(),
+): ReviewRow[] {
   return SETUP_STEPS.filter((s) => s.id !== LAST_STEP).map((s) => {
-    const status = stepStatus(progress, s.id);
+    const status = shownStatus(progress, s.id, comingSoon);
     const action = status === 'done' ? 'Edit' : s.required ? 'Finish this' : 'Add now';
-    return { id: s.id, title: s.title, status, action };
+    return { id: s.id, title: s.title, status, comingSoon: comingSoon.has(s.id), action };
   });
 }

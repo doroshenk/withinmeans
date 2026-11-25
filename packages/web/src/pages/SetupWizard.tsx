@@ -1,10 +1,12 @@
 import {
   SETUP_STEPS,
   type FirstMonthChoice,
+  type ReviewRow,
   markStep,
   resumeStep,
   reviewRows,
   setupAccountsError,
+  shownStatus,
   stepStatus,
   type SetupProgress,
 } from '@withinmeans/domain';
@@ -39,8 +41,8 @@ type Load =
 
 const LAST = SETUP_STEPS.length;
 
-/** Steps whose real screens have landed. Each setup ticket (P1-09 to P1-13) adds its step here. */
-const BUILT_STEPS: ReadonlySet<number> = new Set([1, 2, 4, 5]);
+/** Steps with no screen yet. The ticket that builds a step removes it (P2-07, P2-09, P3-01, P3-05). */
+const COMING_SOON: ReadonlySet<number> = new Set([3, 6, 7, 8]);
 
 const STATUS_LABEL = { todo: '', done: 'Done', skipped: 'Skipped' } as const;
 
@@ -75,7 +77,10 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
   const { progress, current } = load;
   const step = SETUP_STEPS[current - 1];
   if (step === undefined) return null;
-  const doneCount = SETUP_STEPS.filter((s) => stepStatus(progress, s.id) === 'done').length;
+  const doneCount = SETUP_STEPS.filter(
+    (s) => shownStatus(progress, s.id, COMING_SOON) === 'done',
+  ).length;
+  const soon = COMING_SOON.has(step.id);
 
   const goTo = (id: number) => {
     setSaveFailed(false);
@@ -141,7 +146,7 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
         <nav aria-label="Setup steps">
           <ol className="wizard-steps">
             {SETUP_STEPS.map((s) => {
-              const status = stepStatus(progress, s.id);
+              const status = shownStatus(progress, s.id, COMING_SOON);
               return (
                 <li key={s.id}>
                   <button
@@ -195,7 +200,7 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
         ) : step.id === 5 ? (
           <RecurringBillsStep client={client} />
         ) : (
-          !BUILT_STEPS.has(step.id) && <p className="wizard-soon">Coming soon</p>
+          soon && <p className="wizard-soon">Coming soon</p>
         )}
 
         {blocked !== null && <p role="alert">{blocked}</p>}
@@ -218,7 +223,7 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
                 Skip for now
               </button>
             )}
-            {can.write && step.id < LAST && (
+            {can.write && !soon && step.id < LAST && (
               <button
                 type="button"
                 className="button"
@@ -238,7 +243,7 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
                 Finish setup
               </button>
             )}
-            {!can.write && step.id < LAST && (
+            {(!can.write || soon) && step.id < LAST && (
               <button type="button" className="button" onClick={() => goTo(step.id + 1)}>
                 Next →
               </button>
@@ -252,7 +257,12 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
 
 const REVIEW_STATUS = { todo: 'Not started', done: 'Done', skipped: 'Skipped' } as const;
 
-/** Spec §3 step 9: each step with its state and Edit, Add now or Finish this. */
+function reviewLabel({ status, comingSoon }: ReviewRow): string {
+  if (!comingSoon) return REVIEW_STATUS[status];
+  return status === 'skipped' ? 'Skipped · Coming soon' : 'Coming soon';
+}
+
+/** Spec §3 step 9: each step with its state and Edit, Add now or Finish this (View if read-only). */
 function ReviewList({
   progress,
   onJump,
@@ -260,16 +270,17 @@ function ReviewList({
   progress: SetupProgress;
   onJump: (id: number) => void;
 }) {
+  const can = useCan();
   return (
     <ul className="wizard-review" aria-label="Review">
-      {reviewRows(progress).map((row) => (
+      {reviewRows(progress, COMING_SOON).map((row) => (
         <li key={row.id}>
           <span className="wizard-review-title">{row.title}</span>
           <span className={`wizard-review-status wizard-review-${row.status}`}>
-            {REVIEW_STATUS[row.status]}
+            {reviewLabel(row)}
           </span>
           <button type="button" className="button button-quiet" onClick={() => onJump(row.id)}>
-            {row.action}
+            {can.write ? row.action : 'View'}
           </button>
         </li>
       ))}

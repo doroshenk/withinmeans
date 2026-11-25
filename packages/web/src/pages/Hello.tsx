@@ -40,6 +40,8 @@ export function Hello({ client, onSignOut, onStartSetup }: HelloProps) {
             <>
               <h1>{`Hello ${state.me.user?.name ?? 'there'}`}</h1>
               {state.me.household && <p>{state.me.household.name}</p>}
+              {/* Placeholder until the Phase 4 dashboard. */}
+              <p>Your dashboard is coming soon.</p>
               {onStartSetup && state.me.household && state.me.household.role !== 'view' && (
                 <button type="button" className="button" onClick={onStartSetup}>
                   Start setting up
