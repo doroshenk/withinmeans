@@ -129,6 +129,28 @@ describe('P2-03 pay schedules and paychecks API', () => {
     expect(found?.semimonthlyDays).toEqual([10, 25]);
   });
 
+  it("pays into the chosen account, and refuses another household's", async () => {
+    const owner = await caller('sub-owner');
+    const other = await caller('sub-other');
+    const account = await owner.addAccount({
+      name: 'Joint checking',
+      type: 'checking',
+      balanceCents: 100_000,
+    });
+    const input = {
+      name: 'Side job',
+      frequency: 'weekly' as const,
+      anchorDate: '2026-11-06',
+      usualCents: 20_000,
+      accountId: account.id,
+    };
+
+    const { id } = await owner.addPaySchedule(input);
+
+    expect((await owner.paySchedules()).find((s) => s.id === id)?.accountId).toBe(account.id);
+    await expect(other.addPaySchedule(input)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
   it('lets a view-only member read', async () => {
     const view = await caller('sub-view');
 

@@ -122,6 +122,21 @@ describe('P2-03 pay schedule input (spec §3 step 3, §5.9)', () => {
     expect(addPayScheduleInput.safeParse({ ...valid, ...over }).success).toBe(false);
   });
 
+  it('says what is wrong with the semimonthly days', () => {
+    const result = addPayScheduleInput.safeParse({
+      ...valid,
+      frequency: 'semimonthly',
+      semimonthlyDays: [15, 15],
+    });
+
+    expect(result.error?.issues).toMatchObject([
+      {
+        path: ['semimonthlyDays'],
+        message: 'Pick two different days, for semimonthly pay only.',
+      },
+    ]);
+  });
+
   it('names a schedule by id', () => {
     expect(payScheduleIdInput.safeParse({ id: ID }).success).toBe(true);
     expect(payScheduleIdInput.safeParse({ id: 'x' }).success).toBe(false);
@@ -129,7 +144,9 @@ describe('P2-03 pay schedule input (spec §3 step 3, §5.9)', () => {
 
   it('asks for a month as YYYY-MM', () => {
     expect(monthPaychecksInput.safeParse({ ym: '2026-11' }).success).toBe(true);
-    expect(monthPaychecksInput.safeParse({ ym: '2026-13' }).success).toBe(false);
+    for (const ym of ['2026-13', '2026-00', '2026-111', '12026-11']) {
+      expect(monthPaychecksInput.safeParse({ ym }).success).toBe(false);
+    }
   });
 
   it('marks a paycheck received with a positive amount and a real date', () => {

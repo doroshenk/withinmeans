@@ -271,18 +271,7 @@ const cases: Case[] = [
     name: 'paySchedules.restart',
     write: true,
     namesId: true,
-    run: async (db, ctx, t) => {
-      // Only a stopped schedule has anything to restart, so stop A's own first (not for the view
-      // role, which must change nothing).
-      if (ctx.role !== 'view') {
-        await db
-          .updateTable('pay_schedules')
-          .set({ ended_on: '2026-11-01' })
-          .where('household_id', '=', ctx.householdId)
-          .execute();
-      }
-      return paySchedules.restart(db, ctx, t.payScheduleId, '2026-11-18');
-    },
+    run: (db, ctx, t) => paySchedules.restart(db, ctx, t.stoppedScheduleId, '2026-11-18'),
   },
 
   {

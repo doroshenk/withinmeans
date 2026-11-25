@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { paychecksTotalCents } from '@withinmeans/domain';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Conflict, InvalidInput, NotFound } from '../context.js';
@@ -166,7 +167,7 @@ describe('P2-03 openMonth creates the expected paychecks (spec §5.9, §5.11)', 
   it('unique (schedule_id, expected_date): a second row for the same payday is refused', async () => {
     await add();
     await open('2026-11');
-    const { id: _id, created_at: _at, ...copy } = await paycheckOn('2026-11-06');
+    const copy = { ...(await paycheckOn('2026-11-06')), id: randomUUID() };
 
     await expect(t.db.insertInto('paychecks').values(copy).execute()).rejects.toMatchObject({
       code: '23505',

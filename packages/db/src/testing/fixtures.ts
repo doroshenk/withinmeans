@@ -15,6 +15,8 @@ export interface Seeded {
   billId: string;
   payScheduleId: string;
   paycheckId: string;
+  /** A second schedule, already stopped, with no paychecks. */
+  stoppedScheduleId: string;
   inviteId: string;
   inviteToken: string;
   /** The one finished setup step seeded for this household (A: 1, B: 2). */
@@ -56,6 +58,7 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
     billId: randomUUID(),
     payScheduleId: randomUUID(),
     paycheckId: randomUUID(),
+    stoppedScheduleId: randomUUID(),
     inviteId: randomUUID(),
     inviteToken: `token-${label}-${randomUUID()}`,
   };
@@ -170,6 +173,21 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
       usual_cents: 200_000,
       account_id: ids.accountId,
       ended_on: null,
+    })
+    .execute();
+  await db
+    .insertInto('pay_schedules')
+    .values({
+      id: ids.stoppedScheduleId,
+      household_id: h,
+      name: `${secret} old job`,
+      frequency: 'monthly',
+      anchor_date: `${ym}-27`,
+      semimonthly_day_1: null,
+      semimonthly_day_2: null,
+      usual_cents: 100_000,
+      account_id: null,
+      ended_on: `${ym}-02`,
     })
     .execute();
   await db
