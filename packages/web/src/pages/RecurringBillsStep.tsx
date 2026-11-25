@@ -58,6 +58,7 @@ export function RecurringBillsStep({ client }: { client: RecurringBillsClient })
   const [categoryId, setCategoryId] = useState('');
   const [autopay, setAutopay] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const fetchAll = useCallback(
     async () => ({
@@ -90,12 +91,14 @@ export function RecurringBillsStep({ client }: { client: RecurringBillsClient })
     : (categories[0]?.id ?? '');
 
   const add = async () => {
+    if (saving) return;
     const error = billDraftError({ name, estimateText: estimate, dueDayText: dueDay });
     if (error !== undefined) {
       setProblem(error);
       return;
     }
     setProblem(null);
+    setSaving(true);
     try {
       await client.addRecurringBill.mutate({
         name: name.trim(),
@@ -111,6 +114,8 @@ export function RecurringBillsStep({ client }: { client: RecurringBillsClient })
       await reload();
     } catch (err) {
       setProblem(apiErrorMessage(err));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -175,7 +180,9 @@ export function RecurringBillsStep({ client }: { client: RecurringBillsClient })
 
       {problem !== null && <p role="alert">{problem}</p>}
 
-      {can.write && (
+      {can.write && categories.length === 0 && <p>Add a bill category in step 4 first.</p>}
+
+      {can.write && categories.length > 0 && (
         <>
           <form
             className="account-add bill-add"
@@ -231,7 +238,7 @@ export function RecurringBillsStep({ client }: { client: RecurringBillsClient })
               />
               Autopay
             </label>
-            <button type="submit" className="button">
+            <button type="submit" className="button" disabled={saving}>
               Add bill
             </button>
           </form>
