@@ -43,8 +43,15 @@ export async function orConflict<T>(fn: () => Promise<T>, message: string): Prom
 export function inTransaction<T>(
   db: Database,
   fn: (trx: Transaction<DB>) => Promise<T>,
+  isolation?: 'repeatable read',
 ): Promise<T> {
-  return withRetry(() => db.transaction().execute(fn), { maxTries: 5 });
+  return withRetry(
+    () => {
+      const trx = db.transaction();
+      return (isolation === undefined ? trx : trx.setIsolationLevel(isolation)).execute(fn);
+    },
+    { maxTries: 5 },
+  );
 }
 
 /** An update or delete that matched nothing means the id is not in the caller's household. */

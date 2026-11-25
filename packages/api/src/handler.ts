@@ -1,12 +1,8 @@
 import { awsLambdaRequestHandler } from '@trpc/server/adapters/aws-lambda';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { createContextFactory, type ContextDeps } from './context.js';
+import { redactDigits } from './redact.js';
 import { appRouter } from './router.js';
-
-/** Error text can echo values (e.g. a bad bigint); digits never reach the log. */
-function redactDigits(text: string): string {
-  return text.replace(/\d+/g, '#');
-}
 
 /** CloudFront forwards `/api/*` to API Gateway unchanged; tRPC wants the path without it. */
 function withoutApiPrefix(event: APIGatewayProxyEventV2): APIGatewayProxyEventV2 {

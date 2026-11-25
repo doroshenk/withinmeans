@@ -1,6 +1,8 @@
+import { NotFound } from '@withinmeans/db';
 import { createTestDb, type TestDb } from '@withinmeans/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createContextFactory } from './context.js';
+import { exportData } from './exportData.js';
 import { runExportJob } from './exportJob.js';
 import { appRouter } from './router.js';
 import {
@@ -156,5 +158,32 @@ describe('P1-14: the nightly export job', () => {
     const log = lines.join('\n');
     expect(log).toContain(H1);
     expect(log).not.toContain('987654');
+  });
+
+  it('logs a failure that is not an Error, still without digits', async () => {
+    const { logger, lines } = captureLogger();
+
+    const run = runExportJob({
+      db: t.db,
+      clock: testClock,
+      logger,
+      store: { put: () => Promise.reject('refused 987654') },
+    });
+
+    await expect(run).rejects.toThrow('2 of 2 household exports failed');
+    expect(lines.join('\n')).toContain('refused #');
+    expect(lines.join('\n')).not.toContain('987654');
+  });
+});
+
+describe('P1-14: exportData for a household that is gone', () => {
+  it('fails instead of writing an empty export over the last good one', async () => {
+    await expect(
+      exportData({
+        db: t.db,
+        clock: testClock,
+        household: { householdId: U_OWNER, userId: U_OWNER, role: 'view' },
+      }),
+    ).rejects.toBeInstanceOf(NotFound);
   });
 });

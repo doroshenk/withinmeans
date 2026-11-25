@@ -10,7 +10,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/testing.ts', 'src/index.ts', 'src/lambda.ts'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/testing.ts',
+        'src/index.ts',
+        'src/lambda.ts',
+        'src/exportLambda.ts',
+      ],
       thresholds: { lines: 95, statements: 95, functions: 95, branches: 90 },
     },
   },

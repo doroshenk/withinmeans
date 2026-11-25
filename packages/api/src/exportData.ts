@@ -1,5 +1,12 @@
-import type { Database, HouseholdContext, HouseholdTables } from '@withinmeans/db';
-import type { Clock } from '@withinmeans/domain';
+import {
+  householdExport,
+  households,
+  NotFound,
+  type Database,
+  type HouseholdContext,
+  type HouseholdTables,
+} from '@withinmeans/db';
+import { today, type Clock } from '@withinmeans/domain';
 
 export interface HouseholdDocument {
   version: 1;
@@ -9,10 +16,19 @@ export interface HouseholdDocument {
   tables: HouseholdTables;
 }
 
-export async function exportData(_deps: {
+/** The household's full JSON export: what "Download my data" returns and the nightly job stores. */
+export async function exportData(deps: {
   db: Database;
   clock: Clock;
   household: HouseholdContext;
 }): Promise<HouseholdDocument> {
-  throw new Error('not implemented');
+  const { db, clock, household } = deps;
+  const mine = await households.getMine(db, household);
+  if (mine === undefined) throw new NotFound('Household not found');
+  return {
+    version: 1,
+    exportedAt: clock.now().toString(),
+    exportedOn: today(clock, mine.timezone).toString(),
+    tables: await householdExport.read(db, household),
+  };
 }

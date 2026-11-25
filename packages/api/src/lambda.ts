@@ -5,15 +5,10 @@ import { randomBytes } from 'node:crypto';
 import { systemClock } from './clock.js';
 import { createCognitoVerifier } from './auth.js';
 import { createSesEmailSender, INVITE_FROM_ADDRESS } from './emailSender.js';
+import { env } from './env.js';
 import { createHandler } from './handler.js';
 import { createCognitoIdentityProvider } from './identityProvider.js';
 import { createLogger } from './logger.js';
-
-function env(name: string): string {
-  const value = process.env[name];
-  if (value === undefined || value === '') throw new Error(`Missing environment variable ${name}`);
-  return value;
-}
 
 /** The Lambda entry point (CDK: handler `handler`). Built once per cold start, reused after. */
 export const handler = createHandler({
