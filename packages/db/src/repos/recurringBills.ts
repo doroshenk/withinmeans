@@ -1,7 +1,7 @@
 import type { Selectable } from 'kysely';
 import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '../context.js';
 import type { Database, RecurringBillsTable } from '../db.js';
-import { insertMonthBills, lockHouseholdBills } from './monthBills.js';
+import { insertMonthBills, lockHouseholdMonths } from './monthBills.js';
 import { assertCents, assertYm, cleanName, inTransaction, mustHaveChanged } from './shared.js';
 
 export type RecurringBill = Selectable<RecurringBillsTable>;
@@ -82,7 +82,7 @@ export const recurringBills = {
     }
     await assertRefs(db, ctx, input);
     return inTransaction(db, async (trx) => {
-      await lockHouseholdBills(trx, ctx);
+      await lockHouseholdMonths(trx, ctx);
       const created = await trx
         .insertInto('recurring_bills')
         .values({
@@ -140,7 +140,7 @@ export const recurringBills = {
     assertCanWrite(ctx);
     assertYm(currentYm, 'current month');
     await inTransaction(db, async (trx) => {
-      await lockHouseholdBills(trx, ctx);
+      await lockHouseholdMonths(trx, ctx);
       const bill = await trx
         .selectFrom('recurring_bills')
         .select('id')

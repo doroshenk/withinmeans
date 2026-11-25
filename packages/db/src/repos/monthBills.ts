@@ -18,7 +18,7 @@ const templateOf = (row: Selectable<RecurringBillsTable>): RecurringBillTemplate
  * different rows, so two transactions could both commit without seeing each other. Each takes this lock first: Postgres
  * makes the second one wait, and DSQL fails one at commit so that it is retried.
  */
-export async function lockHouseholdBills(
+export async function lockHouseholdMonths(
   trx: Transaction<DB>,
   ctx: HouseholdContext,
 ): Promise<void> {

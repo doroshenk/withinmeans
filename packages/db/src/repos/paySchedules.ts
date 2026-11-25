@@ -2,7 +2,7 @@ import { PAY_FREQUENCIES, type PayFrequency } from '@withinmeans/domain';
 import type { Selectable, Transaction } from 'kysely';
 import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '../context.js';
 import type { Database, DB, PaySchedulesTable } from '../db.js';
-import { lockHouseholdBills } from './monthBills.js';
+import { lockHouseholdMonths } from './monthBills.js';
 import { insertMonthPaychecks } from './paychecks.js';
 import { assertCents, assertDate, cleanName, inTransaction } from './shared.js';
 
@@ -114,7 +114,7 @@ export const paySchedules = {
     if (input.usualCents <= 0) throw new InvalidInput('take-home must be more than zero');
     const days = semimonthlyDays(input);
     return inTransaction(db, async (trx) => {
-      await lockHouseholdBills(trx, ctx);
+      await lockHouseholdMonths(trx, ctx);
       const created = await trx
         .insertInto('pay_schedules')
         .values({
@@ -145,7 +145,7 @@ export const paySchedules = {
     assertCanWrite(ctx);
     assertDate(today);
     await inTransaction(db, async (trx) => {
-      await lockHouseholdBills(trx, ctx);
+      await lockHouseholdMonths(trx, ctx);
       const schedule = await findMine(trx, ctx, id);
       if (schedule.ended_on !== null) return;
       await setEndedOn(trx, ctx, id, today);
@@ -176,7 +176,7 @@ export const paySchedules = {
     assertCanWrite(ctx);
     assertDate(today);
     await inTransaction(db, async (trx) => {
-      await lockHouseholdBills(trx, ctx);
+      await lockHouseholdMonths(trx, ctx);
       const schedule = await findMine(trx, ctx, id);
       if (schedule.ended_on === null) return;
       await setEndedOn(trx, ctx, id, null);

@@ -1,7 +1,7 @@
 import type { Transaction } from 'kysely';
 import { assertCanWrite, type HouseholdContext } from '../context.js';
 import type { Database, DB } from '../db.js';
-import { insertMonthBills, lockHouseholdBills } from './monthBills.js';
+import { insertMonthBills, lockHouseholdMonths } from './monthBills.js';
 import type { Month } from './months.js';
 import { insertMonthPaychecks } from './paychecks.js';
 import { assertYm, inTransaction } from './shared.js';
@@ -19,7 +19,7 @@ export async function openMonthIn(
 ): Promise<{ month: Month; created: boolean }> {
   assertCanWrite(ctx);
   assertYm(ym);
-  await lockHouseholdBills(trx, ctx);
+  await lockHouseholdMonths(trx, ctx);
   const inserted = await trx
     .insertInto('months')
     .values({ household_id: ctx.householdId, ym, started_at: startedAt, closed_at: null })
