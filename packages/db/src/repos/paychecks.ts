@@ -8,6 +8,7 @@ import {
   type HouseholdContext,
 } from '../context.js';
 import type { Database, DB, PaychecksTable, PaySchedulesTable } from '../db.js';
+import { lockHouseholdMonths } from './monthBills.js';
 import { assertCents, assertDate, assertYm, inTransaction } from './shared.js';
 
 export type Paycheck = Selectable<PaychecksTable>;
@@ -83,6 +84,8 @@ export const paychecks = {
     if (received.receivedCents <= 0) throw new InvalidInput('the amount must be more than zero');
     assertDate(received.receivedDate);
     await inTransaction(db, async (trx) => {
+      // Stopping a schedule deletes paychecks, so the two take turns.
+      await lockHouseholdMonths(trx, ctx);
       const paycheck = await trx
         .selectFrom('paychecks')
         .select('expected_date')

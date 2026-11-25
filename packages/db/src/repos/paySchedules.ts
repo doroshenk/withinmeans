@@ -169,8 +169,9 @@ export const paySchedules = {
   },
 
   /**
-   * Clears `ended_on` and expects pay again in open months, from `today` on: paydays missed while
-   * stopped stay out. Restarting a running schedule changes nothing.
+   * Clears `ended_on` and expects pay again in open months, from `today` on: in those months,
+   * paydays missed while stopped stay out. A month opened later gets all its paydays. Restarting a
+   * running schedule changes nothing.
    */
   async restart(db: Database, ctx: HouseholdContext, id: string, today: string): Promise<void> {
     assertCanWrite(ctx);
