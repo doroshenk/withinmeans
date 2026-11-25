@@ -459,3 +459,81 @@ describe('P2-08 categories manager', () => {
     expect(calls.deleteCategory).not.toHaveBeenCalled();
   });
 });
+
+describe('P2-08 review fixes', () => {
+  async function editThenManage() {
+    const fake = fakeClient();
+    const user = await open(fake.client);
+    await user.click(screen.getByRole('button', { name: 'Edit Mortgage' }));
+    await user.click(screen.getByRole('button', { name: 'Manage categories' }));
+    return { ...fake, user };
+  }
+
+  it('an open bill form follows its bill when the category is deleted', async () => {
+    const { user, calls } = await editThenManage();
+
+    await user.click(screen.getByRole('button', { name: 'Delete Housing' }));
+    await user.selectOptions(screen.getByLabelText('Move its bills to'), 'Auto');
+    await user.click(screen.getByRole('button', { name: 'Delete category' }));
+    await screen.findByText('Moved 1 bill to Auto.');
+    await user.click(screen.getByRole('button', { name: 'Save bill' }));
+
+    expect(calls.update).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 'c-auto' }));
+  });
+
+  it('an add form opened with no categories uses the one added afterwards', async () => {
+    const { client, calls } = fakeClient({ bills: [] });
+    let categories: CategoryRow[] = [];
+    client.categories.query = () => Promise.resolve(categories);
+    client.createCategory.mutate = (input) => {
+      categories = [{ id: 'c-first', ...input, billCount: 0 }];
+      return Promise.resolve({ id: 'c-first' });
+    };
+    const user = await open(client);
+
+    await user.click(screen.getByRole('button', { name: 'Add your first bill' }));
+    await user.click(screen.getByRole('button', { name: 'Manage categories' }));
+    await user.type(screen.getByLabelText('New category'), 'Pets');
+    await user.click(screen.getByRole('button', { name: 'Add category' }));
+    await user.type(screen.getByLabelText('Bill name'), 'Vet');
+    await user.type(screen.getByLabelText('Estimate'), '20');
+    await user.type(screen.getByLabelText('Due day'), '3');
+    await user.click(screen.getByRole('button', { name: 'Save bill' }));
+
+    expect(calls.add).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 'c-first' }));
+  });
+
+  it('shows a category problem inside the categories panel', async () => {
+    const user = await open(fakeClient().client);
+    await user.click(screen.getByRole('button', { name: 'Manage categories' }));
+    const panel = screen.getByRole('region', { name: 'Categories' });
+
+    await user.click(within(panel).getByRole('button', { name: 'Add category' }));
+
+    expect(within(panel).getByRole('alert')).toHaveTextContent('Give the category a name.');
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+  });
+
+  it('shows what was saved when only part of a category change fails', async () => {
+    const { client } = fakeClient();
+    client.recolorCategory.mutate = () => Promise.reject(new Error('boom'));
+    const user = await open(client);
+    await user.click(screen.getByRole('button', { name: 'Manage categories' }));
+    await user.click(screen.getByRole('button', { name: 'Edit Housing' }));
+    const form = screen.getByRole('form', { name: 'Edit Housing' });
+    await user.clear(within(form).getByLabelText('Category name'));
+    await user.type(within(form).getByLabelText('Category name'), 'Home loan');
+    await user.click(within(form).getByRole('radio', { name: 'Color 4' }));
+
+    await user.click(within(form).getByRole('button', { name: 'Save category' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong');
+    expect(await screen.findByRole('button', { name: 'Edit Home loan' })).toBeInTheDocument();
+  });
+
+  it('the empty state has an icon', async () => {
+    await open(fakeClient({ bills: [] }).client);
+
+    expect(screen.getByTestId('empty-icon')).toHaveAttribute('aria-hidden', 'true');
+  });
+});

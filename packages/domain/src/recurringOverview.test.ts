@@ -254,3 +254,9 @@ describe('P2-08 inputs', () => {
     expect(deleteCategoryInput.safeParse({ id: ID, moveToId: 'nope' }).success).toBe(false);
   });
 });
+
+describe('P2-08 newBillStartMonth during catch-up', () => {
+  it('is the first month while no later month has been started (spec §3 steps 1 and 5)', () => {
+    expect(newBillStartMonth('2026-11', '2026-12', true)).toBe('2026-11');
+  });
+});

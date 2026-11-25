@@ -174,3 +174,21 @@ describe('P2-08 recurring bills API', () => {
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 });
+
+describe('P2-08 setup finished after a month boundary', () => {
+  it('a bill still goes into the first month while it is the only one started', async () => {
+    await t.db
+      .updateTable('households')
+      .set({ first_month: '2026-10' })
+      .where('id', '=', H2)
+      .execute();
+    await openMonth(t.db, { householdId: H2, userId: U_OTHER, role: 'owner' }, '2026-10', NOW);
+    const other = await caller('sub-other');
+    await other.seedDefaultCategories({ preset: 'default' });
+    const categoryId = (await other.categories())[0]?.id ?? '';
+
+    const { id } = await other.addRecurringBill({ ...rent(), categoryId });
+
+    expect(await monthsOf(id)).toEqual([['2026-10', 150_000]]);
+  });
+});
