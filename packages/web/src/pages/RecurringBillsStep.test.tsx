@@ -271,6 +271,31 @@ describe('P1-12 recurring bills step', () => {
     expect(screen.queryByRole('button', { name: 'Remove Rent' })).not.toBeInTheDocument();
   });
 
+  it('with no categories yet (step 4 not visited): says so instead of showing the form', async () => {
+    const { client } = fakeClient();
+    client.categories.query = () => Promise.resolve([]);
+    open(client);
+
+    expect(await screen.findByText('Add a bill category in step 4 first.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add bill' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mortgage' })).not.toBeInTheDocument();
+  });
+
+  it('a second submit while saving does not add the bill twice', async () => {
+    const { client, calls } = fakeClient();
+    client.addRecurringBill.mutate = (input) => {
+      calls.add(input);
+      return new Promise(() => {});
+    };
+    const user = open(client);
+    await screen.findByRole('textbox', { name: 'Bill name' });
+
+    await fillAndAdd(user, { name: 'Gym', estimate: '30', day: '3' });
+    await user.click(screen.getByRole('button', { name: 'Add bill' }));
+
+    expect(calls.add).toHaveBeenCalledTimes(1);
+  });
+
   it('shows an error when the bills cannot be loaded', async () => {
     const { client } = fakeClient();
     client.setupBills.query = () => Promise.reject(new Error('down'));
