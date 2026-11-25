@@ -186,8 +186,9 @@ export const categories = {
   },
 
   /**
-   * Deletes a category; its recurring bills move to the first remaining one (spec §3 step 4, T18).
-   * Never the last one. When the `bills` table lands, its rows must move here too.
+   * Deletes a category; its recurring bills and month Bills move to the first remaining one (spec
+   * §3 step 4, T18). Never the last one. `movedCount` counts each bill once: recurring bills, plus
+   * one-time bills.
    */
   async remove(db: Database, ctx: HouseholdContext, id: string): Promise<RemovedCategory> {
     assertCanWrite(ctx);
@@ -215,13 +216,27 @@ export const categories = {
         .where('household_id', '=', ctx.householdId)
         .where('category_id', '=', id)
         .executeTakeFirst();
+      // One-time bills first, to count them; then the rows made from recurring bills.
+      const oneTime = await trx
+        .updateTable('bills')
+        .set({ category_id: target.id })
+        .where('household_id', '=', ctx.householdId)
+        .where('category_id', '=', id)
+        .where('recurring_bill_id', 'is', null)
+        .executeTakeFirst();
+      await trx
+        .updateTable('bills')
+        .set({ category_id: target.id })
+        .where('household_id', '=', ctx.householdId)
+        .where('category_id', '=', id)
+        .execute();
       await trx
         .deleteFrom('categories')
         .where('id', '=', id)
         .where('household_id', '=', ctx.householdId)
         .execute();
       return {
-        movedCount: Number(moved.numUpdatedRows),
+        movedCount: Number(moved.numUpdatedRows) + Number(oneTime.numUpdatedRows),
         movedToId: target.id,
         movedToName: target.name,
       };

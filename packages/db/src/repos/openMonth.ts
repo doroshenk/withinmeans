@@ -1,12 +1,14 @@
 import type { Transaction } from 'kysely';
 import { assertCanWrite, type HouseholdContext } from '../context.js';
 import type { Database, DB } from '../db.js';
+import { insertMonthBills } from './monthBills.js';
 import type { Month } from './months.js';
 import { assertYm, inTransaction } from './shared.js';
 
 /**
- * Inserts the Month row, or finds the one that is already there. Runs inside the caller's
- * transaction. Later tickets add the bills, paychecks and carry-ins here, so they open together.
+ * Inserts the Month row and its bills, or finds the month that is already there and adds nothing
+ * (so a bill later taken out of it stays out). Runs inside the caller's transaction. Later tickets
+ * add the paychecks and carry-ins here, so they open together.
  */
 export async function openMonthIn(
   trx: Transaction<DB>,
@@ -22,7 +24,15 @@ export async function openMonthIn(
     .onConflict((oc) => oc.columns(['household_id', 'ym']).doNothing())
     .returningAll()
     .executeTakeFirst();
-  if (inserted !== undefined) return { month: inserted, created: true };
+  if (inserted !== undefined) {
+    const recurring = await trx
+      .selectFrom('recurring_bills')
+      .selectAll()
+      .where('household_id', '=', ctx.householdId)
+      .execute();
+    await insertMonthBills(trx, ctx, ym, recurring);
+    return { month: inserted, created: true };
+  }
   const month = await trx
     .selectFrom('months')
     .selectAll()

@@ -23,7 +23,8 @@ beforeEach(async () => {
   await clearAll(t.db);
   A = await seedHousehold(t.db, 'A');
   B = await seedHousehold(t.db, 'B');
-  // Start from a household with no month yet (seeding gives each one).
+  // Start from a household with no month yet (seeding gives each one, with its bill).
+  await t.db.deleteFrom('bills').where('household_id', '=', A.householdId).execute();
   await t.db.deleteFrom('months').where('household_id', '=', A.householdId).execute();
 });
 

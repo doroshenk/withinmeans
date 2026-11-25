@@ -1,4 +1,4 @@
-import type { YearMonth } from './dates';
+import { parseYm, type YearMonth } from './dates';
 import type { Cents } from './money';
 
 /** What a recurring bill needs to say to make a month's bill. */
@@ -23,9 +23,23 @@ export interface MonthBill {
   estimateCents: Cents;
 }
 
+/**
+ * Spec §5.11: one bill for each recurring bill active in `ym` (start and end months included), at
+ * its estimate and due day.
+ */
 export function billsForMonth(
-  _recurring: readonly RecurringBillTemplate[],
-  _ym: YearMonth,
+  recurring: readonly RecurringBillTemplate[],
+  ym: YearMonth,
 ): MonthBill[] {
-  throw new Error('not implemented');
+  parseYm(ym);
+  // "YYYY-MM" strings sort in calendar order.
+  return recurring
+    .filter((r) => r.startYm <= ym && (r.endYm === null || ym <= r.endYm))
+    .map((r) => ({
+      recurringBillId: r.id,
+      name: r.name,
+      categoryId: r.categoryId,
+      dueDate: `${ym}-${String(r.dueDay).padStart(2, '0')}`,
+      estimateCents: r.estimateCents,
+    }));
 }

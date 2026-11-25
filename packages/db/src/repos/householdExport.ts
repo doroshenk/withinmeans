@@ -26,7 +26,8 @@ export const householdExport = {
             | 'accounts'
             | 'balance_snapshots'
             | 'recurring_bills'
-            | 'setup_progress',
+            | 'setup_progress'
+            | 'bills',
         ) => trx.selectFrom(table).selectAll().where('household_id', '=', h).execute();
         // One at a time: a transaction has a single connection.
         return {
@@ -60,6 +61,7 @@ export const householdExport = {
           balance_snapshots: await all('balance_snapshots'),
           recurring_bills: await all('recurring_bills'),
           setup_progress: await all('setup_progress'),
+          bills: await all('bills'),
         };
       },
       'repeatable read',
