@@ -28,9 +28,10 @@ export class JobsStack extends Stack {
     const isProd = props.stage === 'prod';
 
     // Private, HTTPS only, encrypted with S3's own keys (free). Each night overwrites the same
-    // object per household; versioning keeps the earlier ones. Exports and old versions are
-    // deleted after 90 days. Prod's bucket is kept if the stack is removed. Dev's is deleted with
-    // the stack, which only works once it is empty.
+    // object per household; versioning keeps the earlier ones, each deleted 90 days after it is
+    // replaced. An object that stops being replaced (a broken job, a removed household) is hidden
+    // after 90 days and deleted 90 days after that. Prod's bucket is kept if the stack is removed.
+    // Dev's is deleted with the stack, which only works once it is empty.
     const bucket = new Bucket(this, 'Exports', {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       enforceSSL: true,
