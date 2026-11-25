@@ -22,21 +22,21 @@ beforeEach(async () => {
 
 describe('P1-12 removing a recurring bill in setup', () => {
   it('deletes the bill', async () => {
-    await recurringBills.remove(t.db, A.ctx(), A.recurringBillId);
+    await recurringBills.remove(t.db, A.ctx(), A.recurringBillId, '2026-11');
 
     expect(await recurringBills.list(t.db, A.ctx())).toEqual([]);
   });
 
   it('another household cannot remove it (it looks missing)', async () => {
-    await expect(recurringBills.remove(t.db, A.ctx(), B.recurringBillId)).rejects.toBeInstanceOf(
-      NotFound,
-    );
+    await expect(
+      recurringBills.remove(t.db, A.ctx(), B.recurringBillId, '2026-11'),
+    ).rejects.toBeInstanceOf(NotFound);
     expect(await recurringBills.list(t.db, B.ctx())).toHaveLength(1);
   });
 
   it('view-only members cannot remove', async () => {
     await expect(
-      recurringBills.remove(t.db, A.ctx('view'), A.recurringBillId),
+      recurringBills.remove(t.db, A.ctx('view'), A.recurringBillId, '2026-11'),
     ).rejects.toBeInstanceOf(Forbidden);
   });
 });

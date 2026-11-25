@@ -171,3 +171,62 @@ describe('P1-12 recurring bills API (setup step 5)', () => {
     });
   });
 });
+
+describe('P2-01 setup step 5 and open months', () => {
+  const monthsWith = async (name: string) =>
+    (
+      await t.db
+        .selectFrom('bills')
+        .select('ym')
+        .where('household_id', '=', H1)
+        .where('name', '=', name)
+        .orderBy('ym')
+        .execute()
+    ).map((b) => b.ym);
+
+  it('a bill added after the first month opened appears in that month', async () => {
+    const owner = await caller('sub-owner');
+    await owner.startFirstMonth({ choice: 'next' });
+    const categoryId = (await owner.categories())[0]?.id ?? '';
+
+    await owner.addRecurringBill({
+      name: 'Water',
+      estimateCents: 4_500,
+      dueDay: 12,
+      categoryId,
+      autopay: false,
+    });
+
+    expect(await monthsWith('Water')).toEqual(['2026-12']);
+  });
+
+  it('removing it takes it out of this month and later, never an earlier one', async () => {
+    const owner = await caller('sub-owner');
+    const water = (await owner.setupBills()).bills.find((b) => b.name === 'Water');
+    // An earlier month (before the clock's November) that already has this bill.
+    await t.db
+      .insertInto('months')
+      .values({ household_id: H1, ym: '2026-10', started_at: new Date(), closed_at: null })
+      .execute();
+    await t.db
+      .insertInto('bills')
+      .values({
+        household_id: H1,
+        ym: '2026-10',
+        recurring_bill_id: water?.id ?? '',
+        name: 'Water',
+        category_id: water?.categoryId ?? '',
+        due_date: '2026-10-12',
+        estimate_cents: 4_500,
+        actual_cents: null,
+        paid_at: null,
+        kind: 'recurring',
+      })
+      .execute();
+
+    await owner.removeRecurringBill({ id: water?.id ?? '' });
+
+    expect(await monthsWith('Water')).toEqual(['2026-10']);
+    expect((await owner.setupBills()).bills.map((b) => b.name)).not.toContain('Water');
+  });
+});

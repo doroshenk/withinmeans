@@ -7,6 +7,7 @@ import type { Database } from './db.js';
 import { lintMigration } from './lint/migrationLinter.js';
 import { runDdl } from './ddl.js';
 import { splitStatements } from './sqlStatements.js';
+import { withRetry } from './retry.js';
 
 /** The linter guarantees a migration is DDL-only or DML-only; this is the DDL side. */
 const DDL = /^(--[^\n]*\n|\/\*[\s\S]*?\*\/|\s)*(CREATE|ALTER|DROP|COMMENT)\b/i;
@@ -60,10 +61,16 @@ export async function migrate(db: Database, dir: URL = MIGRATIONS_DIR): Promise<
       for (const statement of statements) await runDdl(db, statement);
       await record(db);
     } else {
-      await db.transaction().execute(async (trx) => {
-        for (const statement of statements) await sql.raw(statement).execute(trx);
-        await record(trx);
-      });
+      // The transaction is all or nothing, so a conflicted try can run again. DSQL reports one
+      // (OC001) when the schema has just changed, as after an earlier DDL migration.
+      await withRetry(
+        () =>
+          db.transaction().execute(async (trx) => {
+            for (const statement of statements) await sql.raw(statement).execute(trx);
+            await record(trx);
+          }),
+        { maxTries: 12, delayMs: 25 },
+      );
     }
     ran.push(file);
   }

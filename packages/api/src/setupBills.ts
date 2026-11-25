@@ -1,9 +1,9 @@
 import { categories, households, recurringBills } from '@withinmeans/db';
-import { monthlyBillsTotal } from '@withinmeans/domain';
+import { monthlyBillsTotal, monthOf, today } from '@withinmeans/domain';
 import { translated } from './errors.js';
 import type { MemberContext } from './invitePartner.js';
 
-type Ctx = Pick<MemberContext, 'db' | 'household'>;
+type Ctx = Pick<MemberContext, 'db' | 'household' | 'clock'>;
 
 export interface SetupBillView {
   id: string;
@@ -20,6 +20,12 @@ export interface SetupBillsView {
   totalCents: number;
   /** Monthly take-home pay; null until pay schedules exist (setup step 3). */
   takeHomeCents: number | null;
+}
+
+async function mine(ctx: Ctx) {
+  const household = await households.getMine(ctx.db, ctx.household);
+  if (household === undefined) throw new Error('Household not found');
+  return household;
 }
 
 /** Spec §3 step 5: active recurring bills (by due day), their total, and take-home for the share. */
@@ -59,8 +65,7 @@ export const addSetupBill = (
   },
 ) =>
   translated(async () => {
-    const household = await households.getMine(ctx.db, ctx.household);
-    if (household === undefined) throw new Error('Household not found');
+    const household = await mine(ctx);
     const row = await recurringBills.create(ctx.db, ctx.household, {
       ...input,
       startYm: household.first_month,
@@ -68,5 +73,10 @@ export const addSetupBill = (
     return { id: row.id };
   });
 
+/** Takes the bill out of this month and later ones; earlier months keep it. */
 export const removeSetupBill = (ctx: Ctx, input: { id: string }) =>
-  translated(() => recurringBills.remove(ctx.db, ctx.household, input.id));
+  translated(async () => {
+    const household = await mine(ctx);
+    const currentYm = monthOf(today(ctx.clock, household.timezone));
+    await recurringBills.remove(ctx.db, ctx.household, input.id, currentYm);
+  });

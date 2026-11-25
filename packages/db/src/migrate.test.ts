@@ -118,6 +118,33 @@ describe('migrate', () => {
     expect(await migrate(t.db, fixed)).toEqual([name]);
   });
 
+  it('P2-01: a DML migration is retried when the schema just changed (DSQL OC001)', async () => {
+    await migrate(t.db, dirWith({ '0006d_t.sql': 'CREATE TABLE i (id int PRIMARY KEY);' }));
+    let transactions = 0;
+    // The first transaction fails as DSQL does right after DDL; later ones run normally.
+    const flaky = new Proxy(t.db, {
+      get(target, prop) {
+        if (prop === 'transaction') {
+          return () => {
+            transactions += 1;
+            if (transactions > 1) return target.transaction();
+            return {
+              execute: () => Promise.reject(Object.assign(new Error('stale'), { code: 'OC001' })),
+            };
+          };
+        }
+        const value = Reflect.get(target, prop) as unknown;
+        return typeof value === 'function' ? (value as () => unknown).bind(target) : value;
+      },
+    });
+    const dir = dirWith({ '0006e_dml.sql': 'INSERT INTO i VALUES (1);' });
+
+    expect(await migrate(flaky, dir)).toEqual(['0006e_dml.sql']);
+
+    expect(transactions).toBe(2);
+    expect((await sql`SELECT * FROM i`.execute(t.db)).rows).toHaveLength(1);
+  });
+
   it('P0-07: a DML-only migration still applies atomically with its bookkeeping row', async () => {
     await migrate(t.db, dirWith({ '0007_t.sql': 'CREATE TABLE g (id int PRIMARY KEY);' }));
     const dir = dirWith({ '0008_dml.sql': 'INSERT INTO g VALUES (1); INSERT INTO g VALUES (1);' });

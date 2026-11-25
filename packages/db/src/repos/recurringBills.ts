@@ -1,7 +1,8 @@
 import type { Selectable } from 'kysely';
 import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '../context.js';
 import type { Database, RecurringBillsTable } from '../db.js';
-import { assertCents, assertYm, cleanName, mustHaveChanged } from './shared.js';
+import { insertMonthBills, lockHouseholdBills } from './monthBills.js';
+import { assertCents, assertYm, cleanName, inTransaction, mustHaveChanged } from './shared.js';
 
 export type RecurringBill = Selectable<RecurringBillsTable>;
 
@@ -64,6 +65,7 @@ export const recurringBills = {
       .execute();
   },
 
+  /** Adds the bill, and its Bill row to every open month it is active in. */
   async create(
     db: Database,
     ctx: HouseholdContext,
@@ -79,21 +81,32 @@ export const recurringBills = {
       if (input.endYm < input.startYm) throw new InvalidInput('end month is before start month');
     }
     await assertRefs(db, ctx, input);
-    return db
-      .insertInto('recurring_bills')
-      .values({
-        household_id: ctx.householdId,
-        name,
-        estimate_cents: input.estimateCents,
-        due_day: input.dueDay,
-        category_id: input.categoryId,
-        autopay: input.autopay,
-        account_id: input.accountId ?? null,
-        start_ym: input.startYm,
-        end_ym: input.endYm ?? null,
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
+    return inTransaction(db, async (trx) => {
+      await lockHouseholdBills(trx, ctx);
+      const created = await trx
+        .insertInto('recurring_bills')
+        .values({
+          household_id: ctx.householdId,
+          name,
+          estimate_cents: input.estimateCents,
+          due_day: input.dueDay,
+          category_id: input.categoryId,
+          autopay: input.autopay,
+          account_id: input.accountId ?? null,
+          start_ym: input.startYm,
+          end_ym: input.endYm ?? null,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      const open = await trx
+        .selectFrom('months')
+        .select('ym')
+        .where('household_id', '=', ctx.householdId)
+        .where('status', '=', 'open')
+        .execute();
+      for (const { ym } of open) await insertMonthBills(trx, ctx, ym, [created]);
+      return created;
+    });
   },
 
   async update(db: Database, ctx: HouseholdContext, id: string, patch: Patch): Promise<void> {
@@ -118,18 +131,61 @@ export const recurringBills = {
   },
 
   /**
-   * Drops a bill for good. Safe only while there is no `bills` table: step 1 has usually opened the
-   * first month, but no month holds bill rows yet. P2-01 must change this to end a bill that has
-   * rows (past months keep their history), and create rows in the already-open first month.
+   * Takes the bill away from `currentYm` on: deletes its Bill rows in open months from then that
+   * are unpaid and have no actual amount. If any rows remain (past or closed months, or money
+   * already recorded), the bill is ended at the last of them so that history keeps it; otherwise
+   * it is deleted.
    */
-  async remove(db: Database, ctx: HouseholdContext, id: string): Promise<void> {
+  async remove(db: Database, ctx: HouseholdContext, id: string, currentYm: string): Promise<void> {
     assertCanWrite(ctx);
-    const result = await db
-      .deleteFrom('recurring_bills')
-      .where('id', '=', id)
-      .where('household_id', '=', ctx.householdId)
-      .executeTakeFirst();
-    mustHaveChanged(result.numDeletedRows, 'Recurring bill');
+    assertYm(currentYm, 'current month');
+    await inTransaction(db, async (trx) => {
+      await lockHouseholdBills(trx, ctx);
+      const bill = await trx
+        .selectFrom('recurring_bills')
+        .select('id')
+        .where('id', '=', id)
+        .where('household_id', '=', ctx.householdId)
+        .executeTakeFirst();
+      if (bill === undefined) throw new NotFound('Recurring bill not found');
+      await trx
+        .deleteFrom('bills')
+        .where('household_id', '=', ctx.householdId)
+        .where('recurring_bill_id', '=', id)
+        .where('ym', '>=', currentYm)
+        .where('paid_at', 'is', null)
+        .where('actual_cents', 'is', null)
+        .where('ym', 'in', (eb) =>
+          eb
+            .selectFrom('months')
+            .select('months.ym')
+            .where('months.household_id', '=', ctx.householdId)
+            .where('months.status', '=', 'open'),
+        )
+        .execute();
+      const last = await trx
+        .selectFrom('bills')
+        .select('ym')
+        .where('household_id', '=', ctx.householdId)
+        .where('recurring_bill_id', '=', id)
+        .orderBy('ym', 'desc')
+        .limit(1)
+        .executeTakeFirst();
+      if (last === undefined) {
+        await trx
+          .deleteFrom('recurring_bills')
+          .where('id', '=', id)
+          .where('household_id', '=', ctx.householdId)
+          .execute();
+      } else {
+        await trx
+          .updateTable('recurring_bills')
+          .set({ end_ym: last.ym })
+          .where('id', '=', id)
+          .where('household_id', '=', ctx.householdId)
+          .execute();
+      }
+    });
   },
 
   /** Ends the bill from `endYm`; past months keep their rows. */

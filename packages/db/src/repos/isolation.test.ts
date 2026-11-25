@@ -242,7 +242,7 @@ const cases: Case[] = [
     name: 'recurringBills.remove',
     write: true,
     namesId: true,
-    run: (db, ctx, t) => recurringBills.remove(db, ctx, t.recurringBillId),
+    run: (db, ctx, t) => recurringBills.remove(db, ctx, t.recurringBillId, '2026-11'),
   },
 
   {
