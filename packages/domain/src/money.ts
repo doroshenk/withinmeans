@@ -23,6 +23,15 @@ export function sumCents(values: readonly Cents[]): Cents {
   return values.reduce((total, v) => addCents(total, v), 0);
 }
 
+/** `part` as a whole-number percent of `whole` (which must be positive), halves rounded up. */
+export function percentOf(part: Cents, whole: Cents): number {
+  assertCents(part, 'part');
+  assertCents(whole, 'whole');
+  if (whole <= 0) throw new RangeError('whole must be greater than zero');
+  // Integer math: (part × 200 + whole) ÷ (whole × 2), rounded down.
+  return Math.floor((part * 200 + whole) / (whole * 2));
+}
+
 const MINUS = '−';
 
 /**

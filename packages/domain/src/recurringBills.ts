@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { parseDollars } from './accounts';
-import { sumCents, type Cents } from './money';
+import { percentOf, sumCents, type Cents } from './money';
 
 /** Spec §3 step 5: one-tap additions. */
 export const SUGGESTED_BILLS: readonly string[] = [
@@ -57,9 +57,7 @@ export function monthlyBillsTotal(estimates: readonly Cents[]): Cents {
  */
 export function shareOfTakeHome(part: Cents, whole: Cents | null): string {
   if (whole === null || whole <= 0) return '—';
-  // Integer math, rounded to the nearest percent: (part × 200 + whole) ÷ (whole × 2).
-  const percent = Math.floor((part * 200 + whole) / (whole * 2));
-  return `${percent}%`;
+  return `${percentOf(part, whole)}%`;
 }
 
 const ORDINAL_ENDINGS: Readonly<Record<number, string>> = { 1: 'st', 2: 'nd', 3: 'rd' };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addCents, assertCents, formatMoney, subCents, sumCents } from './money';
+import { addCents, assertCents, formatMoney, subCents, sumCents, percentOf } from './money';
 
 const MINUS = '−';
 
@@ -91,5 +91,20 @@ describe('error messages name the offending argument (mutation-killing)', () => 
     expect(() => addCents(1, 0.5)).toThrow(/^b must be/);
     expect(() => subCents(0.5, 1)).toThrow(/^a must be/);
     expect(() => subCents(1, 0.5)).toThrow(/^b must be/);
+  });
+});
+
+describe('P1-12 percentOf', () => {
+  it('rounds to the nearest whole percent, halves up', () => {
+    expect(percentOf(1, 200)).toBe(1);
+    expect(percentOf(1, 201)).toBe(0);
+    expect(percentOf(275_000, 600_000)).toBe(46);
+  });
+
+  it('needs integer cents and a positive whole', () => {
+    expect(() => percentOf(1.5, 100)).toThrow(/part must be an integer/);
+    expect(() => percentOf(1, 100.5)).toThrow(/whole must be an integer/);
+    expect(() => percentOf(1, 0)).toThrow(/whole must be greater than zero/);
+    expect(() => percentOf(1, -5)).toThrow(/whole must be greater than zero/);
   });
 });

@@ -118,8 +118,9 @@ export const recurringBills = {
   },
 
   /**
-   * Setup only: drops a bill, before any month has been opened from it. Once `bills` rows exist
-   * (P2-01), removing must end the bill instead so past months keep their history.
+   * Drops a bill for good. Safe only while there is no `bills` table: step 1 has usually opened the
+   * first month, but no month holds bill rows yet. P2-01 must change this to end a bill that has
+   * rows (past months keep their history), and create rows in the already-open first month.
    */
   async remove(db: Database, ctx: HouseholdContext, id: string): Promise<void> {
     assertCanWrite(ctx);
