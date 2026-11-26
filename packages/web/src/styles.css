@@ -950,6 +950,18 @@ button.category-swatch {
   cursor: default;
 }
 
+/* Setup step 3: paychecks. */
+.pay-main small {
+  display: block;
+}
+
+.pay-preview {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-ink-2);
+  font-size: 14px;
+}
+
 /* Recurring bills (P2-08, design/Recurring.png): tiles, weeks, categories and the bill table. */
 .page {
   max-width: 1120px;

@@ -285,6 +285,12 @@ const cases: Case[] = [
       }),
   },
   {
+    name: 'paySchedules.remove',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) => paySchedules.remove(db, ctx, t.stoppedScheduleId, '2026-09-30'),
+  },
+  {
     name: 'paySchedules.stop',
     write: true,
     namesId: true,

@@ -119,6 +119,42 @@ export const paySchedules = {
   },
 
   /**
+   * Takes back a schedule added by mistake (setup step 3), with the paychecks it expected. One with
+   * a received paycheck, or a paycheck in a closed month or one before `today`'s, is history: it can
+   * only be stopped (spec §4: past months keep their rows).
+   */
+  async remove(db: Database, ctx: HouseholdContext, id: string, today: string): Promise<void> {
+    assertCanWrite(ctx);
+    assertDate(today);
+    await inTransaction(db, async (trx) => {
+      await lockHouseholdMonths(trx, ctx);
+      await findMine(trx, ctx, id);
+      const expected = await trx
+        .selectFrom('paychecks')
+        .select(['expected_date', 'received_cents'])
+        .where('household_id', '=', ctx.householdId)
+        .where('schedule_id', '=', id)
+        .execute();
+      const open = new Set(await openYms(trx, ctx));
+      const history = expected.some((p) => {
+        const ym = p.expected_date.slice(0, 7);
+        return p.received_cents !== null || !open.has(ym) || ym < today.slice(0, 7);
+      });
+      if (history) throw new InvalidInput('This paycheck has history, so it can only be stopped.');
+      await trx
+        .deleteFrom('paychecks')
+        .where('household_id', '=', ctx.householdId)
+        .where('schedule_id', '=', id)
+        .execute();
+      await trx
+        .deleteFrom('pay_schedules')
+        .where('household_id', '=', ctx.householdId)
+        .where('id', '=', id)
+        .execute();
+    });
+  },
+
+  /**
    * Spec §5.9 "Stop this paycheck": sets `ended_on` to `today` and deletes the paychecks after it
    * that are in open months and not received. Stopping a stopped schedule changes nothing.
    */

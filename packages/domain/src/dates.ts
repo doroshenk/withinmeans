@@ -54,6 +54,12 @@ const SHORT_MONTHS = [
   'Dec',
 ] as const;
 
+/** "Nov 18" from "2026-11-18". */
+export function formatMonthDay(date: string): string {
+  const { month, day } = Temporal.PlainDate.from(date);
+  return `${SHORT_MONTHS[month - 1]} ${day}`;
+}
+
 /** "Wed, Nov 18" from "2026-11-18". */
 export function formatShortDate(date: string): string {
   const { dayOfWeek, month, day } = Temporal.PlainDate.from(date);

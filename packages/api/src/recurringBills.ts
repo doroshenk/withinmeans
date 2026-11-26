@@ -1,6 +1,7 @@
 import { categories, recurringBills } from '@withinmeans/db';
 import { monthOf, today, type RecurringBillItem } from '@withinmeans/domain';
 import { translated } from './errors.js';
+import { takeHomeCents } from './paychecks.js';
 import { myHousehold, type BillsContext } from './setupBills.js';
 
 export interface RecurringBillsView {
@@ -9,7 +10,7 @@ export interface RecurringBillsView {
   bills: RecurringBillItem[];
   /** Categories that any bill, past ones too, uses. */
   usedCategoryIds: string[];
-  /** Monthly take-home pay; null until pay schedules exist. */
+  /** Take-home pay in a typical month; null when no pay schedule is running. */
   takeHomeCents: number | null;
 }
 
@@ -19,10 +20,11 @@ async function todayOf(ctx: BillsContext) {
 
 /** Spec §6.3: every recurring bill, ended ones too. */
 export async function listRecurringBills(ctx: BillsContext): Promise<RecurringBillsView> {
-  const [date, rows, usedCategoryIds] = await Promise.all([
+  const [date, rows, usedCategoryIds, takeHome] = await Promise.all([
     todayOf(ctx),
     recurringBills.list(ctx.db, ctx.household),
     categories.usedIds(ctx.db, ctx.household),
+    takeHomeCents(ctx),
   ]);
   return {
     today: date.toString(),
@@ -37,7 +39,7 @@ export async function listRecurringBills(ctx: BillsContext): Promise<RecurringBi
       endYm: b.end_ym,
     })),
     usedCategoryIds,
-    takeHomeCents: null,
+    takeHomeCents: takeHome,
   };
 }
 

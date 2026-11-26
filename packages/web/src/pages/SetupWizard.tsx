@@ -6,6 +6,7 @@ import {
   resumeStep,
   reviewRows,
   setupAccountsError,
+  setupPaychecksError,
   shownStatus,
   stepStatus,
   type SetupProgress,
@@ -15,11 +16,12 @@ import { GENERIC_ERROR } from '../auth/errors';
 import { useCan } from '../permissions';
 import { AccountsStep, type AccountsClient } from './AccountsStep';
 import { CategoriesStep, type CategoriesClient } from './CategoriesStep';
+import { PaychecksStep, type PaychecksClient } from './PaychecksStep';
 import { RecurringBillsStep, type RecurringBillsClient } from './RecurringBillsStep';
 import { WelcomeStep, type WelcomeClient } from './WelcomeStep';
 
 export interface SetupClient
-  extends AccountsClient, CategoriesClient, RecurringBillsClient, WelcomeClient {
+  extends AccountsClient, CategoriesClient, PaychecksClient, RecurringBillsClient, WelcomeClient {
   setupProgress: {
     query: () => Promise<{ step: number; status: 'done' | 'skipped' }[]>;
   };
@@ -41,8 +43,8 @@ type Load =
 
 const LAST = SETUP_STEPS.length;
 
-/** Steps with no screen yet. The ticket that builds a step removes it (P2-07, P2-09, P3-01, P3-05). */
-const COMING_SOON: ReadonlySet<number> = new Set([3, 6, 7, 8]);
+/** Steps with no screen yet. The ticket that builds a step removes it (P2-07, P3-01, P3-05). */
+const COMING_SOON: ReadonlySet<number> = new Set([6, 7, 8]);
 
 const STATUS_LABEL = { todo: '', done: 'Done', skipped: 'Skipped' } as const;
 
@@ -97,6 +99,15 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
       if (step.id === 2 && status === 'done') {
         const { accounts } = await client.setupAccounts.query();
         const problem = setupAccountsError(accounts.length);
+        if (problem !== undefined) {
+          setBlocked(problem);
+          return;
+        }
+      }
+      // Step 3 is skipped, or finished with at least one running paycheck.
+      if (step.id === 3 && status === 'done') {
+        const { schedules } = await client.setupPaychecks.query();
+        const problem = setupPaychecksError(schedules.filter((s) => s.endedOn === null).length);
         if (problem !== undefined) {
           setBlocked(problem);
           return;
@@ -195,6 +206,8 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
           />
         ) : step.id === 2 ? (
           <AccountsStep client={client} />
+        ) : step.id === 3 ? (
+          <PaychecksStep client={client} />
         ) : step.id === 4 ? (
           <CategoriesStep client={client} />
         ) : step.id === 5 ? (

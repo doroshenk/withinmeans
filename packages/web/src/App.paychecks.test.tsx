@@ -7,6 +7,7 @@ import { accountsStub } from './pages/accountsStub';
 import { categoriesStub } from './pages/categoriesStub';
 import type { MeResult } from './pages/Hello';
 import { otherIncomeStub } from './pages/otherIncomeStub';
+import { paychecksStub } from './pages/paychecksStub';
 import { recurringBillsStub } from './pages/recurringBillsStub';
 import { welcomeStub } from './pages/welcomeStub';
 
@@ -31,6 +32,7 @@ function start(me: () => Promise<MeResult>) {
     ...categoriesStub,
     ...recurringBillsStub,
     ...otherIncomeStub,
+    ...paychecksStub,
     ...welcomeStub,
     setupProgress: { query: () => Promise.resolve([]) },
     saveSetupStep: { mutate: () => Promise.resolve({}) },

@@ -1,5 +1,5 @@
 import { paychecks, paySchedules } from '@withinmeans/db';
-import type { addPayScheduleInput, PayFrequency } from '@withinmeans/domain';
+import { monthlyPayCents, type addPayScheduleInput, type PayFrequency } from '@withinmeans/domain';
 import type { z } from 'zod';
 import { translated } from './errors.js';
 import { householdToday } from './householdToday.js';
@@ -44,6 +44,11 @@ export async function listPaySchedules(ctx: Ctx): Promise<PayScheduleView[]> {
     accountId: s.account_id,
     endedOn: s.ended_on,
   }));
+}
+
+/** Take-home pay in a typical month; null when no schedule is running. */
+export async function takeHomeCents(ctx: Ctx): Promise<number | null> {
+  return monthlyPayCents(await listPaySchedules(ctx));
 }
 
 /** The month's paychecks by date, each with its schedule's name. */

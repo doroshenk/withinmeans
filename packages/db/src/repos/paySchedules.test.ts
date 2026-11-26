@@ -446,3 +446,77 @@ describe('P2-03 stopping and marking received at the same moment', () => {
     await expectOneAfterTheOther(marked, stopped);
   });
 });
+
+describe('P2-09 removing a paycheck added by mistake', () => {
+  const schedules = () => paySchedules.list(t.db, A.ctx());
+
+  it('removes the schedule and the paychecks it expected, and nothing else', async () => {
+    await open('2026-11');
+    const job = await add();
+    const kept = await add({ name: 'Side job', frequency: 'monthly' });
+
+    await paySchedules.remove(t.db, A.ctx(), job.id, TODAY);
+
+    expect((await schedules()).map((s) => s.id)).toEqual([kept.id]);
+    expect((await rows()).map((p) => p.schedule_id)).toEqual([kept.id]);
+  });
+
+  it('removes a schedule that has no paychecks', async () => {
+    const job = await add();
+
+    await paySchedules.remove(t.db, A.ctx(), job.id, TODAY);
+
+    expect(await schedules()).toEqual([]);
+  });
+
+  it('refuses once a paycheck has been received', async () => {
+    await open('2026-11');
+    const job = await add();
+    const [first] = await rows();
+    await paychecks.markReceived(t.db, A.ctx(), first?.id ?? '', {
+      receivedCents: 327_218,
+      receivedDate: '2026-11-06',
+    });
+
+    await expect(paySchedules.remove(t.db, A.ctx(), job.id, TODAY)).rejects.toBeInstanceOf(
+      InvalidInput,
+    );
+
+    expect(await schedules()).toHaveLength(1);
+    expect(await rows()).toHaveLength(2);
+  });
+
+  it('refuses when a closed month has one of its paychecks', async () => {
+    await open('2026-11');
+    const job = await add();
+    await close('2026-11');
+
+    await expect(paySchedules.remove(t.db, A.ctx(), job.id, TODAY)).rejects.toBeInstanceOf(
+      InvalidInput,
+    );
+
+    expect(await rows()).toHaveLength(2);
+  });
+
+  it('P2-09: refuses when a past month has one of its paychecks, even if still open', async () => {
+    await open('2026-11');
+    const job = await add();
+
+    await expect(paySchedules.remove(t.db, A.ctx(), job.id, '2026-12-01')).rejects.toBeInstanceOf(
+      InvalidInput,
+    );
+
+    expect(await schedules()).toHaveLength(1);
+    expect(await rows()).toHaveLength(2);
+  });
+
+  it("does not find another household's schedule", async () => {
+    const job = await add();
+
+    await expect(paySchedules.remove(t.db, B.ctx(), job.id, TODAY)).rejects.toBeInstanceOf(
+      NotFound,
+    );
+
+    expect(await schedules()).toHaveLength(1);
+  });
+});
