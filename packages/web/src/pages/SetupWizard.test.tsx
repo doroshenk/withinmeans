@@ -381,6 +381,7 @@ describe('P1-13 setup step 9: review and finish', () => {
   const saved: Row[] = [
     { step: 1, status: 'done' },
     { step: 3, status: 'skipped' },
+    { step: 6, status: 'skipped' },
     { step: 7, status: 'done' },
   ];
 
@@ -393,7 +394,7 @@ describe('P1-13 setup step 9: review and finish', () => {
       ['Paychecks', 'Skipped', 'Add now'],
       ['Bill categories', 'Not started', 'Finish this'],
       ['Recurring bills', 'Not started', 'Finish this'],
-      ['Credit cards', 'Coming soon', 'Add now'],
+      ['Credit cards', 'Skipped · Coming soon', 'Add now'],
       ['Investments', 'Coming soon', 'Add now'],
       ['Where income goes', 'Coming soon', 'Finish this'],
     ] as const;

@@ -169,6 +169,20 @@ describe('P2-09 setup step 3: paychecks', () => {
     expect(add).not.toHaveBeenCalled();
   });
 
+  it('refuses a take-home too large to add up, without breaking the screen', async () => {
+    const { client, add } = fakeClient();
+    const user = await open(client);
+    await fill(user, { takeHome: '9999999999999999' });
+    expect(preview()).toHaveTextContent('Enter the usual take-home to see a monthly estimate');
+
+    await user.click(addButton());
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Enter a take-home of $100,000,000 or less.',
+    );
+    expect(add).not.toHaveBeenCalled();
+  });
+
   it('removes a paycheck', async () => {
     const { client, remove } = fakeClient([mainJob]);
     const user = await open(client);

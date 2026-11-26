@@ -110,6 +110,15 @@ describe('P2-09 payDraftError: take-home must be > 0 and the date valid', () => 
     expect(payDraftError({ ...draft, takeHomeText })).toBe('Enter a take-home above $0.');
   });
 
+  it('P2-09: take-home can be at most $100,000,000', () => {
+    expect(payDraftError({ ...draft, takeHomeText: '100,000,000.00' })).toBeUndefined();
+    for (const takeHomeText of ['100,000,000.01', '9999999999999999']) {
+      expect(payDraftError({ ...draft, takeHomeText })).toBe(
+        'Enter a take-home of $100,000,000 or less.',
+      );
+    }
+  });
+
   it.each(['', '2026-02-30', '11/06/2026', '2026-13-01'])(
     'P2-09: payday "%s" is rejected',
     (anchorDate) => {
