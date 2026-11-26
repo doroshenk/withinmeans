@@ -350,7 +350,7 @@ const cases: Case[] = [
     namesId: true,
     // Only a received paycheck changes.
     prepare: markSeededReceived,
-    run: (db, ctx, t) => paychecks.unmarkReceived(db, ctx, t.paycheckId),
+    run: (db, ctx, t) => paychecks.unmarkReceived(db, ctx, t.paycheckId, '2026-11-18'),
   },
   {
     name: 'paychecks.markReceived',

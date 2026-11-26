@@ -682,7 +682,7 @@ describe('P2-09 undoing "received"', () => {
     await open('2026-11');
     await receive('2026-11-06', 327_218);
 
-    await paychecks.unmarkReceived(t.db, A.ctx(), (await paycheckOn('2026-11-06')).id);
+    await paychecks.unmarkReceived(t.db, A.ctx(), (await paycheckOn('2026-11-06')).id, TODAY);
 
     expect(await paycheckOn('2026-11-06')).toMatchObject({
       expected_cents: 322_500,
@@ -697,7 +697,7 @@ describe('P2-09 undoing "received"', () => {
     await receive('2026-11-20', 324_860, TODAY);
     await paySchedules.stop(t.db, A.ctx(), id, TODAY);
 
-    await paychecks.unmarkReceived(t.db, A.ctx(), (await paycheckOn('2026-11-20')).id);
+    await paychecks.unmarkReceived(t.db, A.ctx(), (await paycheckOn('2026-11-20')).id, TODAY);
 
     expect(await dates()).toEqual(['2026-11-06']);
   });
@@ -709,15 +709,17 @@ describe('P2-09 undoing "received"', () => {
     await close('2026-11');
     const { id } = await paycheckOn('2026-11-06');
 
-    await expect(paychecks.unmarkReceived(t.db, A.ctx(), id)).rejects.toBeInstanceOf(Conflict);
+    await expect(paychecks.unmarkReceived(t.db, A.ctx(), id, TODAY)).rejects.toBeInstanceOf(
+      Conflict,
+    );
 
     expect((await paycheckOn('2026-11-06')).received_cents).toBe(327_218);
   });
 
   it('does not find an unknown paycheck', async () => {
-    await expect(paychecks.unmarkReceived(t.db, A.ctx(), randomUUID())).rejects.toBeInstanceOf(
-      NotFound,
-    );
+    await expect(
+      paychecks.unmarkReceived(t.db, A.ctx(), randomUUID(), TODAY),
+    ).rejects.toBeInstanceOf(NotFound);
   });
 });
 
@@ -735,5 +737,86 @@ describe('P2-09 paychecks.listReceived', () => {
     const latest = await paychecks.listReceived(t.db, A.ctx(), id, 2);
 
     expect(latest.map((p) => p.expected_date)).toEqual(['2026-12-04', '2026-11-20']);
+  });
+});
+
+describe('P2-09 undo, edit and restart keep one paycheck per pay period', () => {
+  const job = {
+    name: 'Main job',
+    frequency: 'biweekly' as const,
+    anchorDate: '2026-11-06',
+    usualCents: 322_500,
+  };
+  const edit = (id: string, over: Partial<NewPaySchedule>, today = TODAY) =>
+    paySchedules.update(t.db, A.ctx(), id, { ...job, ...over }, today);
+  const undo = async (date: string) =>
+    paychecks.unmarkReceived(t.db, A.ctx(), (await paycheckOn(date)).id, TODAY);
+
+  /** November open, with the Nov 20 paycheck received early, today. */
+  async function receivedEarly() {
+    const { id } = await add();
+    await open('2026-11');
+    await receive('2026-11-20', 324_860, TODAY);
+    return id;
+  }
+
+  it('undo after the take-home changed expects the new amount', async () => {
+    const id = await receivedEarly();
+    await edit(id, { usualCents: 340_000 });
+
+    await undo('2026-11-20');
+
+    expect((await paycheckOn('2026-11-20')).expected_cents).toBe(340_000);
+  });
+
+  it('undo after the payday moved leaves only the new payday', async () => {
+    const id = await receivedEarly();
+    await edit(id, { anchorDate: '2026-11-27' });
+
+    await undo('2026-11-20');
+
+    expect(await dates()).toEqual(['2026-11-06', '2026-11-27']);
+  });
+
+  it('a payday moved by one day is not paid twice, and undo brings the new one', async () => {
+    const id = await receivedEarly();
+
+    await edit(id, { anchorDate: '2026-11-21' });
+    expect(await dates()).toEqual(['2026-11-06', '2026-11-20']);
+
+    await undo('2026-11-20');
+    expect(await dates()).toEqual(['2026-11-06', '2026-11-21']);
+  });
+
+  it('stopping, moving the payday and restarting adds no second paycheck', async () => {
+    const id = await receivedEarly();
+    await paySchedules.stop(t.db, A.ctx(), id, TODAY);
+    await edit(id, { anchorDate: '2026-11-21' });
+
+    await paySchedules.restart(t.db, A.ctx(), id, TODAY);
+
+    expect(await dates()).toEqual(['2026-11-06', '2026-11-20']);
+  });
+
+  it("restarting updates today's paycheck to the edited amount", async () => {
+    const { id } = await add();
+    await open('2026-11');
+    await paySchedules.stop(t.db, A.ctx(), id, '2026-11-20');
+    await edit(id, { usualCents: 340_000 }, '2026-11-20');
+
+    await paySchedules.restart(t.db, A.ctx(), id, '2026-11-20');
+
+    expect((await paycheckOn('2026-11-20')).expected_cents).toBe(340_000);
+  });
+
+  it('close paydays of twice-a-month pay are both kept', async () => {
+    const { id } = await add({ frequency: 'semimonthly', semimonthlyDays: [23, 25] });
+    await open('2026-11');
+    await receive('2026-11-23', 100, TODAY);
+    await paySchedules.stop(t.db, A.ctx(), id, TODAY);
+
+    await paySchedules.restart(t.db, A.ctx(), id, TODAY);
+
+    expect(await dates()).toEqual(['2026-11-23', '2026-11-25']);
   });
 });

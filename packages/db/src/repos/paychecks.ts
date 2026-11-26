@@ -119,7 +119,12 @@ export const paychecks = {
    * Takes back "received". A paycheck dated after its schedule stopped was only there because the
    * money had arrived, so it goes.
    */
-  async unmarkReceived(db: Database, ctx: HouseholdContext, id: string): Promise<void> {
+  async unmarkReceived(
+    db: Database,
+    ctx: HouseholdContext,
+    id: string,
+    _today: string,
+  ): Promise<void> {
     assertCanWrite(ctx);
     await inTransaction(db, async (trx) => {
       await lockHouseholdMonths(trx, ctx);

@@ -191,7 +191,9 @@ export const updatePaySchedule = (ctx: Ctx, input: z.infer<typeof updatePaySched
   });
 
 export const unmarkPaycheckReceived = (ctx: Ctx, input: { id: string }) =>
-  translated(() => paychecks.unmarkReceived(ctx.db, ctx.household, input.id));
+  translated(async () => {
+    await paychecks.unmarkReceived(ctx.db, ctx.household, input.id, await householdToday(ctx));
+  });
 
 export const markPaycheckReceived = (
   ctx: Ctx,

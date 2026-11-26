@@ -513,3 +513,79 @@ describe('P2-09 view-only members', () => {
     expect(names()).toEqual(['Previous month', 'Next month']);
   });
 });
+
+/** A promise and the function that settles it, to answer requests in a chosen order. */
+function gate() {
+  let release = () => {};
+  const wait = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { wait, release };
+}
+
+describe('P2-09 slow answers', () => {
+  it('a reload after saving never replaces the month moved to since', async () => {
+    const { client } = fakeClient();
+    const load = client.paychecksPage.query;
+    const slow = gate();
+    let loads = 0;
+    // The second load is the reload after the save: it answers last.
+    client.paychecksPage.query = async (input) => {
+      const mine = ++loads;
+      const answer = await load(input);
+      if (mine === 2) await slow.wait;
+      return answer;
+    };
+    const user = await open(client);
+
+    await user.click(button('Undo Nov 6 Main job'));
+    await waitFor(() => expect(loads).toBe(2));
+    await goTo(user, 'December 2026', 'Next month');
+    slow.release();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('December 2026');
+  });
+
+  it('says a schedule was saved when only the reload fails', async () => {
+    const { client } = fakeClient();
+    const load = client.paychecksPage.query;
+    let loads = 0;
+    client.paychecksPage.query = (input) =>
+      ++loads === 1 ? load(input) : Promise.reject(new Error('boom'));
+    const user = await open(client);
+
+    await user.click(button('Edit Main job'));
+    await user.click(button('Save schedule'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Saved, but this page couldn’t refresh. Reload it before trying again.',
+    );
+  });
+
+  it.each([
+    ['saving', ['Save schedule']],
+    ['stopping', ['Stop this paycheck', 'Yes, stop it']],
+  ])('%s one schedule does not close a form opened meanwhile', async (_what, clicks) => {
+    const { client } = fakeClient();
+    const slow = gate();
+    const slowly =
+      <T,>(change: (input: T) => Promise<unknown>) =>
+      async (input: T) => {
+        await slow.wait;
+        return change(input);
+      };
+    client.updatePaySchedule.mutate = slowly(client.updatePaySchedule.mutate);
+    client.stopPaySchedule.mutate = slowly(client.stopPaySchedule.mutate);
+    const user = await open(client);
+
+    await user.click(button('Edit Main job'));
+    for (const name of clicks) await user.click(button(name));
+    await user.click(button('Add a paycheck schedule'));
+    await user.type(screen.getByLabelText('Paycheck name'), 'Side job');
+    slow.release();
+    await screen.findByRole('status');
+
+    expect(screen.getByLabelText('Paycheck name')).toHaveValue('Side job');
+  });
+});
