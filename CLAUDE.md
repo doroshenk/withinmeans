@@ -73,6 +73,7 @@ Two clones of the repo sit side by side, so two tickets never share a working tr
 ```bash
 pnpm install
 pnpm test             # all unit and integration tests (vitest projects: packages/* and tooling)
+                      # (test and coverage first remove leftover test Postgres containers, if no other run is active)
 pnpm coverage         # per-package coverage gates (domain 100/100, db and api 95/90, web 85/80)
 pnpm --filter @withinmeans/domain mutation   # Stryker on domain, must score 90% or more
 pnpm lint             # ESLint + Prettier --check + dependency-cruiser
