@@ -1,73 +1,165 @@
+import { Temporal } from 'temporal-polyfill';
 import { z } from 'zod';
-import type { YearMonth } from './dates';
-import type { Cents } from './money';
-import type { ExpectedPaycheck, PaycheckAmounts, PayScheduleTemplate } from './paychecks';
-
-const todo = (): never => {
-  throw new Error('not implemented');
-};
+import { parseDollars } from './accounts';
+import { addMonths, formatMonthDay, monthOf, parseYm, type YearMonth } from './dates';
+import { averageCents, formatMoney, subCents, sumCents, type Cents } from './money';
+import { otherIncomeTotalCents } from './otherIncome';
+import {
+  MAX_TAKE_HOME_CENTS,
+  payScheduleFields,
+  payScheduleIdInput,
+  paychecksForMonth,
+  paychecksTotalCents,
+  paydaySchedule,
+  twoDaysRule,
+  type ExpectedPaycheck,
+  type PaycheckAmounts,
+  type PayScheduleTemplate,
+} from './paychecks';
+import { isThreePaydayMonth } from './paydays';
+import { isPayDate } from './paySetup';
 
 export interface PaycheckMonthSummary {
+  /** Paychecks marked received, plus one-time income. */
   receivedCents: Cents;
   stillExpectedCents: Cents;
   toComeCount: number;
+  /** The actual amount of each received paycheck and the expected amount of the rest. */
   paychecksCents: Cents;
   paycheckCount: number;
   otherCents: Cents;
   otherCount: number;
 }
 
+/** Spec §6.4: the four tiles at the top of the Paychecks page. */
 export function paycheckMonthSummary(
-  _paychecks: readonly PaycheckAmounts[],
-  _otherIncome: readonly { amountCents: Cents }[],
+  paychecks: readonly PaycheckAmounts[],
+  otherIncome: readonly { amountCents: Cents }[],
 ): PaycheckMonthSummary {
-  return todo();
+  const received = paychecks.filter((p) => p.receivedCents !== null);
+  const toCome = paychecks.filter((p) => p.receivedCents === null);
+  const otherCents = otherIncomeTotalCents(otherIncome);
+  return {
+    receivedCents: sumCents([paychecksTotalCents(received), otherCents]),
+    stillExpectedCents: paychecksTotalCents(toCome),
+    toComeCount: toCome.length,
+    paychecksCents: paychecksTotalCents(paychecks),
+    paycheckCount: paychecks.length,
+    otherCents,
+    otherCount: otherIncome.length,
+  };
 }
 
+/** The number of paychecks in a schedule's "Average of last 6". */
+export const AVERAGE_PAYCHECKS = 6;
+
+/** The average of the paychecks received most recently; null before the first. */
 export function averageReceivedCents(
-  _paychecks: readonly { receivedDate: string | null; receivedCents: Cents | null }[],
+  paychecks: readonly { receivedDate: string | null; receivedCents: Cents | null }[],
 ): Cents | null {
-  return todo();
+  const latest = paychecks
+    .flatMap(({ receivedDate, receivedCents }) =>
+      receivedDate === null || receivedCents === null ? [] : [{ receivedDate, receivedCents }],
+    )
+    // "YYYY-MM-DD" strings sort in calendar order.
+    .sort((a, b) => b.receivedDate.localeCompare(a.receivedDate))
+    .slice(0, AVERAGE_PAYCHECKS);
+  return averageCents(latest.map((p) => p.receivedCents));
 }
 
-export function receivedDifferenceText(_receivedCents: Cents, _expectedCents: Cents): string {
-  return todo();
+/** "+$47.18 vs expected" on a received paycheck. */
+export function receivedDifferenceText(receivedCents: Cents, expectedCents: Cents): string {
+  const difference = subCents(receivedCents, expectedCents);
+  if (difference === 0) return 'Same as expected';
+  return `${difference > 0 ? '+' : ''}${formatMoney(difference)} vs expected`;
 }
 
-export function receivedPreviewText(_amountText: string, _expectedCents: Cents): string | null {
-  return todo();
+/** The line under the "received" form while the amount is typed; null until it is an amount. */
+export function receivedPreviewText(amountText: string, expectedCents: Cents): string | null {
+  const receivedCents = parseDollars(amountText) ?? 0;
+  if (receivedCents <= 0) return null;
+  if (receivedCents === expectedCents) return 'Same as expected.';
+  const more = receivedCents > expectedCents;
+  const difference = more
+    ? subCents(receivedCents, expectedCents)
+    : subCents(expectedCents, receivedCents);
+  return `${formatMoney(difference)} ${more ? 'more' : 'less'} than expected.`;
 }
 
-export function expectedWhenText(_expectedDate: string, _today: string): string {
-  return todo();
+/** "Expected in 2 days" on a paycheck not received yet. */
+export function expectedWhenText(expectedDate: string, today: string): string {
+  const days = Temporal.PlainDate.from(today).until(expectedDate).days;
+  if (days < 0) return `Was expected ${formatMonthDay(expectedDate)}`;
+  if (days === 0) return 'Expected today';
+  if (days === 1) return 'Expected tomorrow';
+  return `Expected in ${days} days`;
 }
 
-export function receivedDraftError(_draft: {
+/** What is wrong with the "received" form, if anything. */
+export function receivedDraftError(draft: {
   amountText: string;
   date: string;
 }): string | undefined {
-  return todo();
+  const amountCents = parseDollars(draft.amountText) ?? 0;
+  if (amountCents <= 0) return 'Enter the amount that landed, above $0.';
+  if (amountCents > MAX_TAKE_HOME_CENTS) return 'Enter an amount of $100,000,000 or less.';
+  if (!isPayDate(draft.date)) return 'Pick the date it was received.';
+  return undefined;
 }
 
+const MONTHS_AHEAD = 12;
+
+/** The first month from `from` on in which a running schedule pays three times, within a year. */
 export function nextThreePaydayMonth(
-  _schedule: PayScheduleTemplate,
-  _from: YearMonth,
+  schedule: PayScheduleTemplate,
+  from: YearMonth,
 ): YearMonth | null {
-  return todo();
+  if (schedule.endedOn !== null) return null;
+  const days = paydaySchedule(schedule);
+  for (let ahead = 0; ahead < MONTHS_AHEAD; ahead += 1) {
+    const ym = addMonths(from, ahead);
+    if (isThreePaydayMonth(days, ym)) return ym;
+  }
+  return null;
 }
 
+/**
+ * Spec §5.11: what a month not started yet will expect, from the running schedules. A past month
+ * that was never started has nothing to preview.
+ */
 export function monthPaycheckPreview(
-  _schedules: readonly PayScheduleTemplate[],
-  _ym: YearMonth,
-  _today: string,
+  schedules: readonly PayScheduleTemplate[],
+  ym: YearMonth,
+  today: string,
 ): ExpectedPaycheck[] {
-  return todo();
+  parseYm(ym);
+  if (ym < monthOf(Temporal.PlainDate.from(today))) return [];
+  return paychecksForMonth(
+    schedules.filter((s) => s.endedOn === null),
+    ym,
+  );
 }
 
-export function firstRegeneratedPayday(_today: string, _received: readonly string[]): string {
-  return todo();
+/**
+ * The first payday an edited schedule may change: today, or the day after the latest payday already
+ * received if that is later, so no second paycheck appears beside one received early.
+ */
+export function firstRegeneratedPayday(today: string, received: readonly string[]): string {
+  const after = received.map((date) => Temporal.PlainDate.from(date).add({ days: 1 }).toString());
+  // "YYYY-MM-DD" strings sort in calendar order.
+  return after.reduce((latest, date) => (date > latest ? date : latest), today);
 }
 
-export const updatePayScheduleInput = z.never();
-export const paycheckIdInput = z.never();
-export const paychecksPageInput = z.object({ ym: z.string().optional() });
+/** Spec §6.4 "edit": the same checks as adding a schedule. */
+export const updatePayScheduleInput = payScheduleFields
+  .extend(payScheduleIdInput.shape)
+  .refine(...twoDaysRule);
+
+export const paycheckIdInput = z.object({ id: z.uuid() });
+
+export const paychecksPageInput = z.object({
+  ym: z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+    .optional(),
+});

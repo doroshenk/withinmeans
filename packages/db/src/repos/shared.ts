@@ -97,3 +97,23 @@ export async function depositAccountId(
   if (found === undefined) throw new NotFound('Account not found');
   return found.id;
 }
+
+/** Money lands in an account still in use, and not in a brokerage account. */
+export async function incomeAccountId(
+  trx: Transaction<DB>,
+  ctx: HouseholdContext,
+  asked: string | undefined,
+): Promise<string | null> {
+  const id = await depositAccountId(trx, ctx, asked);
+  if (id === null) return null;
+  const account = await trx
+    .selectFrom('accounts')
+    .select(['type', 'archived_at'])
+    .where('household_id', '=', ctx.householdId)
+    .where('id', '=', id)
+    .executeTakeFirstOrThrow();
+  if (account.archived_at !== null || account.type === 'brokerage') {
+    throw new InvalidInput('Pick a checking, savings or cash account');
+  }
+  return id;
+}

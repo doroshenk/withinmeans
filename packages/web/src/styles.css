@@ -1637,3 +1637,198 @@ button.category-swatch {
     padding-inline: 0;
   }
 }
+
+/* Paychecks (P2-09, design/Paychecks.png): the month's paydays beside the schedules. */
+.month-nav h1 {
+  margin: 0;
+}
+
+.paycheck-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  align-items: start;
+  gap: 24px;
+}
+
+.pay-list {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pay-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border-card);
+  border-radius: 14px;
+}
+
+.pay-received {
+  background: var(--color-bg);
+}
+
+.pay-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 2px dashed var(--color-border-input);
+  border-radius: 50%;
+}
+
+.pay-received .pay-mark {
+  border: 0;
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font-weight: 700;
+}
+
+.pay-what {
+  display: grid;
+  flex: 1 1 160px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pay-what span,
+.pay-amount span {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.pay-amount {
+  display: grid;
+  justify-items: end;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.pay-received-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex-basis: 100%;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-card);
+}
+
+.pay-received-form > p,
+.pay-received-form > .form-actions {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.pay-heads-up {
+  margin: 12px 0 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--color-bg);
+  font-size: 14px;
+}
+
+.schedule {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-border-card);
+  border-radius: 14px;
+}
+
+.schedule-stopped {
+  background: var(--color-bg);
+}
+
+.schedule-amounts {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.schedule-amounts div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.schedule-amounts dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.schedule-next {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.payday-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.payday-chips li {
+  padding: 2px 10px;
+  border: 1px solid var(--color-border-card);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 12px;
+}
+
+.schedule-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.schedule-upcoming {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--color-bg);
+  font-size: 14px;
+}
+
+.empty-main h2,
+.empty-main p {
+  margin: 0 0 12px;
+}
+
+@media (max-width: 1100px) {
+  .paycheck-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .month-nav h1 {
+    font-size: 26px;
+  }
+
+  .pay-received-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* "+ Add" stays on one line beside the card title on a phone. */
+.card-head .button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}

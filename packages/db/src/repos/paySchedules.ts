@@ -1,10 +1,10 @@
-import { PAY_FREQUENCIES, type PayFrequency } from '@withinmeans/domain';
+import { firstRegeneratedPayday, PAY_FREQUENCIES, type PayFrequency } from '@withinmeans/domain';
 import type { Selectable, Transaction } from 'kysely';
 import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '../context.js';
 import type { Database, DB, PaySchedulesTable } from '../db.js';
 import { lockHouseholdMonths } from './monthBills.js';
-import { insertMonthPaychecks } from './paychecks.js';
-import { assertCents, assertDate, cleanName, depositAccountId, inTransaction } from './shared.js';
+import { insertMonthPaychecks, replaceExpectedPaychecks } from './paychecks.js';
+import { assertCents, assertDate, cleanName, incomeAccountId, inTransaction } from './shared.js';
 
 export type PaySchedule = Selectable<PaySchedulesTable>;
 
@@ -33,6 +33,24 @@ function semimonthlyDays(input: NewPaySchedule): readonly [number, number] | nul
     throw new InvalidInput('pick two different days from 1 to 31');
   }
   return days;
+}
+
+/** The checked columns a new or edited schedule stores, apart from its account. */
+function scheduleColumns(input: NewPaySchedule) {
+  const name = cleanName(input.name);
+  if (!PAY_FREQUENCIES.includes(input.frequency)) throw new InvalidInput('unknown frequency');
+  assertDate(input.anchorDate);
+  assertCents(input.usualCents);
+  if (input.usualCents <= 0) throw new InvalidInput('take-home must be more than zero');
+  const days = semimonthlyDays(input);
+  return {
+    name,
+    frequency: input.frequency,
+    anchor_date: input.anchorDate,
+    semimonthly_day_1: days?.[0] ?? null,
+    semimonthly_day_2: days?.[1] ?? null,
+    usual_cents: input.usualCents,
+  };
 }
 
 async function openYms(trx: Transaction<DB>, ctx: HouseholdContext): Promise<string[]> {
@@ -88,25 +106,15 @@ export const paySchedules = {
   /** Adds the schedule, and its expected paychecks to every open month. */
   async create(db: Database, ctx: HouseholdContext, input: NewPaySchedule): Promise<PaySchedule> {
     assertCanWrite(ctx);
-    const name = cleanName(input.name);
-    if (!PAY_FREQUENCIES.includes(input.frequency)) throw new InvalidInput('unknown frequency');
-    assertDate(input.anchorDate);
-    assertCents(input.usualCents);
-    if (input.usualCents <= 0) throw new InvalidInput('take-home must be more than zero');
-    const days = semimonthlyDays(input);
+    const columns = scheduleColumns(input);
     return inTransaction(db, async (trx) => {
       await lockHouseholdMonths(trx, ctx);
       const created = await trx
         .insertInto('pay_schedules')
         .values({
           household_id: ctx.householdId,
-          name,
-          frequency: input.frequency,
-          anchor_date: input.anchorDate,
-          semimonthly_day_1: days?.[0] ?? null,
-          semimonthly_day_2: days?.[1] ?? null,
-          usual_cents: input.usualCents,
-          account_id: await depositAccountId(trx, ctx, input.accountId),
+          ...columns,
+          account_id: await incomeAccountId(trx, ctx, input.accountId),
           ended_on: null,
         })
         .returningAll()
@@ -118,14 +126,52 @@ export const paySchedules = {
     });
   },
 
+  /**
+   * Spec §6.4 "edit". A running schedule's paychecks in open months, from `today` on and not yet
+   * received, are made to match; received and earlier ones stay as they are. The account stays
+   * unless one is given.
+   */
   async update(
-    _db: Database,
-    _ctx: HouseholdContext,
-    _id: string,
-    _input: NewPaySchedule,
-    _today: string,
+    db: Database,
+    ctx: HouseholdContext,
+    id: string,
+    input: NewPaySchedule,
+    today: string,
   ): Promise<void> {
-    throw new Error('not implemented');
+    assertCanWrite(ctx);
+    assertDate(today);
+    const columns = scheduleColumns(input);
+    await inTransaction(db, async (trx) => {
+      await lockHouseholdMonths(trx, ctx);
+      await findMine(trx, ctx, id);
+      const updated = await trx
+        .updateTable('pay_schedules')
+        .set({
+          ...columns,
+          ...(input.accountId !== undefined && {
+            account_id: await incomeAccountId(trx, ctx, input.accountId),
+          }),
+        })
+        .where('id', '=', id)
+        .where('household_id', '=', ctx.householdId)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      if (updated.ended_on !== null) return;
+      const received = await trx
+        .selectFrom('paychecks')
+        .select('expected_date')
+        .where('household_id', '=', ctx.householdId)
+        .where('schedule_id', '=', id)
+        .where('received_cents', 'is not', null)
+        .execute();
+      const from = firstRegeneratedPayday(
+        today,
+        received.map((p) => p.expected_date),
+      );
+      for (const ym of await openYms(trx, ctx)) {
+        await replaceExpectedPaychecks(trx, ctx, ym, updated, from);
+      }
+    });
   },
 
   /**

@@ -283,6 +283,26 @@ describe('P2-09 Paychecks page API', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
+  it('names no account for a schedule that has none, or a month it only previews', async () => {
+    const owner = await caller('sub-owner');
+    const { id } = await owner.addPaySchedule({ ...job, name: 'Unbanked' });
+    // The owner's household has no primary checking account.
+    await t.db
+      .updateTable('pay_schedules')
+      .set({ account_id: null })
+      .where('id', '=', id)
+      .execute();
+
+    const page = await owner.paychecksPage({ ym: '2027-01' });
+
+    expect(page.status).toBe('not-started');
+    expect(page.paychecks.find((p) => p.scheduleId === id)).toMatchObject({
+      scheduleName: 'Unbanked',
+      accountName: null,
+    });
+    expect(page.schedules.find((s) => s.id === id)?.accountName).toBeNull();
+  });
+
   it('shows a closed month, which is read-only', async () => {
     const other = await caller('sub-other');
     await t.db

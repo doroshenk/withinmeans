@@ -271,12 +271,12 @@ export const appRouter = t.router({
 
   updatePaySchedule: writeProcedure
     .input(updatePayScheduleInput)
-    .mutation(({ ctx }) => updatePaySchedule(ctx)),
+    .mutation(({ ctx, input }) => updatePaySchedule(ctx, input)),
 
   /** "Undo" on a received paycheck: back to the expected amount. */
   unmarkPaycheckReceived: writeProcedure
     .input(paycheckIdInput)
-    .mutation(({ ctx }) => unmarkPaycheckReceived(ctx)),
+    .mutation(({ ctx, input }) => unmarkPaycheckReceived(ctx, input)),
 
   /** Spec §6.4: one-time income in a month (this month when none is given), and the form's lists. */
   otherIncome: memberProcedure

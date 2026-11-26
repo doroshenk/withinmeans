@@ -57,6 +57,49 @@ export async function insertMonthPaychecks(
     .execute();
 }
 
+/**
+ * Makes the paychecks `schedule` expects in month `ym`, on `from` or later, match it: a payday it
+ * no longer has goes, one it keeps takes the new amount, and a new one is added. None of those
+ * days may have been received. Runs inside the caller's transaction.
+ */
+export async function replaceExpectedPaychecks(
+  trx: Transaction<DB>,
+  ctx: HouseholdContext,
+  ym: string,
+  schedule: Selectable<PaySchedulesTable>,
+  from: string,
+): Promise<void> {
+  assertCanWrite(ctx);
+  const dates = paychecksForMonth([templateOf(schedule)], ym).map((p) => p.expectedDate);
+  const stored = await trx
+    .selectFrom('paychecks')
+    .select(['id', 'expected_date'])
+    .where('household_id', '=', ctx.householdId)
+    .where('schedule_id', '=', schedule.id)
+    .where('expected_date', '>=', from > `${ym}-01` ? from : `${ym}-01`)
+    .where('expected_date', '<', `${addMonths(ym, 1)}-01`)
+    .where('received_cents', 'is', null)
+    .execute();
+  const gone = stored.filter((p) => !dates.includes(p.expected_date)).map((p) => p.id);
+  const kept = stored.filter((p) => dates.includes(p.expected_date)).map((p) => p.id);
+  if (gone.length > 0) {
+    await trx
+      .deleteFrom('paychecks')
+      .where('household_id', '=', ctx.householdId)
+      .where('id', 'in', gone)
+      .execute();
+  }
+  if (kept.length > 0) {
+    await trx
+      .updateTable('paychecks')
+      .set({ expected_cents: schedule.usual_cents })
+      .where('household_id', '=', ctx.householdId)
+      .where('id', 'in', kept)
+      .execute();
+  }
+  await insertMonthPaychecks(trx, ctx, ym, [schedule], from);
+}
+
 export const paychecks = {
   /** The paychecks expected in month `ym`, by date. */
   async listForMonth(db: Database, ctx: HouseholdContext, ym: string): Promise<Paycheck[]> {
@@ -72,17 +115,63 @@ export const paychecks = {
       .execute();
   },
 
-  async unmarkReceived(_db: Database, _ctx: HouseholdContext, _id: string): Promise<void> {
-    throw new Error('not implemented');
+  /**
+   * Takes back "received". A paycheck dated after its schedule stopped was only there because the
+   * money had arrived, so it goes.
+   */
+  async unmarkReceived(db: Database, ctx: HouseholdContext, id: string): Promise<void> {
+    assertCanWrite(ctx);
+    await inTransaction(db, async (trx) => {
+      await lockHouseholdMonths(trx, ctx);
+      const paycheck = await trx
+        .selectFrom('paychecks')
+        .select(['schedule_id', 'expected_date'])
+        .where('id', '=', id)
+        .where('household_id', '=', ctx.householdId)
+        .executeTakeFirst();
+      if (paycheck === undefined) throw new NotFound('Paycheck not found');
+      await assertMonthNotClosed(trx, ctx, paycheck.expected_date.slice(0, 7));
+      const schedule = await trx
+        .selectFrom('pay_schedules')
+        .select('ended_on')
+        .where('id', '=', paycheck.schedule_id)
+        .where('household_id', '=', ctx.householdId)
+        .executeTakeFirst();
+      const endedOn = schedule?.ended_on ?? null;
+      if (endedOn !== null && paycheck.expected_date > endedOn) {
+        await trx
+          .deleteFrom('paychecks')
+          .where('id', '=', id)
+          .where('household_id', '=', ctx.householdId)
+          .execute();
+        return;
+      }
+      await trx
+        .updateTable('paychecks')
+        .set({ received_cents: null, received_date: null })
+        .where('id', '=', id)
+        .where('household_id', '=', ctx.householdId)
+        .execute();
+    });
   },
 
+  /** A schedule's received paychecks, the latest received first. */
   async listReceived(
-    _db: Database,
-    _ctx: HouseholdContext,
-    _scheduleId: string,
-    _limit: number,
+    db: Database,
+    ctx: HouseholdContext,
+    scheduleId: string,
+    limit: number,
   ): Promise<Paycheck[]> {
-    throw new Error('not implemented');
+    return db
+      .selectFrom('paychecks')
+      .selectAll()
+      .where('household_id', '=', ctx.householdId)
+      .where('schedule_id', '=', scheduleId)
+      .where('received_cents', 'is not', null)
+      .orderBy('received_date', 'desc')
+      .orderBy('expected_date', 'desc')
+      .limit(limit)
+      .execute();
   },
 
   /** Spec §5.9: the actual amount and date, which may be early. Marking again corrects it. */

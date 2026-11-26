@@ -8,6 +8,7 @@ import {
   nextThreePaydayMonth,
   paycheckIdInput,
   paycheckMonthSummary,
+  paychecksPageInput,
   receivedDifferenceText,
   receivedDraftError,
   receivedPreviewText,
@@ -199,6 +200,7 @@ describe('P2-09 monthPaycheckPreview: a month not started yet', () => {
     expect(monthPaycheckPreview([mainJob({ endedOn: '2026-12-10' })], '2026-12', TODAY)).toEqual(
       [],
     );
+    expect(() => monthPaycheckPreview([], '2026-13', TODAY)).toThrow(RangeError);
   });
 });
 
@@ -242,6 +244,14 @@ describe('P2-09 API inputs', () => {
     expect(
       updatePayScheduleInput.safeParse({ ...schedule, semimonthlyDays: [1, 15] }).success,
     ).toBe(false);
+  });
+
+  it('the page takes a real month, or none for the current one', () => {
+    expect(paychecksPageInput.parse({ ym: '2026-11' })).toEqual({ ym: '2026-11' });
+    expect(paychecksPageInput.safeParse({}).success).toBe(true);
+    for (const ym of ['2026-13', '2026-1', 'x2026-11', '2026-11x']) {
+      expect(paychecksPageInput.safeParse({ ym }).success).toBe(false);
+    }
   });
 
   it('undoing names a paycheck', () => {
