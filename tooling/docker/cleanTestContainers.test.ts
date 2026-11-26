@@ -77,7 +77,8 @@ describe('leftover test container cleanup', () => {
   });
 
   it.each([
-    'node "C:\dev\other\node_modules\.bin\..\vitest\vitest.mjs" run',
+    String.raw`node "C:\dev\other\node_modules\.bin\..\vitest\vitest.mjs" run`,
+    String.raw`node.exe C:\dev\other\node_modules\vitest\dist\workers\forks.js`,
     'node /repo/node_modules/.pnpm/vitest@5/node_modules/vitest/dist/workers/forks.js',
     'node (vitest 2)',
     'node /repo/node_modules/@stryker-mutator/core/bin/stryker.js run',
