@@ -1,4 +1,5 @@
 import {
+  MAX_TAKE_HOME_CENTS,
   PAY_FREQUENCIES,
   formatMoney,
   formatMonthDay,
@@ -261,7 +262,7 @@ export function PaychecksStep({ client }: { client: PaychecksClient }) {
             Add paycheck
           </button>
           <p className="pay-preview" data-testid="pay-preview">
-            {draftCents > 0
+            {draftCents > 0 && draftCents <= MAX_TAKE_HOME_CENTS
               ? estimate(frequency, draftCents)
               : 'Enter the usual take-home to see a monthly estimate'}
             {isPayDate(anchorDate) && payDays !== undefined && (

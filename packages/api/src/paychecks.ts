@@ -85,7 +85,7 @@ export const addPaySchedule = (ctx: Ctx, input: z.infer<typeof addPayScheduleInp
   });
 
 /** Today's date in the household's time zone. */
-async function householdToday(ctx: Ctx): Promise<string> {
+export async function householdToday(ctx: Ctx): Promise<string> {
   const household = await households.getMine(ctx.db, ctx.household);
   if (household === undefined) throw new Error('Household not found');
   return today(ctx.clock, household.timezone).toString();

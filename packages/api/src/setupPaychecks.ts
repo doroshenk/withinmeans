@@ -1,7 +1,7 @@
 import { paySchedules } from '@withinmeans/db';
 import { today } from '@withinmeans/domain';
 import { translated } from './errors.js';
-import { listPaySchedules, type PayScheduleView } from './paychecks.js';
+import { householdToday, listPaySchedules, type PayScheduleView } from './paychecks.js';
 import { myHousehold, type BillsContext } from './setupBills.js';
 
 export interface SetupPaychecksView {
@@ -18,5 +18,5 @@ export async function listSetupPaychecks(ctx: BillsContext): Promise<SetupPayche
 
 export const removePaySchedule = (ctx: BillsContext, input: { id: string }) =>
   translated(async () => {
-    await paySchedules.remove(ctx.db, ctx.household, input.id);
+    await paySchedules.remove(ctx.db, ctx.household, input.id, await householdToday(ctx));
   });

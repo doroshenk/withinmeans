@@ -3,7 +3,12 @@ import { parseDollars } from './accounts';
 import { addMonths, monthOf } from './dates';
 import { sumCents, type Cents } from './money';
 import { paydaysForMonth } from './paydays';
-import { paydaySchedule, type PayFrequency, type PayScheduleTemplate } from './paychecks';
+import {
+  MAX_TAKE_HOME_CENTS,
+  paydaySchedule,
+  type PayFrequency,
+  type PayScheduleTemplate,
+} from './paychecks';
 
 /** Paychecks in a typical month: months with an extra payday are left out. */
 const PAYCHECKS_PER_MONTH: Record<PayFrequency, number> = {
@@ -69,11 +74,12 @@ export function isPayDate(text: string): boolean {
   }
 }
 
-/** Spec §3 step 3: name, take-home > 0, a valid date. */
+/** Spec §3 step 3: name, take-home > 0 (and not absurdly large), a valid date. */
 export function payDraftError(draft: PayDraft): string | undefined {
   if (draft.name.trim() === '') return 'Enter a name for this paycheck.';
   const takeHome = parseDollars(draft.takeHomeText);
   if (takeHome === undefined || takeHome <= 0) return 'Enter a take-home above $0.';
+  if (takeHome > MAX_TAKE_HOME_CENTS) return 'Enter a take-home of $100,000,000 or less.';
   if (!isPayDate(draft.anchorDate)) return 'Pick a recent payday.';
   if (draft.frequency === 'semimonthly' && parsePayDays(draft.dayTexts) === undefined) {
     return 'Pick two different pay days from 1 to 31.';

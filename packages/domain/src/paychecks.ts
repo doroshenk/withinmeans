@@ -82,6 +82,9 @@ export function paychecksTotalCents(paychecks: readonly PaycheckAmounts[]): Cent
 const payDay = z.number().int().min(1).max(31);
 const positiveCents = z.number().int().positive();
 
+/** $100,000,000: far above any real paycheck, and small enough that monthly totals stay exact. */
+export const MAX_TAKE_HOME_CENTS = 10_000_000_000;
+
 /** Spec §3 step 3: name, take-home > 0, a real date. */
 export const addPayScheduleInput = z
   .object({
@@ -89,7 +92,7 @@ export const addPayScheduleInput = z
     frequency: z.enum(PAY_FREQUENCIES),
     anchorDate: z.iso.date(),
     semimonthlyDays: z.tuple([payDay, payDay]).optional(),
-    usualCents: positiveCents,
+    usualCents: positiveCents.max(MAX_TAKE_HOME_CENTS),
     accountId: z.uuid().optional(),
   })
   .refine(
