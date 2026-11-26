@@ -49,3 +49,7 @@ export function formatMoney(value: Cents, options: { whole?: boolean } = {}): st
   const sign = value < 0 && !isZero ? MINUS : '';
   return `${sign}$${dollars}${shownCents}`;
 }
+
+export function averageCents(_values: readonly Cents[]): Cents | null {
+  throw new Error('not implemented');
+}

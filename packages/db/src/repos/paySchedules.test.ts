@@ -520,3 +520,220 @@ describe('P2-09 removing a paycheck added by mistake', () => {
     expect(await schedules()).toHaveLength(1);
   });
 });
+
+describe('P2-09 paySchedules.update (spec §6.4 "edit")', () => {
+  const edit = (id: string, over: Partial<NewPaySchedule> = {}, today = TODAY) =>
+    paySchedules.update(
+      t.db,
+      A.ctx(),
+      id,
+      {
+        name: 'Main job',
+        frequency: 'biweekly',
+        anchorDate: '2026-11-06',
+        usualCents: 322_500,
+        ...over,
+      },
+      today,
+    );
+
+  const amounts = async () => (await rows()).map((p) => [p.expected_date, p.expected_cents]);
+
+  it('saves the new name, take-home and account', async () => {
+    const { id } = await add();
+
+    await edit(id, { name: '  Day job ', usualCents: 330_000, accountId: A.accountId });
+
+    expect(await paySchedules.list(t.db, A.ctx())).toMatchObject([
+      { id, name: 'Day job', usual_cents: 330_000, account_id: A.accountId },
+    ]);
+  });
+
+  it('keeps the account when none is given', async () => {
+    const { id } = await add({ accountId: A.accountId });
+
+    await edit(id);
+
+    expect((await paySchedules.list(t.db, A.ctx()))[0]?.account_id).toBe(A.accountId);
+  });
+
+  it('changes the expected amount from today on, keeping the same rows', async () => {
+    const { id } = await add();
+    await open('2026-11');
+    const nov20 = await paycheckOn('2026-11-20');
+
+    await edit(id, { usualCents: 330_000 });
+
+    expect(await amounts()).toEqual([
+      ['2026-11-06', 322_500],
+      ['2026-11-20', 330_000],
+    ]);
+    expect((await paycheckOn('2026-11-20')).id).toBe(nov20.id);
+  });
+
+  it("changes today's paycheck, but never a received one", async () => {
+    const { id } = await add();
+    await open('2026-11');
+    await open('2026-12');
+    await receive('2026-11-20', 324_860, TODAY);
+
+    await edit(id, { usualCents: 330_000 }, '2026-11-06');
+
+    expect(await amounts()).toEqual([
+      ['2026-11-06', 322_500],
+      ['2026-11-20', 322_500],
+      ['2026-12-04', 330_000],
+      ['2026-12-18', 330_000],
+    ]);
+  });
+
+  it('moves the paydays still to come when the dates change', async () => {
+    const { id } = await add();
+    await open('2026-11');
+
+    await edit(id, { frequency: 'weekly', anchorDate: '2026-11-19' });
+
+    expect(await dates()).toEqual(['2026-11-06', '2026-11-19', '2026-11-26']);
+  });
+
+  it('adds no second paycheck beside one already received early', async () => {
+    const { id } = await add();
+    await open('2026-11');
+    await receive('2026-11-20', 324_860, TODAY);
+
+    await edit(id, { frequency: 'weekly', anchorDate: '2026-11-19' });
+
+    expect(await dates()).toEqual(['2026-11-06', '2026-11-20', '2026-11-26']);
+  });
+
+  it('leaves closed months alone', async () => {
+    const { id } = await add();
+    await open('2026-11');
+    await open('2026-12');
+    await close('2026-12');
+
+    await edit(id, { usualCents: 330_000 });
+
+    expect(await amounts()).toEqual([
+      ['2026-11-06', 322_500],
+      ['2026-11-20', 330_000],
+      ['2026-12-04', 322_500],
+      ['2026-12-18', 322_500],
+    ]);
+  });
+
+  it('a stopped schedule gets no paychecks by being edited', async () => {
+    const { id } = await add();
+    await open('2026-11');
+    await paySchedules.stop(t.db, A.ctx(), id, TODAY);
+
+    await edit(id, { frequency: 'weekly', anchorDate: '2026-11-19' });
+
+    expect(await dates()).toEqual(['2026-11-06']);
+  });
+
+  it.each<[string, Partial<NewPaySchedule>]>([
+    ['an empty name', { name: ' ' }],
+    ['a take-home of zero', { usualCents: 0 }],
+    ['the same day twice', { frequency: 'semimonthly', semimonthlyDays: [5, 5] }],
+  ])('rejects %s', async (_why, over) => {
+    const { id } = await add();
+    const saved = await snapshotHousehold(t.db, A);
+
+    await expect(edit(id, over)).rejects.toBeInstanceOf(InvalidInput);
+
+    expect(await snapshotHousehold(t.db, A)).toEqual(saved);
+  });
+
+  it("does not find another household's schedule, or account", async () => {
+    const { id } = await add();
+
+    await expect(edit(B.payScheduleId)).rejects.toBeInstanceOf(NotFound);
+    await expect(edit(id, { accountId: B.accountId })).rejects.toBeInstanceOf(NotFound);
+  });
+
+  it('refuses a brokerage or removed account', async () => {
+    const { id } = await add({ accountId: A.accountId });
+    const spare = (type: 'brokerage' | 'savings', archivedAt: Date | null) =>
+      t.db
+        .insertInto('accounts')
+        .values({
+          household_id: A.householdId,
+          name: `Spare ${type}`,
+          type,
+          is_primary_checking: false,
+          archived_at: archivedAt,
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+    const brokerage = await spare('brokerage', null);
+    const removed = await spare('savings', NOW);
+
+    for (const account of [brokerage, removed]) {
+      await expect(edit(id, { accountId: account.id })).rejects.toBeInstanceOf(InvalidInput);
+      await expect(add({ accountId: account.id })).rejects.toBeInstanceOf(InvalidInput);
+    }
+  });
+});
+
+describe('P2-09 undoing "received"', () => {
+  it('puts the expected amount back', async () => {
+    await add();
+    await open('2026-11');
+    await receive('2026-11-06', 327_218);
+
+    await paychecks.unmarkReceived(t.db, A.ctx(), (await paycheckOn('2026-11-06')).id);
+
+    expect(await paycheckOn('2026-11-06')).toMatchObject({
+      expected_cents: 322_500,
+      received_cents: null,
+      received_date: null,
+    });
+  });
+
+  it('drops a paycheck dated after its schedule stopped', async () => {
+    const { id } = await add();
+    await open('2026-11');
+    await receive('2026-11-20', 324_860, TODAY);
+    await paySchedules.stop(t.db, A.ctx(), id, TODAY);
+
+    await paychecks.unmarkReceived(t.db, A.ctx(), (await paycheckOn('2026-11-20')).id);
+
+    expect(await dates()).toEqual(['2026-11-06']);
+  });
+
+  it('a closed month is read-only', async () => {
+    await add();
+    await open('2026-11');
+    await receive('2026-11-06', 327_218);
+    await close('2026-11');
+    const { id } = await paycheckOn('2026-11-06');
+
+    await expect(paychecks.unmarkReceived(t.db, A.ctx(), id)).rejects.toBeInstanceOf(Conflict);
+
+    expect((await paycheckOn('2026-11-06')).received_cents).toBe(327_218);
+  });
+
+  it('does not find an unknown paycheck', async () => {
+    await expect(paychecks.unmarkReceived(t.db, A.ctx(), randomUUID())).rejects.toBeInstanceOf(
+      NotFound,
+    );
+  });
+});
+
+describe('P2-09 paychecks.listReceived', () => {
+  it("lists a schedule's received paychecks, latest received first, up to the limit", async () => {
+    const { id } = await add();
+    await add({ name: 'Side job', anchorDate: '2026-11-07' });
+    await open('2026-11');
+    await open('2026-12');
+    await receive('2026-11-06', 100);
+    await receive('2026-11-07', 999);
+    await receive('2026-11-20', 200);
+    await receive('2026-12-04', 300);
+
+    const latest = await paychecks.listReceived(t.db, A.ctx(), id, 2);
+
+    expect(latest.map((p) => p.expected_date)).toEqual(['2026-12-04', '2026-11-20']);
+  });
+});

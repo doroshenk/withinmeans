@@ -72,6 +72,19 @@ export const paychecks = {
       .execute();
   },
 
+  async unmarkReceived(_db: Database, _ctx: HouseholdContext, _id: string): Promise<void> {
+    throw new Error('not implemented');
+  },
+
+  async listReceived(
+    _db: Database,
+    _ctx: HouseholdContext,
+    _scheduleId: string,
+    _limit: number,
+  ): Promise<Paycheck[]> {
+    throw new Error('not implemented');
+  },
+
   /** Spec §5.9: the actual amount and date, which may be early. Marking again corrects it. */
   async markReceived(
     db: Database,

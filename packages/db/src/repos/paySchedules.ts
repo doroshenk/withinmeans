@@ -118,6 +118,16 @@ export const paySchedules = {
     });
   },
 
+  async update(
+    _db: Database,
+    _ctx: HouseholdContext,
+    _id: string,
+    _input: NewPaySchedule,
+    _today: string,
+  ): Promise<void> {
+    throw new Error('not implemented');
+  },
+
   /**
    * Takes back a schedule added by mistake (setup step 3), with the paychecks it expected. One with
    * a received paycheck, or a paycheck in a closed month or one before `today`'s, is history: it can

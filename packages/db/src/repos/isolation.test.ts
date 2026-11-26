@@ -48,6 +48,12 @@ const newInvite = () => ({
   expiresAt: new Date('2026-12-01T00:00:00Z'),
 });
 
+const markSeededReceived = (db: TestDb['db'], t: Seeded) =>
+  paychecks.markReceived(db, t.ctx(), t.paycheckId, {
+    receivedCents: 199_000,
+    receivedDate: '2026-11-18',
+  });
+
 const cases: Case[] = [
   { name: 'memberships.list', write: false, run: (db, ctx) => memberships.list(db, ctx) },
 
@@ -285,6 +291,25 @@ const cases: Case[] = [
       }),
   },
   {
+    name: 'paySchedules.update',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) =>
+      paySchedules.update(
+        db,
+        ctx,
+        t.payScheduleId,
+        {
+          name: 'Renamed',
+          frequency: 'monthly',
+          anchorDate: '2026-11-25',
+          usualCents: 210_000,
+          accountId: t.accountId,
+        },
+        '2026-11-18',
+      ),
+  },
+  {
     name: 'paySchedules.remove',
     write: true,
     namesId: true,
@@ -308,6 +333,24 @@ const cases: Case[] = [
     write: false,
     marker: (t) => t.paycheckId,
     run: (db, ctx, t) => paychecks.listForMonth(db, ctx, t.ym),
+  },
+  {
+    name: 'paychecks.listReceived',
+    write: false,
+    marker: (t) => t.paycheckId,
+    // Only a received paycheck is listed.
+    run: async (db, ctx, t) => {
+      await markSeededReceived(db, t);
+      return paychecks.listReceived(db, ctx, t.payScheduleId, 6);
+    },
+  },
+  {
+    name: 'paychecks.unmarkReceived',
+    write: true,
+    namesId: true,
+    // Only a received paycheck changes.
+    prepare: markSeededReceived,
+    run: (db, ctx, t) => paychecks.unmarkReceived(db, ctx, t.paycheckId),
   },
   {
     name: 'paychecks.markReceived',

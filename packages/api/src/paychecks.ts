@@ -90,6 +90,41 @@ export const restartPaySchedule = (ctx: Ctx, input: { id: string }) =>
     await paySchedules.restart(ctx.db, ctx.household, input.id, await householdToday(ctx));
   });
 
+export interface PagePaycheck {
+  /** Null in a preview of a month not started. */
+  id: string | null;
+  scheduleId: string;
+  scheduleName: string;
+  /** The account the schedule pays into. */
+  accountName: string | null;
+  expectedDate: string;
+  expectedCents: number;
+  receivedDate: string | null;
+  receivedCents: number | null;
+}
+
+export interface PaychecksPageView {
+  /** "YYYY-MM-DD" in the household's time zone. */
+  today: string;
+  /** The month shown. */
+  ym: string;
+  status: 'open' | 'closed' | 'not-started';
+  paychecks: PagePaycheck[];
+  schedules: (PayScheduleView & { accountName: string | null; averageCents: number | null })[];
+  /** The accounts pay can be deposited into. */
+  accounts: { id: string; name: string; isPrimary: boolean }[];
+}
+
+const todo = (): never => {
+  throw new Error('not implemented');
+};
+
+export const paychecksPage = async (_ctx: Ctx, _ym?: string): Promise<PaychecksPageView> => todo();
+
+export const updatePaySchedule = async (_ctx: Ctx): Promise<void> => todo();
+
+export const unmarkPaycheckReceived = async (_ctx: Ctx): Promise<void> => todo();
+
 export const markPaycheckReceived = (
   ctx: Ctx,
   input: { id: string; receivedCents: number; receivedDate: string },
