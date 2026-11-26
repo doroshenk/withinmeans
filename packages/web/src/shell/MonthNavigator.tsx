@@ -7,6 +7,8 @@ export interface MonthNavigatorProps {
   month: string;
   status: MonthStatus;
   onChange: (month: string) => void;
+  /** 1 when the month is the page's own title. */
+  headingLevel?: 1 | 2;
 }
 
 const MONTH_NAMES = [
@@ -31,8 +33,9 @@ const CHIP_LABEL: Record<MonthStatus, string> = {
 };
 
 /** Spec §6 intro: ‹ Month › with a status chip. Shown on Bills, Paychecks and Investment income. */
-export function MonthNavigator({ month, status, onChange }: MonthNavigatorProps) {
+export function MonthNavigator({ month, status, onChange, headingLevel = 2 }: MonthNavigatorProps) {
   const { year, month: m } = parseYm(month);
+  const Heading = headingLevel === 1 ? 'h1' : 'h2';
   return (
     <div className="month-nav">
       <button
@@ -43,7 +46,7 @@ export function MonthNavigator({ month, status, onChange }: MonthNavigatorProps)
       >
         <span aria-hidden="true">‹</span>
       </button>
-      <h2>{`${MONTH_NAMES[m - 1]} ${year}`}</h2>
+      <Heading>{`${MONTH_NAMES[m - 1]} ${year}`}</Heading>
       <button
         type="button"
         className="icon-button"

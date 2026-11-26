@@ -49,3 +49,11 @@ export function formatMoney(value: Cents, options: { whole?: boolean } = {}): st
   const sign = value < 0 && !isZero ? MINUS : '';
   return `${sign}$${dollars}${shownCents}`;
 }
+
+/** The mean to the nearest cent, halves rounded up; null when there is nothing to average. */
+export function averageCents(values: readonly Cents[]): Cents | null {
+  if (values.length === 0) return null;
+  // Integer math: (sum × 2 + count) ÷ (count × 2), rounded down.
+  const total = sumCents(values);
+  return Math.floor((total * 2 + values.length) / (values.length * 2));
+}

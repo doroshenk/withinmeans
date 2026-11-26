@@ -15,4 +15,5 @@ export * from './recurringOverview';
 export * from './paychecks';
 export * from './otherIncome';
 export * from './paySetup';
+export * from './paycheckPage';
 export * from './cashflow';

@@ -85,22 +85,31 @@ const positiveCents = z.number().int().positive();
 /** $100,000,000: far above any real paycheck, and small enough that monthly totals stay exact. */
 export const MAX_TAKE_HOME_CENTS = 10_000_000_000;
 
+export const payScheduleFields = z.object({
+  name: z.string().trim().min(1),
+  frequency: z.enum(PAY_FREQUENCIES),
+  anchorDate: z.iso.date(),
+  semimonthlyDays: z.tuple([payDay, payDay]).optional(),
+  usualCents: positiveCents.max(MAX_TAKE_HOME_CENTS),
+  accountId: z.uuid().optional(),
+});
+
+/** Only twice-a-month pay has two days, and they differ. For `.refine(...)`. */
+export const twoDaysRule = [
+  ({
+    frequency,
+    semimonthlyDays,
+  }: {
+    frequency: PayFrequency;
+    semimonthlyDays?: [number, number] | undefined;
+  }): boolean =>
+    semimonthlyDays === undefined ||
+    (frequency === 'semimonthly' && semimonthlyDays[0] !== semimonthlyDays[1]),
+  { path: ['semimonthlyDays'], message: 'Pick two different days, for semimonthly pay only.' },
+] satisfies [unknown, unknown];
+
 /** Spec §3 step 3: name, take-home > 0, a real date. */
-export const addPayScheduleInput = z
-  .object({
-    name: z.string().trim().min(1),
-    frequency: z.enum(PAY_FREQUENCIES),
-    anchorDate: z.iso.date(),
-    semimonthlyDays: z.tuple([payDay, payDay]).optional(),
-    usualCents: positiveCents.max(MAX_TAKE_HOME_CENTS),
-    accountId: z.uuid().optional(),
-  })
-  .refine(
-    ({ frequency, semimonthlyDays }) =>
-      semimonthlyDays === undefined ||
-      (frequency === 'semimonthly' && semimonthlyDays[0] !== semimonthlyDays[1]),
-    { path: ['semimonthlyDays'], message: 'Pick two different days, for semimonthly pay only.' },
-  );
+export const addPayScheduleInput = payScheduleFields.refine(...twoDaysRule);
 
 export const payScheduleIdInput = z.object({ id: z.uuid() });
 export const monthPaychecksInput = z.object({
@@ -108,6 +117,6 @@ export const monthPaychecksInput = z.object({
 });
 export const markPaycheckReceivedInput = z.object({
   id: z.uuid(),
-  receivedCents: positiveCents,
+  receivedCents: positiveCents.max(MAX_TAKE_HOME_CENTS),
   receivedDate: z.iso.date(),
 });
