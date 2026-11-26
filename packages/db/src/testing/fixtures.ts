@@ -15,6 +15,7 @@ export interface Seeded {
   billId: string;
   payScheduleId: string;
   paycheckId: string;
+  otherIncomeId: string;
   /** A second schedule, already stopped, with no paychecks. */
   stoppedScheduleId: string;
   inviteId: string;
@@ -39,6 +40,7 @@ export const HOUSEHOLD_TABLES = [
   'bills',
   'pay_schedules',
   'paychecks',
+  'other_income',
 ] as const;
 
 export async function clearAll(db: Database): Promise<void> {
@@ -58,6 +60,7 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
     billId: randomUUID(),
     payScheduleId: randomUUID(),
     paycheckId: randomUUID(),
+    otherIncomeId: randomUUID(),
     stoppedScheduleId: randomUUID(),
     inviteId: randomUUID(),
     inviteToken: `token-${label}-${randomUUID()}`,
@@ -200,6 +203,19 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
       expected_cents: 200_000,
       received_date: null,
       received_cents: null,
+    })
+    .execute();
+  await db
+    .insertInto('other_income')
+    .values({
+      id: ids.otherIncomeId,
+      household_id: h,
+      date: `${ym}-12`,
+      source: `${secret} sale`,
+      type: 'sale',
+      amount_cents: 12_000,
+      account_id: ids.accountId,
+      note: `${secret} income note`,
     })
     .execute();
   await db

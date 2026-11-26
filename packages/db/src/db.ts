@@ -1,3 +1,4 @@
+import type { OtherIncomeType } from '@withinmeans/domain';
 import { Kysely, PostgresDialect, type Generated } from 'kysely';
 import pg from 'pg';
 
@@ -145,6 +146,19 @@ export interface PaychecksTable {
   created_at: Generated<Date>;
 }
 
+export interface OtherIncomeTable {
+  id: Generated<string>;
+  household_id: string;
+  /** 'YYYY-MM-DD' */
+  date: string;
+  source: string;
+  type: OtherIncomeType;
+  amount_cents: number;
+  account_id: string | null;
+  note: string | null;
+  created_at: Generated<Date>;
+}
+
 export interface SetupProgressTable {
   household_id: string;
   step: number;
@@ -166,6 +180,7 @@ export interface DB {
   bills: BillsTable;
   pay_schedules: PaySchedulesTable;
   paychecks: PaychecksTable;
+  other_income: OtherIncomeTable;
 }
 
 export type Database = Kysely<DB>;

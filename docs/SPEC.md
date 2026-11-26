@@ -163,7 +163,7 @@ CardStatement    id, card_id, ym, statement_cents, minimum_cents, planned_paymen
 
 PaySchedule      id, name, frequency(weekly|biweekly|semimonthly|monthly), anchor_date, usual_cents, account_id, ended_on?
 Paycheck         id, schedule_id, expected_date, expected_cents, received_date?, received_cents?   -- generated per month
-OtherIncome      id, date, source, amount_cents, account_id                                         -- one-time income
+OtherIncome      id, date, source, type(side_work|sale|refund|gift|bonus|other), amount_cents, account_id, note?   -- one-time income
 
 Holding          id, ticker(upper), pay_frequency(daily|weekly|monthly|none), shares(decimal 6dp), price_cents, price_updated_at
 ShareTrade       id, date, ticker, side(buy|sell), shares, price_cents, total_cents   -- changes Holding.shares and brokerage cash
@@ -439,7 +439,7 @@ Desktop-first, with a left sidebar. The nav links are Dashboard, Bills & cash fl
 
 - **Schedules:** add or edit; stop or restart.
 - **This month's paydays:** mark received with the amount and date.
-- **One-time income:** list and form.
+- **One-time income:** list and form (source, amount, date received, type, deposited into, optional note).
 - **Month navigator.**
 
 ### 6.5 Accounts — `Accounts.dc.html`

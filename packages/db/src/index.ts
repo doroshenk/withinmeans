@@ -21,6 +21,7 @@ export { invites, type Invite, type NewInvite } from './repos/invites.js';
 export { memberships, type Member } from './repos/memberships.js';
 export { months, type Month } from './repos/months.js';
 export { openMonth } from './repos/openMonth.js';
+export { otherIncome, type NewOtherIncome, type OtherIncome } from './repos/otherIncome.js';
 export { paychecks, type Paycheck } from './repos/paychecks.js';
 export { paySchedules, type NewPaySchedule, type PaySchedule } from './repos/paySchedules.js';
 export {

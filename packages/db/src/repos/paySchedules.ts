@@ -4,7 +4,7 @@ import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '.
 import type { Database, DB, PaySchedulesTable } from '../db.js';
 import { lockHouseholdMonths } from './monthBills.js';
 import { insertMonthPaychecks } from './paychecks.js';
-import { assertCents, assertDate, cleanName, inTransaction } from './shared.js';
+import { assertCents, assertDate, cleanName, depositAccountId, inTransaction } from './shared.js';
 
 export type PaySchedule = Selectable<PaySchedulesTable>;
 
@@ -33,25 +33,6 @@ function semimonthlyDays(input: NewPaySchedule): readonly [number, number] | nul
     throw new InvalidInput('pick two different days from 1 to 31');
   }
   return days;
-}
-
-/** The account asked for, which must be the household's, or else its primary checking account. */
-async function payAccountId(
-  trx: Transaction<DB>,
-  ctx: HouseholdContext,
-  accountId: string | undefined,
-): Promise<string | null> {
-  const query = trx.selectFrom('accounts').select('id').where('household_id', '=', ctx.householdId);
-  if (accountId === undefined) {
-    const primary = await query
-      .where('is_primary_checking', '=', true)
-      .where('archived_at', 'is', null)
-      .executeTakeFirst();
-    return primary?.id ?? null;
-  }
-  const found = await query.where('id', '=', accountId).executeTakeFirst();
-  if (found === undefined) throw new NotFound('Account not found');
-  return found.id;
 }
 
 async function openYms(trx: Transaction<DB>, ctx: HouseholdContext): Promise<string[]> {
@@ -125,7 +106,7 @@ export const paySchedules = {
           semimonthly_day_1: days?.[0] ?? null,
           semimonthly_day_2: days?.[1] ?? null,
           usual_cents: input.usualCents,
-          account_id: await payAccountId(trx, ctx, input.accountId),
+          account_id: await depositAccountId(trx, ctx, input.accountId),
           ended_on: null,
         })
         .returningAll()

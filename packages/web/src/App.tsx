@@ -4,8 +4,9 @@ import type { AuthClient } from './auth/types';
 import { Accept, type InviteDetails } from './pages/Accept';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Hello, type HelloProps } from './pages/Hello';
-import type { RecurringClient } from './pages/RecurringPage';
-import { RecurringScreen } from './pages/RecurringScreen';
+import { MemberScreen } from './pages/MemberScreen';
+import { PaychecksPage, type OtherIncomeClient } from './pages/PaychecksPage';
+import { RecurringPage, type RecurringClient } from './pages/RecurringPage';
 import { SignIn } from './pages/SignIn';
 import { SetupPage } from './pages/SetupPage';
 import type { SetupClient } from './pages/SetupWizard';
@@ -17,7 +18,8 @@ export interface AppProps {
   /** Builds the API client; injected so tests can supply a fake. */
   createClient: (auth: AuthClient) => HelloProps['client'] &
     SetupClient &
-    RecurringClient & {
+    RecurringClient &
+    OtherIncomeClient & {
       signUp: { mutate: (input: SignUpInput) => Promise<unknown> };
       invitePartner: { mutate: (input: InvitePartnerInput) => Promise<PendingInvite> };
       resendInvite: { mutate: (input: { inviteId: string }) => Promise<PendingInvite> };
@@ -29,10 +31,22 @@ export interface AppProps {
 }
 
 type View =
-  'checking' | 'forgot' | 'sign-in' | 'sign-up' | 'hello' | 'accept' | 'setup' | 'recurring';
+  | 'checking'
+  | 'forgot'
+  | 'sign-in'
+  | 'sign-up'
+  | 'hello'
+  | 'accept'
+  | 'setup'
+  | 'recurring'
+  | 'paychecks';
 
 /** The pages that exist so far; later tickets add theirs. */
-const PAGES: Partial<Record<Route, View>> = { dashboard: 'hello', recurring: 'recurring' };
+const PAGES: Partial<Record<Route, View>> = {
+  dashboard: 'hello',
+  recurring: 'recurring',
+  paychecks: 'paychecks',
+};
 
 /** The secret from an invite link (`/accept?token=…`); undefined on any other page. */
 function inviteToken(location: { pathname: string; search: string }): string | undefined {
@@ -79,7 +93,17 @@ export function App({ auth, createClient, location = window.location }: AppProps
     );
   }
   if (view === 'setup') return <SetupPage client={client} onExit={() => setView('hello')} />;
-  if (view === 'recurring') return <RecurringScreen client={client} onNavigate={navigate} />;
+  if (view === 'recurring' || view === 'paychecks') {
+    return (
+      <MemberScreen client={client} route={view} onNavigate={navigate}>
+        {view === 'recurring' ? (
+          <RecurringPage client={client} />
+        ) : (
+          <PaychecksPage client={client} />
+        )}
+      </MemberScreen>
+    );
+  }
   if (view === 'forgot') return <ForgotPassword auth={auth} onBack={() => setView('sign-in')} />;
   if (view === 'sign-in') {
     return (

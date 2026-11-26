@@ -1,15 +1,15 @@
 import { addMonths, paychecksForMonth, type PayScheduleTemplate } from '@withinmeans/domain';
 import type { Selectable, Transaction } from 'kysely';
-import {
-  assertCanWrite,
-  Conflict,
-  InvalidInput,
-  NotFound,
-  type HouseholdContext,
-} from '../context.js';
+import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '../context.js';
 import type { Database, DB, PaychecksTable, PaySchedulesTable } from '../db.js';
 import { lockHouseholdMonths } from './monthBills.js';
-import { assertCents, assertDate, assertYm, inTransaction } from './shared.js';
+import {
+  assertCents,
+  assertDate,
+  assertMonthNotClosed,
+  assertYm,
+  inTransaction,
+} from './shared.js';
 
 export type Paycheck = Selectable<PaychecksTable>;
 
@@ -93,15 +93,7 @@ export const paychecks = {
         .where('household_id', '=', ctx.householdId)
         .executeTakeFirst();
       if (paycheck === undefined) throw new NotFound('Paycheck not found');
-      const month = await trx
-        .selectFrom('months')
-        .select('status')
-        .where('household_id', '=', ctx.householdId)
-        .where('ym', '=', paycheck.expected_date.slice(0, 7))
-        // So that closing the month at the same moment can't slip past this check.
-        .forUpdate()
-        .executeTakeFirst();
-      if (month?.status === 'closed') throw new Conflict('That month is closed');
+      await assertMonthNotClosed(trx, ctx, paycheck.expected_date.slice(0, 7));
       await trx
         .updateTable('paychecks')
         .set({

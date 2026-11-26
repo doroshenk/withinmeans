@@ -35,8 +35,12 @@ const MONTH_NAMES = [
   'December',
 ] as const;
 
+/** "2026-11" → "November". */
+export function monthName(ym: YearMonth): string {
+  return MONTH_NAMES[parseYm(ym).month - 1] as string;
+}
+
 /** "2026-11" → "November 2026". */
 export function monthLabel(ym: YearMonth): string {
-  const { year, month } = parseYm(ym);
-  return `${MONTH_NAMES[month - 1]} ${year}`;
+  return `${monthName(ym)} ${parseYm(ym).year}`;
 }

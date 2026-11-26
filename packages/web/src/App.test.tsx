@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { accountsStub } from './pages/accountsStub';
 import { categoriesStub } from './pages/categoriesStub';
+import { otherIncomeStub } from './pages/otherIncomeStub';
 import { paychecksStub } from './pages/paychecksStub';
 import { recurringBillsStub } from './pages/recurringBillsStub';
 import { welcomeStub } from './pages/welcomeStub';
@@ -52,6 +53,7 @@ function setup(token: string | undefined, location?: { pathname: string; search:
     ...accountsStub,
     ...categoriesStub,
     ...recurringBillsStub,
+    ...otherIncomeStub,
     ...paychecksStub,
     ...welcomeStub,
     setupProgress: { query: () => Promise.resolve([]) },

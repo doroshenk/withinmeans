@@ -22,6 +22,9 @@ import {
   markPaycheckReceivedInput,
   monthPaychecksInput,
   payScheduleIdInput,
+  addOtherIncomeInput,
+  otherIncomeInput,
+  removeOtherIncomeInput,
 } from '@withinmeans/domain';
 import { setupProgress } from '@withinmeans/db';
 import { z } from 'zod';
@@ -46,6 +49,7 @@ import {
   restartPaySchedule,
   stopPaySchedule,
 } from './paychecks.js';
+import { addOtherIncome, listOtherIncome, removeOtherIncome } from './otherIncome.js';
 import {
   addSetupAccount,
   requireAccounts,
@@ -253,6 +257,19 @@ export const appRouter = t.router({
   markPaycheckReceived: writeProcedure
     .input(markPaycheckReceivedInput)
     .mutation(({ ctx, input }) => markPaycheckReceived(ctx, input)),
+
+  /** Spec §6.4: one-time income in a month (this month when none is given), and the form's lists. */
+  otherIncome: memberProcedure
+    .input(otherIncomeInput)
+    .query(({ ctx, input }) => listOtherIncome(ctx, input.ym)),
+
+  addOtherIncome: writeProcedure
+    .input(addOtherIncomeInput)
+    .mutation(({ ctx, input }) => addOtherIncome(ctx, input)),
+
+  removeOtherIncome: writeProcedure
+    .input(removeOtherIncomeInput)
+    .mutation(({ ctx, input }) => removeOtherIncome(ctx, input)),
 
   /** Spec §8: the household's full JSON export. A read, so view-only members may call it. */
   exportData: memberProcedure.query(({ ctx }) => exportData(ctx)),

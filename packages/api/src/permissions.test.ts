@@ -38,6 +38,8 @@ const WRITE_PROCEDURES = [
   'stopPaySchedule',
   'restartPaySchedule',
   'markPaycheckReceived',
+  'addOtherIncome',
+  'removeOtherIncome',
   'removePaySchedule',
 ] as const;
 

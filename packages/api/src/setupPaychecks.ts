@@ -1,7 +1,8 @@
 import { paySchedules } from '@withinmeans/db';
 import { today } from '@withinmeans/domain';
 import { translated } from './errors.js';
-import { householdToday, listPaySchedules, type PayScheduleView } from './paychecks.js';
+import { householdToday } from './householdToday.js';
+import { listPaySchedules, type PayScheduleView } from './paychecks.js';
 import { myHousehold, type BillsContext } from './setupBills.js';
 
 export interface SetupPaychecksView {
