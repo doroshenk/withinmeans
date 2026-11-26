@@ -5,7 +5,8 @@ import { Accept, type InviteDetails } from './pages/Accept';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Hello, type HelloProps } from './pages/Hello';
 import { MemberScreen } from './pages/MemberScreen';
-import { PaychecksPage, type OtherIncomeClient } from './pages/PaychecksPage';
+import { PaychecksPage } from './pages/PaychecksPage';
+import type { PaychecksPageClient } from './pages/paychecks/types';
 import { RecurringPage, type RecurringClient } from './pages/RecurringPage';
 import { SignIn } from './pages/SignIn';
 import { SetupPage } from './pages/SetupPage';
@@ -19,7 +20,7 @@ export interface AppProps {
   createClient: (auth: AuthClient) => HelloProps['client'] &
     SetupClient &
     RecurringClient &
-    OtherIncomeClient & {
+    PaychecksPageClient & {
       signUp: { mutate: (input: SignUpInput) => Promise<unknown> };
       invitePartner: { mutate: (input: InvitePartnerInput) => Promise<PendingInvite> };
       resendInvite: { mutate: (input: { inviteId: string }) => Promise<PendingInvite> };

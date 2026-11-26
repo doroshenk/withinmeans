@@ -14,6 +14,8 @@ export interface OtherIncomeListProps {
   entries: OtherIncomeData['entries'];
   saving: boolean;
   problem: string | null;
+  /** A closed month: nothing can be removed. */
+  readOnly?: boolean;
   onRemove: (id: string) => void;
 }
 
@@ -23,9 +25,11 @@ export function OtherIncomeList({
   entries,
   saving,
   problem,
+  readOnly = false,
   onRemove,
 }: OtherIncomeListProps) {
   const can = useCan();
+  const removable = can.write && !readOnly;
   const id = useId();
   const [confirming, setConfirming] = useState<string | null>(null);
 
@@ -70,7 +74,7 @@ export function OtherIncomeList({
                 </span>
               </div>
               <strong className="income-amount">+{formatMoney(entry.amountCents)}</strong>
-              {can.write && (
+              {removable && (
                 <button
                   type="button"
                   className="button button-quiet icon-danger"
@@ -81,7 +85,7 @@ export function OtherIncomeList({
                   <span aria-hidden="true">✕</span>
                 </button>
               )}
-              {can.write && confirming === entry.id && (
+              {removable && confirming === entry.id && (
                 <div className="confirm income-confirm">
                   <p>
                     Remove {entry.source}, {formatMoney(entry.amountCents)}?

@@ -3,7 +3,9 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider, type Role } from '../permissions';
-import { PaychecksPage, type OtherIncomeClient } from './PaychecksPage';
+import { PaychecksPage } from './PaychecksPage';
+import type { PaychecksPageClient } from './paychecks/types';
+import { paychecksPageStub } from './paychecksPageStub';
 
 type Entry = OtherIncomeItem & { accountName: string | null };
 
@@ -49,7 +51,33 @@ function fakeClient(options: { entries?: Entry[]; fail?: boolean; loadFails?: bo
   const calls = { add: vi.fn(), remove: vi.fn() };
   const done = () =>
     options.fail === true ? Promise.reject(new Error('boom')) : Promise.resolve({});
-  const client: OtherIncomeClient = {
+  const client: PaychecksPageClient = {
+    ...paychecksPageStub,
+    // A running schedule, so the page is not empty even without any one-time income.
+    paychecksPage: {
+      query: () =>
+        Promise.resolve({
+          today: '2026-11-18',
+          ym: '2026-11',
+          status: 'open',
+          paychecks: [],
+          schedules: [
+            {
+              id: 's1',
+              name: 'Main job',
+              frequency: 'biweekly',
+              anchorDate: '2026-11-06',
+              semimonthlyDays: null,
+              usualCents: 322_500,
+              accountId: 'a-checking',
+              accountName: 'Everyday checking',
+              endedOn: null,
+              averageCents: null,
+            },
+          ],
+          accounts: ACCOUNTS,
+        }),
+    },
     otherIncome: {
       query: () =>
         options.loadFails === true
@@ -95,7 +123,7 @@ function fakeClient(options: { entries?: Entry[]; fail?: boolean; loadFails?: bo
   return { client, calls };
 }
 
-async function open(client: OtherIncomeClient, role: Role = 'owner') {
+async function open(client: PaychecksPageClient, role: Role = 'owner') {
   const user = userEvent.setup();
   render(
     <RoleProvider role={role}>
@@ -293,6 +321,9 @@ describe('P2-04 one-time income form', () => {
 
     expect(within(list()).getAllByRole('listitem')).toHaveLength(3);
     expect(screen.queryByRole('form')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Previous month',
+      'Next month',
+    ]);
   });
 });

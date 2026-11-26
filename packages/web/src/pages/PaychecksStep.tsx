@@ -14,6 +14,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { GENERIC_ERROR, apiErrorMessage } from '../auth/errors';
 import { useCan } from '../permissions';
+import { FREQUENCY_LABEL } from './paychecks/frequencyLabel';
 
 export interface PayRow {
   id: string;
@@ -38,13 +39,6 @@ export interface PaychecksClient {
   };
   removePaySchedule: { mutate: (input: { id: string }) => Promise<unknown> };
 }
-
-const FREQUENCY_LABEL: Record<PayFrequency, string> = {
-  weekly: 'Every week',
-  biweekly: 'Every 2 weeks',
-  semimonthly: 'Twice a month',
-  monthly: 'Once a month',
-};
 
 const THREE_PAYDAYS_NOTE = '2 months a year have 3 paydays';
 

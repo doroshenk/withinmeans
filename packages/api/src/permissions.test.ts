@@ -41,6 +41,8 @@ const WRITE_PROCEDURES = [
   'addOtherIncome',
   'removeOtherIncome',
   'removePaySchedule',
+  'updatePaySchedule',
+  'unmarkPaycheckReceived',
 ] as const;
 
 /** Mutations that need no membership: anyone may call them (the token or the new login is the credential). */
