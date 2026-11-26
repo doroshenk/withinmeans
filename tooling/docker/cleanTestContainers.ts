@@ -3,7 +3,8 @@
  * Testcontainers' own reaper waits until no run is connected, so with two clones testing back to
  * back, containers from timed-out runs pile up. Runs before `pnpm test` and `pnpm coverage`.
  *
- * Nothing is removed while any other Vitest or Stryker process is running on this machine.
+ * Nothing is removed while another Vitest or Stryker process is visible to this user on this OS.
+ * Runs inside WSL, a dev container or (on Windows) an admin terminal are not seen.
  */
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -24,7 +25,10 @@ interface Proc {
   command: string;
 }
 
-/** Only this repo's test databases: other Docker containers are never touched. */
+/**
+ * Only Postgres 16 containers started by Testcontainers: this repo's test databases, or the same
+ * kind from another project on this machine. Other Docker containers are never touched.
+ */
 const LIST_LEFTOVERS = [
   'ps',
   '--all',
