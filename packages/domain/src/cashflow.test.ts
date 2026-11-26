@@ -127,6 +127,18 @@ describe('P2-05 kept, spent % and status (spec §5.6)', () => {
     expect(status(march)).toBe('over');
   });
 
+  it('T11: with $357.00 moved to checking, March is $6,557 in, −$923 kept and Over at 114%', () => {
+    const march = {
+      ...inAndOut(620_000, 748_000),
+      checkingMovedCents: 35_700,
+    };
+
+    expect(moneyIn(march)).toBe(655_700);
+    expect(kept(march)).toBe(-92_300);
+    expect(spentPct(march)).toBe(114);
+    expect(status(march)).toBe('over');
+  });
+
   it('has no spent % when nothing came in', () => {
     expect(spentPct(inAndOut(0, 5_000))).toBeNull();
     expect(spentPct(month())).toBeNull();
