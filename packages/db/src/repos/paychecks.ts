@@ -1,4 +1,10 @@
-import { addMonths, paychecksForMonth, type PayScheduleTemplate } from '@withinmeans/domain';
+import {
+  addMonths,
+  paychecksForMonth,
+  uncoveredPaydays,
+  type ExpectedPaycheck,
+  type PayScheduleTemplate,
+} from '@withinmeans/domain';
 import type { Selectable, Transaction } from 'kysely';
 import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '../context.js';
 import type { Database, DB, PaychecksTable, PaySchedulesTable } from '../db.js';
@@ -9,6 +15,7 @@ import {
   assertMonthNotClosed,
   assertYm,
   inTransaction,
+  openYms,
 } from './shared.js';
 
 export type Paycheck = Selectable<PaychecksTable>;
@@ -40,6 +47,14 @@ export async function insertMonthPaychecks(
   const expected = paychecksForMonth(schedules.map(templateOf), ym).filter(
     (p) => from === undefined || p.expectedDate >= from,
   );
+  await insertExpected(trx, ctx, expected);
+}
+
+async function insertExpected(
+  trx: Transaction<DB>,
+  ctx: HouseholdContext,
+  expected: readonly ExpectedPaycheck[],
+): Promise<void> {
   if (expected.length === 0) return;
   await trx
     .insertInto('paychecks')
@@ -58,9 +73,10 @@ export async function insertMonthPaychecks(
 }
 
 /**
- * Makes the paychecks `schedule` expects in month `ym`, on `from` or later, match it: a payday it
- * no longer has goes, one it keeps takes the new amount, and a new one is added. None of those
- * days may have been received. Runs inside the caller's transaction.
+ * Makes the paychecks `schedule` expects in month `ym`, on `from` or later, match it: an unreceived
+ * payday it no longer has goes, one it keeps takes the current amount, and a new one is added
+ * unless a received paycheck already pays for it. Received ones stay as they are. Runs inside the
+ * caller's transaction.
  */
 export async function replaceExpectedPaychecks(
   trx: Transaction<DB>,
@@ -70,18 +86,21 @@ export async function replaceExpectedPaychecks(
   from: string,
 ): Promise<void> {
   assertCanWrite(ctx);
-  const dates = paychecksForMonth([templateOf(schedule)], ym).map((p) => p.expectedDate);
-  const stored = await trx
+  const template = templateOf(schedule);
+  const expected = paychecksForMonth([template], ym).filter((p) => p.expectedDate >= from);
+  const dates = expected.map((p) => p.expectedDate);
+  const rows = await trx
     .selectFrom('paychecks')
-    .select(['id', 'expected_date'])
+    .select(['id', 'expected_date', 'received_cents'])
     .where('household_id', '=', ctx.householdId)
     .where('schedule_id', '=', schedule.id)
-    .where('expected_date', '>=', from > `${ym}-01` ? from : `${ym}-01`)
-    .where('expected_date', '<', `${addMonths(ym, 1)}-01`)
-    .where('received_cents', 'is', null)
     .execute();
-  const gone = stored.filter((p) => !dates.includes(p.expected_date)).map((p) => p.id);
-  const kept = stored.filter((p) => dates.includes(p.expected_date)).map((p) => p.id);
+  const inRange = rows.filter(
+    (p) =>
+      p.received_cents === null && p.expected_date >= from && p.expected_date.startsWith(`${ym}-`),
+  );
+  const gone = inRange.filter((p) => !dates.includes(p.expected_date)).map((p) => p.id);
+  const kept = inRange.filter((p) => dates.includes(p.expected_date)).map((p) => p.id);
   if (gone.length > 0) {
     await trx
       .deleteFrom('paychecks')
@@ -97,7 +116,10 @@ export async function replaceExpectedPaychecks(
       .where('id', 'in', kept)
       .execute();
   }
-  await insertMonthPaychecks(trx, ctx, ym, [schedule], from);
+  const received = rows.filter((p) => p.received_cents !== null).map((p) => p.expected_date);
+  const uncovered = uncoveredPaydays(template, dates, received);
+  const added = expected.filter((p) => uncovered.includes(p.expectedDate));
+  await insertExpected(trx, ctx, added);
 }
 
 export const paychecks = {
@@ -116,16 +138,18 @@ export const paychecks = {
   },
 
   /**
-   * Takes back "received". A paycheck dated after its schedule stopped was only there because the
-   * money had arrived, so it goes.
+   * Takes back "received". A running schedule's paychecks from `today` on are then made to match
+   * it, so an edit made meanwhile applies; an earlier paycheck just becomes expected again. One
+   * dated after its schedule stopped was only there because the money had arrived, so it goes.
    */
   async unmarkReceived(
     db: Database,
     ctx: HouseholdContext,
     id: string,
-    _today: string,
+    today: string,
   ): Promise<void> {
     assertCanWrite(ctx);
+    assertDate(today);
     await inTransaction(db, async (trx) => {
       await lockHouseholdMonths(trx, ctx);
       const paycheck = await trx
@@ -138,12 +162,11 @@ export const paychecks = {
       await assertMonthNotClosed(trx, ctx, paycheck.expected_date.slice(0, 7));
       const schedule = await trx
         .selectFrom('pay_schedules')
-        .select('ended_on')
+        .selectAll()
         .where('id', '=', paycheck.schedule_id)
         .where('household_id', '=', ctx.householdId)
-        .executeTakeFirst();
-      const endedOn = schedule?.ended_on ?? null;
-      if (endedOn !== null && paycheck.expected_date > endedOn) {
+        .executeTakeFirstOrThrow();
+      if (schedule.ended_on !== null && paycheck.expected_date > schedule.ended_on) {
         await trx
           .deleteFrom('paychecks')
           .where('id', '=', id)
@@ -157,6 +180,10 @@ export const paychecks = {
         .where('id', '=', id)
         .where('household_id', '=', ctx.householdId)
         .execute();
+      if (schedule.ended_on !== null) return;
+      for (const ym of await openYms(trx, ctx)) {
+        await replaceExpectedPaychecks(trx, ctx, ym, schedule, today);
+      }
     });
   },
 

@@ -13,10 +13,11 @@ import {
   paydaySchedule,
   twoDaysRule,
   type ExpectedPaycheck,
+  type PayFrequency,
   type PaycheckAmounts,
   type PayScheduleTemplate,
 } from './paychecks';
-import { isThreePaydayMonth } from './paydays';
+import { isThreePaydayMonth, paydaysForMonth } from './paydays';
 import { isPayDate } from './paySetup';
 
 export interface PaycheckMonthSummary {
@@ -148,6 +149,36 @@ export function firstRegeneratedPayday(today: string, received: readonly string[
   const after = received.map((date) => Temporal.PlainDate.from(date).add({ days: 1 }).toString());
   // "YYYY-MM-DD" strings sort in calendar order.
   return after.reduce((latest, date) => (date > latest ? date : latest), today);
+}
+
+/** Half a pay period, in days: closer than this, two paydays pay for the same period. */
+const HALF_PERIOD_DAYS: Record<PayFrequency, number> = {
+  weekly: 4,
+  biweekly: 7,
+  semimonthly: 7,
+  monthly: 15,
+};
+
+/**
+ * Of `paydays`, those no received paycheck already pays for. Only a received paycheck dated off the
+ * schedule (its payday moved after the money arrived) stands for a payday near it; one on the
+ * schedule covers just its own date.
+ */
+export function uncoveredPaydays(
+  schedule: Pick<PayScheduleTemplate, 'frequency' | 'anchorDate' | 'semimonthlyDays'>,
+  paydays: readonly string[],
+  received: readonly string[],
+): string[] {
+  const days = paydaySchedule(schedule);
+  const moved = received.filter((date) =>
+    paydaysForMonth(days, monthOf(Temporal.PlainDate.from(date))).every(
+      (payday) => payday.toString() !== date,
+    ),
+  );
+  const half = HALF_PERIOD_DAYS[schedule.frequency];
+  return paydays.filter((payday) =>
+    moved.every((date) => Math.abs(Temporal.PlainDate.from(date).until(payday).days) >= half),
+  );
 }
 
 /** Spec §6.4 "edit": the same checks as adding a schedule. */

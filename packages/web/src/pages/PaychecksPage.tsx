@@ -73,6 +73,8 @@ export function PaychecksPage({ client }: { client: PaychecksPageClient }) {
   const sourceRef = useRef<HTMLInputElement>(null);
   /** The month asked for; undefined means the household's current one. */
   const asked = useRef<string | undefined>(undefined);
+  /** Counts the page's reloads, so that only the latest one's answer is shown. */
+  const latest = useRef(0);
 
   const fetchAll = useCallback(
     async (ym: string | undefined) => {
@@ -106,17 +108,22 @@ export function PaychecksPage({ client }: { client: PaychecksPageClient }) {
     setProblem(text === null ? null : { section, text });
   const problemIn = (section: Section) => (problem?.section === section ? problem.text : null);
 
+  /** Loads the month asked for; an answer overtaken by a later reload is dropped. */
+  const reload = async (onFailure: () => void) => {
+    const mine = ++latest.current;
+    try {
+      const result = await fetchAll(asked.current);
+      if (latest.current === mine) setLoad(result);
+    } catch {
+      if (latest.current === mine) onFailure();
+    }
+  };
+
   const showMonth = async (ym: string) => {
     asked.current = ym;
     setNotice(null);
     setProblem(null);
-    try {
-      const result = await fetchAll(ym);
-      // A later click wins.
-      if (asked.current === ym) setLoad(result);
-    } catch {
-      if (asked.current === ym) report('month')(GENERIC_ERROR);
-    }
+    await reload(() => report('month')(GENERIC_ERROR));
   };
 
   /** Runs one change, then shows what the server now has. */
@@ -124,6 +131,8 @@ export function PaychecksPage({ client }: { client: PaychecksPageClient }) {
     change: () => Promise<unknown>,
     section: Section,
     done?: string,
+    /** Where to say the reload failed, when the change's own section may be gone by then. */
+    reloadSection: Section = section,
   ): Promise<boolean> => {
     if (saving) return false;
     setSaving(true);
@@ -138,7 +147,7 @@ export function PaychecksPage({ client }: { client: PaychecksPageClient }) {
     }
     if (done !== undefined) setNotice(done);
     // The change is saved. If this reload fails, keep what is shown.
-    await fetchAll(asked.current).then(setLoad, () => report(section)(RELOAD_ERROR));
+    await reload(() => report(reloadSection)(RELOAD_ERROR));
     setSaving(false);
     return true;
   };
@@ -177,7 +186,11 @@ export function PaychecksPage({ client }: { client: PaychecksPageClient }) {
   const edited =
     editing?.kind === 'edit' ? page.schedules.find((s) => s.id === editing.id) : undefined;
 
+  /** Closes the form that was saved, unless another has been opened since. */
+  const close = (saved: Editing) => setEditing((now) => (now === saved ? null : now));
+
   const saveSchedule = async (input: ScheduleInput) => {
+    const form = editing;
     const saved = await act(
       () =>
         edited
@@ -185,8 +198,9 @@ export function PaychecksPage({ client }: { client: PaychecksPageClient }) {
           : client.addPaySchedule.mutate(input),
       'schedule-form',
       `Saved ${input.name}.`,
+      'month',
     );
-    if (saved) setEditing(null);
+    if (saved) close(form);
   };
 
   const scheduleForm = can.write && (editing?.kind === 'add' || edited !== undefined) && (
@@ -202,11 +216,13 @@ export function PaychecksPage({ client }: { client: PaychecksPageClient }) {
       onCancel={() => openSchedule(null)}
       onStop={() => {
         if (!edited) return;
+        const form = editing;
         void act(
           () => client.stopPaySchedule.mutate({ id: edited.id }),
           'schedule-form',
           `Stopped ${edited.name}.`,
-        ).then((stopped) => stopped && setEditing(null));
+          'month',
+        ).then((stopped) => stopped && close(form));
       }}
     />
   );

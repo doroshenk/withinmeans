@@ -4,7 +4,14 @@ import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '.
 import type { Database, DB, PaySchedulesTable } from '../db.js';
 import { lockHouseholdMonths } from './monthBills.js';
 import { insertMonthPaychecks, replaceExpectedPaychecks } from './paychecks.js';
-import { assertCents, assertDate, cleanName, incomeAccountId, inTransaction } from './shared.js';
+import {
+  assertCents,
+  assertDate,
+  cleanName,
+  incomeAccountId,
+  inTransaction,
+  openYms,
+} from './shared.js';
 
 export type PaySchedule = Selectable<PaySchedulesTable>;
 
@@ -51,16 +58,6 @@ function scheduleColumns(input: NewPaySchedule) {
     semimonthly_day_2: days?.[1] ?? null,
     usual_cents: input.usualCents,
   };
-}
-
-async function openYms(trx: Transaction<DB>, ctx: HouseholdContext): Promise<string[]> {
-  const rows = await trx
-    .selectFrom('months')
-    .select('ym')
-    .where('household_id', '=', ctx.householdId)
-    .where('status', '=', 'open')
-    .execute();
-  return rows.map((r) => r.ym);
 }
 
 async function findMine(
@@ -242,9 +239,9 @@ export const paySchedules = {
   },
 
   /**
-   * Clears `ended_on` and expects pay again in open months, from `today` on: in those months,
-   * paydays missed while stopped stay out. A month opened later gets all its paydays. Restarting a
-   * running schedule changes nothing.
+   * Clears `ended_on` and expects pay again in open months, as the schedule now stands, from
+   * `today` on: in those months, paydays missed while stopped stay out. A month opened later gets
+   * all its paydays. Restarting a running schedule changes nothing.
    */
   async restart(db: Database, ctx: HouseholdContext, id: string, today: string): Promise<void> {
     assertCanWrite(ctx);
@@ -255,7 +252,7 @@ export const paySchedules = {
       if (schedule.ended_on === null) return;
       await setEndedOn(trx, ctx, id, null);
       for (const ym of await openYms(trx, ctx)) {
-        await insertMonthPaychecks(trx, ctx, ym, [{ ...schedule, ended_on: null }], today);
+        await replaceExpectedPaychecks(trx, ctx, ym, { ...schedule, ended_on: null }, today);
       }
     });
   },

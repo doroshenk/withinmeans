@@ -12,6 +12,7 @@ import {
   receivedDifferenceText,
   receivedDraftError,
   receivedPreviewText,
+  uncoveredPaydays,
   updatePayScheduleInput,
 } from './paycheckPage';
 import {
@@ -213,6 +214,30 @@ describe('P2-09 firstRegeneratedPayday: which paychecks an edit may change', () 
   it('is the day after the latest payday already received', () => {
     expect(firstRegeneratedPayday(TODAY, ['2026-11-30', '2026-11-06'])).toBe('2026-12-01');
     expect(firstRegeneratedPayday(TODAY, [TODAY])).toBe('2026-11-19');
+  });
+});
+
+describe('P2-09 uncoveredPaydays: no second paycheck for a period already paid', () => {
+  it.each<[PayScheduleTemplate['frequency'], string[], string[]]>([
+    // Received Tue Nov 10, which none of these schedules pays on.
+    ['weekly', ['2026-11-07', '2026-11-13'], ['2026-11-06', '2026-11-14']],
+    ['biweekly', ['2026-11-04', '2026-11-16'], ['2026-11-03', '2026-11-17']],
+    ['semimonthly', ['2026-11-04', '2026-11-16'], ['2026-11-03', '2026-11-17']],
+    ['monthly', ['2026-10-27', '2026-11-24'], ['2026-10-26', '2026-11-25']],
+  ])('%s: a moved paycheck covers paydays within half a period', (frequency, near, far) => {
+    const job = mainJob({ frequency });
+
+    expect(uncoveredPaydays(job, [...near, ...far], ['2026-11-10'])).toEqual(far);
+  });
+
+  it('a received paycheck on the schedule covers only itself', () => {
+    const twice = mainJob({ frequency: 'semimonthly', semimonthlyDays: [23, 25] });
+
+    expect(uncoveredPaydays(twice, ['2026-11-25'], ['2026-11-23'])).toEqual(['2026-11-25']);
+  });
+
+  it('with nothing received every payday stays', () => {
+    expect(uncoveredPaydays(mainJob(), ['2026-11-20'], [])).toEqual(['2026-11-20']);
   });
 });
 

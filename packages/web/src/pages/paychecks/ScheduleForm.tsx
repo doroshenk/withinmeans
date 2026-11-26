@@ -201,8 +201,8 @@ export function ScheduleForm({
       </div>
       {schedule && (
         <p className="help">
-          Changes apply to paychecks from today on that you haven&apos;t received yet. Stopping
-          keeps its history, and you can restart it.
+          Changes apply to paychecks you haven&apos;t received yet, from today on and after the
+          latest one received. Stopping keeps its history, and you can restart it.
         </p>
       )}
       {problem !== null && (

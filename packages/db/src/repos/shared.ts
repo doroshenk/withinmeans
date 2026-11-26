@@ -117,3 +117,14 @@ export async function incomeAccountId(
   }
   return id;
 }
+
+/** The household's open months. */
+export async function openYms(trx: Transaction<DB>, ctx: HouseholdContext): Promise<string[]> {
+  const rows = await trx
+    .selectFrom('months')
+    .select('ym')
+    .where('household_id', '=', ctx.householdId)
+    .where('status', '=', 'open')
+    .execute();
+  return rows.map((r) => r.ym);
+}
