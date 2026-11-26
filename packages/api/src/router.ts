@@ -3,6 +3,9 @@ import {
   acceptInviteInput,
   addAccountInput,
   addRecurringBillInput,
+  endRecurringBillInput,
+  restartRecurringBillInput,
+  updateRecurringBillInput,
   removeRecurringBillInput,
   removeAccountInput,
   setCushionInput,
@@ -50,6 +53,12 @@ import {
   removeSetupAccount,
   saveCushion,
 } from './setupAccounts.js';
+import {
+  endRecurringBill,
+  listRecurringBills,
+  restartRecurringBill,
+  updateRecurringBill,
+} from './recurringBills.js';
 import { addSetupBill, listSetupBills, removeSetupBill } from './setupBills.js';
 import { signUp } from './signUp.js';
 
@@ -179,7 +188,7 @@ export const appRouter = t.router({
     .input(recolorCategoryInput)
     .mutation(({ ctx, input }) => recolorCategory(ctx, input)),
 
-  /** Spec §3 step 4 / T18: bills move to the first remaining category. */
+  /** Spec §4: bills move to the chosen category; without one, to the first (§3 step 4, T18). */
   deleteCategory: writeProcedure
     .input(deleteCategoryInput)
     .mutation(({ ctx, input }) => deleteCategory(ctx, input)),
@@ -194,6 +203,21 @@ export const appRouter = t.router({
   removeRecurringBill: writeProcedure
     .input(removeRecurringBillInput)
     .mutation(({ ctx, input }) => removeSetupBill(ctx, input)),
+
+  /** Spec §6.3: all recurring bills, ended ones too, and today. */
+  recurringBills: memberProcedure.query(({ ctx }) => listRecurringBills(ctx)),
+
+  updateRecurringBill: writeProcedure
+    .input(updateRecurringBillInput)
+    .mutation(({ ctx, input }) => updateRecurringBill(ctx, input)),
+
+  endRecurringBill: writeProcedure
+    .input(endRecurringBillInput)
+    .mutation(({ ctx, input }) => endRecurringBill(ctx, input)),
+
+  restartRecurringBill: writeProcedure
+    .input(restartRecurringBillInput)
+    .mutation(({ ctx, input }) => restartRecurringBill(ctx, input)),
 
   /** Spec §5.9: pay schedules, running and stopped. */
   paySchedules: memberProcedure.query(({ ctx }) => listPaySchedules(ctx)),

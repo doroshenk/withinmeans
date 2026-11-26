@@ -1,5 +1,11 @@
 import type { Selectable } from 'kysely';
-import { assertCanWrite, Conflict, NotFound, type HouseholdContext } from '../context.js';
+import {
+  assertCanWrite,
+  Conflict,
+  InvalidInput,
+  NotFound,
+  type HouseholdContext,
+} from '../context.js';
 import type { CategoriesTable, Database } from '../db.js';
 import { cleanName, inTransaction, mustHaveChanged, orConflict } from './shared.js';
 
@@ -186,13 +192,32 @@ export const categories = {
     return rows.map((r) => ({ ...r, bill_count: Number(r.bill_count) }));
   },
 
+  /** Ids of the categories any bill uses: recurring (ended ones too) or a month's bill. */
+  async usedIds(db: Database, ctx: HouseholdContext): Promise<string[]> {
+    const rows = await db
+      .selectFrom('recurring_bills')
+      .select('category_id')
+      .where('household_id', '=', ctx.householdId)
+      .union(
+        db.selectFrom('bills').select('category_id').where('household_id', '=', ctx.householdId),
+      )
+      .execute();
+    return rows.map((r) => r.category_id);
+  },
+
   /**
-   * Deletes a category; its recurring bills and month Bills move to the first remaining one (spec
-   * §3 step 4, T18). Never the last one. Ended bills move too, for their history, but
+   * Deletes a category; its recurring bills and month Bills move to `moveToId` (spec §4), or
+   * without one to the first remaining category (spec §3 step 4, T18). Never the last one. Ended bills move too, for their history, but
    * `movedCount` counts only recurring bills that have not ended, plus one-time bills.
    */
-  async remove(db: Database, ctx: HouseholdContext, id: string): Promise<RemovedCategory> {
+  async remove(
+    db: Database,
+    ctx: HouseholdContext,
+    id: string,
+    moveToId?: string,
+  ): Promise<RemovedCategory> {
     assertCanWrite(ctx);
+    if (moveToId === id) throw new InvalidInput('Choose a different category for its bills');
     return inTransaction(db, async (trx) => {
       const mine = await trx
         .selectFrom('categories')
@@ -201,16 +226,20 @@ export const categories = {
         .where('household_id', '=', ctx.householdId)
         .executeTakeFirst();
       if (mine === undefined) throw new NotFound('Category not found');
-      const target = await trx
+      let others = trx
         .selectFrom('categories')
         .select(['id', 'name'])
         .where('household_id', '=', ctx.householdId)
         .where('archived_at', 'is', null)
         .where('id', '<>', id)
         .orderBy('sort')
-        .orderBy('name_key')
-        .executeTakeFirst();
-      if (target === undefined) throw new Conflict('At least one category is required');
+        .orderBy('name_key');
+      if (moveToId !== undefined) others = others.where('id', '=', moveToId);
+      const target = await others.executeTakeFirst();
+      if (target === undefined) {
+        if (moveToId !== undefined) throw new NotFound('Category not found');
+        throw new Conflict('At least one category is required');
+      }
       const active = await trx
         .selectFrom('recurring_bills')
         .select('id')

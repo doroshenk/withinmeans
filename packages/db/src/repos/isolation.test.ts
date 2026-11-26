@@ -33,6 +33,8 @@ interface Case {
   namesId?: boolean;
   /** Text proving the result holds `t`'s data (defaults to `<label>-secret`). */
   marker?: (t: Seeded) => string;
+  /** Puts `t`'s data (as its owner) in the state a write needs, before it is looked at. */
+  prepare?: (db: Database, t: Seeded) => Promise<unknown>;
   run(db: Database, ctx: HouseholdContext, t: Seeded): Promise<unknown>;
 }
 
@@ -241,6 +243,26 @@ const cases: Case[] = [
     run: (db, ctx, t) => recurringBills.end(db, ctx, t.recurringBillId, '2027-01'),
   },
   {
+    name: 'recurringBills.stop',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) => recurringBills.stop(db, ctx, t.recurringBillId, '2026-11'),
+  },
+  {
+    name: 'recurringBills.restart',
+    write: true,
+    namesId: true,
+    // Only an ended bill changes.
+    prepare: (db, t) => recurringBills.end(db, t.ctx(), t.recurringBillId, t.ym),
+    run: (db, ctx, t) => recurringBills.restart(db, ctx, t.recurringBillId, '2026-11'),
+  },
+  {
+    name: 'categories.usedIds',
+    write: false,
+    marker: (t) => t.categoryId,
+    run: (db, ctx) => categories.usedIds(db, ctx),
+  },
+  {
     name: 'recurringBills.remove',
     write: true,
     namesId: true,
@@ -360,6 +382,7 @@ describe('P1-01 isolation: writes', () => {
   it.each(writes.map((c) => [c.name, c] as const))(
     "%s: works on A's own data",
     async (_name, c) => {
+      await c.prepare?.(t.db, A);
       const before = await snapshotHousehold(t.db, A);
       await c.run(t.db, A.ctx(), A);
       expect(await snapshotHousehold(t.db, A)).not.toEqual(before);
@@ -368,6 +391,7 @@ describe('P1-01 isolation: writes', () => {
   it.each(writes.map((c) => [c.name, c] as const))(
     "%s: A cannot change B's data",
     async (_name, c) => {
+      await c.prepare?.(t.db, B);
       const before = await snapshotHousehold(t.db, B);
       const attempt = c.run(t.db, A.ctx(), B);
       if (c.namesId === true) await expect(attempt).rejects.toBeInstanceOf(NotFound);
@@ -378,6 +402,7 @@ describe('P1-01 isolation: writes', () => {
   it.each(writes.map((c) => [c.name, c] as const))(
     '%s: the view role is rejected and nothing changes',
     async (_name, c) => {
+      await c.prepare?.(t.db, A);
       const before = await snapshotHousehold(t.db, A);
       await expect(c.run(t.db, A.ctx('view'), A)).rejects.toBeInstanceOf(Forbidden);
       expect(await snapshotHousehold(t.db, A)).toEqual(before);

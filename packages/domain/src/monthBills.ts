@@ -23,6 +23,11 @@ export interface MonthBill {
   estimateCents: Cents;
 }
 
+/** The date ("YYYY-MM-DD") a bill with this due day (1 to 28) has in month `ym`. */
+export function dueDateIn(ym: YearMonth, dueDay: number): string {
+  return `${ym}-${String(dueDay).padStart(2, '0')}`;
+}
+
 /**
  * Spec §5.11: one bill for each recurring bill active in `ym` (start and end months included), at
  * its estimate and due day.
@@ -39,7 +44,7 @@ export function billsForMonth(
       recurringBillId: r.id,
       name: r.name,
       categoryId: r.categoryId,
-      dueDate: `${ym}-${String(r.dueDay).padStart(2, '0')}`,
+      dueDate: dueDateIn(ym, r.dueDay),
       estimateCents: r.estimateCents,
     }));
 }

@@ -4,16 +4,20 @@ import type { AuthClient } from './auth/types';
 import { Accept, type InviteDetails } from './pages/Accept';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Hello, type HelloProps } from './pages/Hello';
+import type { RecurringClient } from './pages/RecurringPage';
+import { RecurringScreen } from './pages/RecurringScreen';
 import { SignIn } from './pages/SignIn';
 import { SetupPage } from './pages/SetupPage';
 import type { SetupClient } from './pages/SetupWizard';
 import { SignUp, type PendingInvite } from './pages/SignUp';
+import type { Route } from './shell/Shell';
 
 export interface AppProps {
   auth: AuthClient;
   /** Builds the API client; injected so tests can supply a fake. */
   createClient: (auth: AuthClient) => HelloProps['client'] &
-    SetupClient & {
+    SetupClient &
+    RecurringClient & {
       signUp: { mutate: (input: SignUpInput) => Promise<unknown> };
       invitePartner: { mutate: (input: InvitePartnerInput) => Promise<PendingInvite> };
       resendInvite: { mutate: (input: { inviteId: string }) => Promise<PendingInvite> };
@@ -24,7 +28,11 @@ export interface AppProps {
   location?: { pathname: string; search: string };
 }
 
-type View = 'checking' | 'forgot' | 'sign-in' | 'sign-up' | 'hello' | 'accept' | 'setup';
+type View =
+  'checking' | 'forgot' | 'sign-in' | 'sign-up' | 'hello' | 'accept' | 'setup' | 'recurring';
+
+/** The pages that exist so far; later tickets add theirs. */
+const PAGES: Partial<Record<Route, View>> = { dashboard: 'hello', recurring: 'recurring' };
 
 /** The secret from an invite link (`/accept?token=…`); undefined on any other page. */
 function inviteToken(location: { pathname: string; search: string }): string | undefined {
@@ -42,6 +50,8 @@ export function App({ auth, createClient, location = window.location }: AppProps
     if (token !== undefined) return;
     void auth.getAccessToken().then((token) => setView(token ? 'hello' : 'sign-in'));
   }, [auth, token]);
+
+  const navigate = (route: Route) => setView((current) => PAGES[route] ?? current);
 
   if (view === 'checking') return <p role="status">Loading…</p>;
   if (view === 'accept' && token !== undefined) {
@@ -69,6 +79,7 @@ export function App({ auth, createClient, location = window.location }: AppProps
     );
   }
   if (view === 'setup') return <SetupPage client={client} onExit={() => setView('hello')} />;
+  if (view === 'recurring') return <RecurringScreen client={client} onNavigate={navigate} />;
   if (view === 'forgot') return <ForgotPassword auth={auth} onBack={() => setView('sign-in')} />;
   if (view === 'sign-in') {
     return (
@@ -83,6 +94,7 @@ export function App({ auth, createClient, location = window.location }: AppProps
   return (
     <Hello
       client={client}
+      onNavigate={navigate}
       onStartSetup={() => setView('setup')}
       onSignOut={() => {
         auth.signOut();

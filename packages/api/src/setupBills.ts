@@ -1,9 +1,9 @@
-import { categories, households, recurringBills } from '@withinmeans/db';
-import { monthlyBillsTotal, monthOf, today } from '@withinmeans/domain';
+import { categories, households, months, recurringBills } from '@withinmeans/db';
+import { monthlyBillsTotal, monthOf, newBillStartMonth, today } from '@withinmeans/domain';
 import { translated } from './errors.js';
 import type { MemberContext } from './invitePartner.js';
 
-type Ctx = Pick<MemberContext, 'db' | 'household' | 'clock'>;
+export type BillsContext = Pick<MemberContext, 'db' | 'household' | 'clock'>;
 
 export interface SetupBillView {
   id: string;
@@ -22,14 +22,14 @@ export interface SetupBillsView {
   takeHomeCents: number | null;
 }
 
-async function mine(ctx: Ctx) {
+export async function myHousehold(ctx: BillsContext) {
   const household = await households.getMine(ctx.db, ctx.household);
   if (household === undefined) throw new Error('Household not found');
   return household;
 }
 
 /** Spec §3 step 5: active recurring bills (by due day), their total, and take-home for the share. */
-export async function listSetupBills(ctx: Ctx): Promise<SetupBillsView> {
+export async function listSetupBills(ctx: BillsContext): Promise<SetupBillsView> {
   const [rows, cats] = await Promise.all([
     recurringBills.list(ctx.db, ctx.household),
     categories.list(ctx.db, ctx.household, { includeArchived: true }),
@@ -53,9 +53,12 @@ export async function listSetupBills(ctx: Ctx): Promise<SetupBillsView> {
   };
 }
 
-/** Spec §3 step 5: the bill starts in the household's first month. */
+/**
+ * Spec §3 step 5 and §6.3: the bill starts this month, or in the first month if that is later or is
+ * still the only month started.
+ */
 export const addSetupBill = (
-  ctx: Ctx,
+  ctx: BillsContext,
   input: {
     name: string;
     estimateCents: number;
@@ -65,18 +68,21 @@ export const addSetupBill = (
   },
 ) =>
   translated(async () => {
-    const household = await mine(ctx);
+    const household = await myHousehold(ctx);
+    const currentYm = monthOf(today(ctx.clock, household.timezone));
+    const started = await months.list(ctx.db, ctx.household);
+    const onlyFirst = started.length > 0 && started.every((m) => m.ym === household.first_month);
     const row = await recurringBills.create(ctx.db, ctx.household, {
       ...input,
-      startYm: household.first_month,
+      startYm: newBillStartMonth(household.first_month, currentYm, onlyFirst),
     });
     return { id: row.id };
   });
 
 /** Takes the bill out of this month and later ones; earlier months keep it. */
-export const removeSetupBill = (ctx: Ctx, input: { id: string }) =>
+export const removeSetupBill = (ctx: BillsContext, input: { id: string }) =>
   translated(async () => {
-    const household = await mine(ctx);
+    const household = await myHousehold(ctx);
     const currentYm = monthOf(today(ctx.clock, household.timezone));
     await recurringBills.remove(ctx.db, ctx.household, input.id, currentYm);
   });

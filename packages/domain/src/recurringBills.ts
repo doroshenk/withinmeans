@@ -62,11 +62,16 @@ export function shareOfTakeHome(part: Cents, whole: Cents | null): string {
 
 const ORDINAL_ENDINGS: Readonly<Record<number, string>> = { 1: 'st', 2: 'nd', 3: 'rd' };
 
-/** "Due on the 1st", "Due on the 22nd": the due day as people say it. */
-export function dueDayLabel(day: number): string {
+/** 1 → "1st", 22 → "22nd". */
+export function ordinal(day: number): string {
   const teen = day % 100 >= 11 && day % 100 <= 13;
   const ending = teen ? 'th' : (ORDINAL_ENDINGS[day % 10] ?? 'th');
-  return `Due on the ${day}${ending}`;
+  return `${day}${ending}`;
+}
+
+/** "Due on the 1st", "Due on the 22nd": the due day as people say it. */
+export function dueDayLabel(day: number): string {
+  return `Due on the ${ordinal(day)}`;
 }
 
 const dueDay = z.number().int().min(MIN_DUE_DAY).max(MAX_DUE_DAY);
@@ -79,3 +84,8 @@ export const addRecurringBillInput = z.object({
   autopay: z.boolean(),
 });
 export const removeRecurringBillInput = z.object({ id: z.uuid() });
+
+/** An edit saves the whole bill. */
+export const updateRecurringBillInput = addRecurringBillInput.extend({ id: z.uuid() });
+export const endRecurringBillInput = z.object({ id: z.uuid() });
+export const restartRecurringBillInput = z.object({ id: z.uuid() });

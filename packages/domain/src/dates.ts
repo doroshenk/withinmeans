@@ -37,3 +37,25 @@ export function week(date: Temporal.PlainDate): Week {
   if (date.day <= 21) return 3;
   return 4;
 }
+
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+const SHORT_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
+
+/** "Wed, Nov 18" from "2026-11-18". */
+export function formatShortDate(date: string): string {
+  const { dayOfWeek, month, day } = Temporal.PlainDate.from(date);
+  return `${WEEKDAYS[dayOfWeek - 1]}, ${SHORT_MONTHS[month - 1]} ${day}`;
+}

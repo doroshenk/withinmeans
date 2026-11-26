@@ -24,7 +24,9 @@ export interface CategoriesClient {
   };
   renameCategory: { mutate: (input: { id: string; name: string }) => Promise<unknown> };
   recolorCategory: { mutate: (input: { id: string; colorIndex: number }) => Promise<unknown> };
-  deleteCategory: { mutate: (input: { id: string }) => Promise<DeleteResult> };
+  deleteCategory: {
+    mutate: (input: { id: string; moveToId?: string }) => Promise<DeleteResult>;
+  };
 }
 
 type Load = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; rows: CategoryRow[] };

@@ -38,10 +38,12 @@ export const renameCategory = (ctx: Ctx, input: { id: string; name: string }) =>
 export const recolorCategory = (ctx: Ctx, input: { id: string; colorIndex: number }) =>
   translated(() => categories.setColor(ctx.db, ctx.household, input.id, input.colorIndex));
 
-/** T18: the bills move to the first remaining category, and `message` says so. */
-export const deleteCategory = (ctx: Ctx, input: { id: string }) =>
+/**
+ * The bills move to `moveToId`, or to the first remaining category (T18), and `message` says so.
+ */
+export const deleteCategory = (ctx: Ctx, input: { id: string; moveToId?: string | undefined }) =>
   translated(async () => {
-    const moved = await categories.remove(ctx.db, ctx.household, input.id);
+    const moved = await categories.remove(ctx.db, ctx.household, input.id, input.moveToId);
     return {
       movedCount: moved.movedCount,
       movedToName: moved.movedToName,
