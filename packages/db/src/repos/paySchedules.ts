@@ -137,8 +137,37 @@ export const paySchedules = {
     });
   },
 
-  async remove(_db: Database, _ctx: HouseholdContext, _id: string): Promise<void> {
-    throw new Error('not implemented');
+  /**
+   * Takes back a schedule added by mistake (setup step 3), with the paychecks it expected. One with
+   * a received paycheck, or a paycheck in a closed month, is history: it can only be stopped.
+   */
+  async remove(db: Database, ctx: HouseholdContext, id: string): Promise<void> {
+    assertCanWrite(ctx);
+    await inTransaction(db, async (trx) => {
+      await lockHouseholdMonths(trx, ctx);
+      await findMine(trx, ctx, id);
+      const expected = await trx
+        .selectFrom('paychecks')
+        .select(['expected_date', 'received_cents'])
+        .where('household_id', '=', ctx.householdId)
+        .where('schedule_id', '=', id)
+        .execute();
+      const open = new Set(await openYms(trx, ctx));
+      const history = expected.some(
+        (p) => p.received_cents !== null || !open.has(p.expected_date.slice(0, 7)),
+      );
+      if (history) throw new InvalidInput('This paycheck has history, so it can only be stopped.');
+      await trx
+        .deleteFrom('paychecks')
+        .where('household_id', '=', ctx.householdId)
+        .where('schedule_id', '=', id)
+        .execute();
+      await trx
+        .deleteFrom('pay_schedules')
+        .where('household_id', '=', ctx.householdId)
+        .where('id', '=', id)
+        .execute();
+    });
   },
 
   /**

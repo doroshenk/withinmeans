@@ -448,8 +448,14 @@ describe('P1-13 setup step 9: review and finish', () => {
   });
 
   it('reopening a finished setup does not land on a coming-soon step', async () => {
-    open(fakeClient([1, 2, 4, 5, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
+    open(fakeClient([1, 2, 3, 4, 5, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
 
     expect(await screen.findByText('Step 9 of 9')).toBeInTheDocument();
+  });
+
+  it('P2-09: reopening a finished setup lands on step 3 if it was never answered', async () => {
+    open(fakeClient([1, 2, 4, 5, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
+
+    expect(await screen.findByText('Step 3 of 9')).toBeInTheDocument();
   });
 });

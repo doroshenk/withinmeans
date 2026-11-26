@@ -183,7 +183,10 @@ describe('P2-09 setup step 3: paychecks', () => {
     const { client } = fakeClient([mainJob]);
     client.removePaySchedule.mutate = () =>
       Promise.reject(
-        Object.assign(new Error('This paycheck has history.'), { data: { code: 'BAD_REQUEST' } }),
+        Object.assign(new Error('This paycheck has history.'), {
+          name: 'TRPCClientError',
+          data: { code: 'BAD_REQUEST' },
+        }),
       );
     const user = await open(client);
 

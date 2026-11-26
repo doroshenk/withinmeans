@@ -2,6 +2,7 @@ import { categories, households, months, recurringBills } from '@withinmeans/db'
 import { monthlyBillsTotal, monthOf, newBillStartMonth, today } from '@withinmeans/domain';
 import { translated } from './errors.js';
 import type { MemberContext } from './invitePartner.js';
+import { takeHomeCents } from './paychecks.js';
 
 export type BillsContext = Pick<MemberContext, 'db' | 'household' | 'clock'>;
 
@@ -18,7 +19,7 @@ export interface SetupBillView {
 export interface SetupBillsView {
   bills: SetupBillView[];
   totalCents: number;
-  /** Monthly take-home pay; null until pay schedules exist (setup step 3). */
+  /** Take-home pay in a typical month; null when no pay schedule is running. */
   takeHomeCents: number | null;
 }
 
@@ -30,9 +31,10 @@ export async function myHousehold(ctx: BillsContext) {
 
 /** Spec §3 step 5: active recurring bills (by due day), their total, and take-home for the share. */
 export async function listSetupBills(ctx: BillsContext): Promise<SetupBillsView> {
-  const [rows, cats] = await Promise.all([
+  const [rows, cats, takeHome] = await Promise.all([
     recurringBills.list(ctx.db, ctx.household),
     categories.list(ctx.db, ctx.household, { includeArchived: true }),
+    takeHomeCents(ctx),
   ]);
   const names = new Map(cats.map((c) => [c.id, c.name]));
   const bills = rows
@@ -49,7 +51,7 @@ export async function listSetupBills(ctx: BillsContext): Promise<SetupBillsView>
   return {
     bills,
     totalCents: monthlyBillsTotal(bills.map((b) => b.estimateCents)),
-    takeHomeCents: null,
+    takeHomeCents: takeHome,
   };
 }
 

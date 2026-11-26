@@ -33,7 +33,10 @@ export interface PaycheckAmounts {
   receivedCents: Cents | null;
 }
 
-function paydaySchedule(s: PayScheduleTemplate): PaySchedule {
+/** A stored schedule's dates in the shape the payday rules take. */
+export function paydaySchedule(
+  s: Pick<PayScheduleTemplate, 'frequency' | 'anchorDate' | 'semimonthlyDays'>,
+): PaySchedule {
   if (s.frequency === 'semimonthly') {
     return {
       frequency: s.frequency,
