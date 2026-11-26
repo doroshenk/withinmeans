@@ -60,6 +60,7 @@ import {
   updateRecurringBill,
 } from './recurringBills.js';
 import { addSetupBill, listSetupBills, removeSetupBill } from './setupBills.js';
+import { listSetupPaychecks, removePaySchedule } from './setupPaychecks.js';
 import { signUp } from './signUp.js';
 
 const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
@@ -230,6 +231,14 @@ export const appRouter = t.router({
   addPaySchedule: writeProcedure
     .input(addPayScheduleInput)
     .mutation(({ ctx, input }) => addPaySchedule(ctx, input)),
+
+  /** Spec §3 step 3: today and the pay schedules. */
+  setupPaychecks: memberProcedure.query(({ ctx }) => listSetupPaychecks(ctx)),
+
+  /** Spec §3 step 3: takes back a paycheck added by mistake; one with history can only be stopped. */
+  removePaySchedule: writeProcedure
+    .input(payScheduleIdInput)
+    .mutation(({ ctx, input }) => removePaySchedule(ctx, input)),
 
   /** Spec §5.9 "Stop this paycheck": ends it today. */
   stopPaySchedule: writeProcedure

@@ -98,6 +98,13 @@ describe('P2-03 pay schedule input (spec §3 step 3, §5.9)', () => {
     usualCents: 322_500,
   };
 
+  it('P2-09: caps take-home at $100,000,000, so monthly totals stay exact', () => {
+    const accepts = (usualCents: number) =>
+      addPayScheduleInput.safeParse({ ...valid, usualCents }).success;
+    expect(accepts(10_000_000_000)).toBe(true);
+    expect(accepts(10_000_000_001)).toBe(false);
+  });
+
   it('accepts a schedule and trims its name', () => {
     expect(addPayScheduleInput.parse(valid)).toStrictEqual({ ...valid, name: 'Main job' });
   });

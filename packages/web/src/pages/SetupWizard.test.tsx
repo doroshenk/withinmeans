@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider, type Role } from '../permissions';
 import { accountsStub } from './accountsStub';
 import { categoriesStub } from './categoriesStub';
+import { paychecksStub } from './paychecksStub';
 import { recurringBillsStub } from './recurringBillsStub';
 import { welcomeStub } from './welcomeStub';
 import { SetupWizard, type SetupClient } from './SetupWizard';
@@ -28,6 +29,7 @@ function fakeClient(initial: Row[] = []) {
     ...accountsStub,
     ...categoriesStub,
     ...recurringBillsStub,
+    ...paychecksStub,
     ...welcomeStub,
   };
   return { client, save };
@@ -236,6 +238,7 @@ describe('P1-08 setup wizard', () => {
       ...accountsStub,
       ...categoriesStub,
       ...recurringBillsStub,
+      ...paychecksStub,
       ...welcomeStub,
       setupProgress: { query: () => Promise.reject(new Error('boom')) },
       saveSetupStep: { mutate: vi.fn() },
@@ -378,6 +381,7 @@ describe('P1-13 setup step 9: review and finish', () => {
   const saved: Row[] = [
     { step: 1, status: 'done' },
     { step: 3, status: 'skipped' },
+    { step: 6, status: 'skipped' },
     { step: 7, status: 'done' },
   ];
 
@@ -387,10 +391,10 @@ describe('P1-13 setup step 9: review and finish', () => {
     const expected = [
       ['Welcome', 'Done', 'Edit'],
       ['Bank accounts', 'Not started', 'Finish this'],
-      ['Paychecks', 'Skipped · Coming soon', 'Add now'],
+      ['Paychecks', 'Skipped', 'Add now'],
       ['Bill categories', 'Not started', 'Finish this'],
       ['Recurring bills', 'Not started', 'Finish this'],
-      ['Credit cards', 'Coming soon', 'Add now'],
+      ['Credit cards', 'Skipped · Coming soon', 'Add now'],
       ['Investments', 'Coming soon', 'Add now'],
       ['Where income goes', 'Coming soon', 'Finish this'],
     ] as const;
@@ -445,8 +449,14 @@ describe('P1-13 setup step 9: review and finish', () => {
   });
 
   it('reopening a finished setup does not land on a coming-soon step', async () => {
-    open(fakeClient([1, 2, 4, 5, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
+    open(fakeClient([1, 2, 3, 4, 5, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
 
     expect(await screen.findByText('Step 9 of 9')).toBeInTheDocument();
+  });
+
+  it('P2-09: reopening a finished setup lands on step 3 if it was never answered', async () => {
+    open(fakeClient([1, 2, 4, 5, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
+
+    expect(await screen.findByText('Step 3 of 9')).toBeInTheDocument();
   });
 });

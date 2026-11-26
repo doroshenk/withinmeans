@@ -1,5 +1,10 @@
 import { households, paychecks, paySchedules } from '@withinmeans/db';
-import { today, type addPayScheduleInput, type PayFrequency } from '@withinmeans/domain';
+import {
+  monthlyPayCents,
+  today,
+  type addPayScheduleInput,
+  type PayFrequency,
+} from '@withinmeans/domain';
 import type { z } from 'zod';
 import { translated } from './errors.js';
 import type { MemberContext } from './invitePartner.js';
@@ -45,6 +50,11 @@ export async function listPaySchedules(ctx: Ctx): Promise<PayScheduleView[]> {
   }));
 }
 
+/** Take-home pay in a typical month; null when no schedule is running. */
+export async function takeHomeCents(ctx: Ctx): Promise<number | null> {
+  return monthlyPayCents(await listPaySchedules(ctx));
+}
+
 /** The month's paychecks by date, each with its schedule's name. */
 export async function listPaychecks(ctx: Ctx, ym: string): Promise<PaycheckView[]> {
   const [rows, schedules] = await Promise.all([
@@ -75,7 +85,7 @@ export const addPaySchedule = (ctx: Ctx, input: z.infer<typeof addPayScheduleInp
   });
 
 /** Today's date in the household's time zone. */
-async function householdToday(ctx: Ctx): Promise<string> {
+export async function householdToday(ctx: Ctx): Promise<string> {
   const household = await households.getMine(ctx.db, ctx.household);
   if (household === undefined) throw new Error('Household not found');
   return today(ctx.clock, household.timezone).toString();
