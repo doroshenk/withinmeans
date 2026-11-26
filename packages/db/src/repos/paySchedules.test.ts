@@ -376,21 +376,24 @@ describe('P2-03 stopping and restarting a schedule (spec §5.9)', () => {
 });
 
 describe('P2-03 stopping and marking received at the same moment', () => {
-  /** Runs `second` while `first` has done its work but not yet committed. */
+  /**
+   * Runs `second` while `first` has done its work but not yet committed, and returns how both
+   * ended. Which one wins depends on the engine: Postgres makes `second` wait, while DSQL lets it
+   * commit and reruns `first`.
+   */
   async function during(
     first: (db: TestDb['db']) => Promise<unknown>,
     second: () => Promise<unknown>,
   ) {
     const slow = pausingBeforeCommit(t.db);
-    const firstDone = first(slow.db);
+    const firstDone = Promise.allSettled([first(slow.db)]);
     await slow.reached;
     const secondDone = Promise.allSettled([second()]);
     // Long enough for `second` to get as far as it can without waiting.
     await new Promise((resolve) => setTimeout(resolve, 500));
     slow.release();
-    await firstDone;
-    const [result] = await secondDone;
-    return result;
+    const [[firstResult], [secondResult]] = await Promise.all([firstDone, secondDone]);
+    return [firstResult, secondResult] as const;
   }
 
   async function novemberOpen() {
@@ -402,27 +405,44 @@ describe('P2-03 stopping and marking received at the same moment', () => {
   const markEarly = (db: TestDb['db'], id: string) =>
     paychecks.markReceived(db, A.ctx(), id, { receivedCents: 322_500, receivedDate: TODAY });
 
-  it('a paycheck being marked received is not deleted by a stop', async () => {
+  /**
+   * The two must end as if one ran after the other: marked first, the paycheck stays, received;
+   * stopped first, it is gone and marking it says so.
+   */
+  async function expectOneAfterTheOther(
+    marked: PromiseSettledResult<unknown>,
+    stopped: PromiseSettledResult<unknown>,
+  ) {
+    expect(stopped.status).toBe('fulfilled');
+    expect((await paySchedules.list(t.db, A.ctx()))[0]?.ended_on).toBe(TODAY);
+    if (marked.status === 'fulfilled') {
+      expect(await dates()).toEqual(['2026-11-06', '2026-11-20']);
+      expect((await paycheckOn('2026-11-20')).received_cents).toBe(322_500);
+    } else {
+      expect(marked.reason).toBeInstanceOf(NotFound);
+      expect(await dates()).toEqual(['2026-11-06']);
+    }
+  }
+
+  it('a paycheck being marked received survives a stop, or marking it is NotFound', async () => {
     const { job, nov20 } = await novemberOpen();
 
-    await during(
+    const [marked, stopped] = await during(
       (db) => markEarly(db, nov20),
       () => paySchedules.stop(t.db, A.ctx(), job.id, TODAY),
     );
 
-    expect(await dates()).toEqual(['2026-11-06', '2026-11-20']);
-    expect((await paycheckOn('2026-11-20')).received_cents).toBe(322_500);
+    await expectOneAfterTheOther(marked, stopped);
   });
 
-  it('marking a paycheck that a stop is deleting is NotFound, not a silent success', async () => {
+  it('marking a paycheck that a stop is deleting is never a silent success', async () => {
     const { job, nov20 } = await novemberOpen();
 
-    const marked = await during(
+    const [stopped, marked] = await during(
       (db) => paySchedules.stop(db, A.ctx(), job.id, TODAY),
       () => markEarly(t.db, nov20),
     );
 
-    expect(marked).toMatchObject({ status: 'rejected', reason: expect.any(NotFound) });
-    expect(await dates()).toEqual(['2026-11-06']);
+    await expectOneAfterTheOther(marked, stopped);
   });
 });
