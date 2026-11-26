@@ -38,6 +38,8 @@ export interface OtherIncomeClient {
   removeOtherIncome: { mutate: (input: { id: string }) => Promise<unknown> };
 }
 
+const RELOAD_ERROR = 'Saved, but this page couldn’t refresh. Reload it before trying again.';
+
 type Load = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: OtherIncomeData };
 
 /** Spec §6.4. One-time income for now; P2-09 adds the paychecks, schedules and month navigator. */
@@ -84,7 +86,7 @@ export function PaychecksPage({ client }: { client: OtherIncomeClient }) {
       return false;
     }
     // The change is saved. If this reload fails, keep what is shown.
-    await fetchAll().then(setLoad, () => report(GENERIC_ERROR));
+    await fetchAll().then(setLoad, () => report(RELOAD_ERROR));
     setSaving(false);
     return true;
   };

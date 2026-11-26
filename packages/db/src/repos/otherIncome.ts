@@ -1,7 +1,12 @@
-import { addMonths, OTHER_INCOME_TYPES, type OtherIncomeType } from '@withinmeans/domain';
-import type { Selectable } from 'kysely';
+import {
+  addMonths,
+  MAX_OTHER_INCOME_CENTS,
+  OTHER_INCOME_TYPES,
+  type OtherIncomeType,
+} from '@withinmeans/domain';
+import type { Selectable, Transaction } from 'kysely';
 import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '../context.js';
-import type { Database, OtherIncomeTable } from '../db.js';
+import type { Database, DB, OtherIncomeTable } from '../db.js';
 import {
   assertCents,
   assertDate,
@@ -37,6 +42,26 @@ const newestFirst = (db: Database, ctx: HouseholdContext) =>
     .orderBy('created_at', 'desc')
     .orderBy('id');
 
+/** Income lands in an account still in use, and not in a brokerage account. */
+async function incomeAccountId(
+  trx: Transaction<DB>,
+  ctx: HouseholdContext,
+  asked: string | undefined,
+): Promise<string | null> {
+  const id = await depositAccountId(trx, ctx, asked);
+  if (id === null) return null;
+  const account = await trx
+    .selectFrom('accounts')
+    .select(['type', 'archived_at'])
+    .where('household_id', '=', ctx.householdId)
+    .where('id', '=', id)
+    .executeTakeFirstOrThrow();
+  if (account.archived_at !== null || account.type === 'brokerage') {
+    throw new InvalidInput('Pick a checking, savings or cash account');
+  }
+  return id;
+}
+
 export const otherIncome = {
   /** The entries dated in month `ym`, newest first. */
   async listForMonth(db: Database, ctx: HouseholdContext, ym: string): Promise<OtherIncome[]> {
@@ -57,6 +82,7 @@ export const otherIncome = {
     assertDate(input.date);
     assertCents(input.amountCents);
     if (input.amountCents <= 0) throw new InvalidInput('the amount must be more than zero');
+    if (input.amountCents > MAX_OTHER_INCOME_CENTS) throw new InvalidInput('the amount is too big');
     if (!OTHER_INCOME_TYPES.includes(input.type)) throw new InvalidInput('unknown income type');
     const source = cleanName(input.source);
     const note = input.note?.trim();
@@ -70,7 +96,7 @@ export const otherIncome = {
           source,
           type: input.type,
           amount_cents: input.amountCents,
-          account_id: await depositAccountId(trx, ctx, input.accountId),
+          account_id: await incomeAccountId(trx, ctx, input.accountId),
           note: note === undefined || note === '' ? null : note,
         })
         .returningAll()

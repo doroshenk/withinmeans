@@ -22,6 +22,9 @@ export const OTHER_INCOME_TYPE_LABELS: Record<OtherIncomeType, string> = {
   other: 'Other',
 };
 
+/** $100,000,000: far above any real entry, and totals stay exact. */
+export const MAX_OTHER_INCOME_CENTS = 10_000_000_000;
+
 export interface OtherIncomeItem {
   id: string;
   /** "YYYY-MM-DD": the day the money came in. */
@@ -75,7 +78,9 @@ const isDate = (text: string) => z.iso.date().safeParse(text).success;
 /** What is wrong with the form, if anything. */
 export function otherIncomeDraftError(draft: OtherIncomeDraft): string | undefined {
   if (draft.source.trim() === '') return 'Say where the money came from.';
-  if ((parseDollars(draft.amountText) ?? 0) <= 0) return 'Enter an amount more than zero.';
+  const amountCents = parseDollars(draft.amountText) ?? 0;
+  if (amountCents <= 0) return 'Enter an amount more than zero.';
+  if (amountCents > MAX_OTHER_INCOME_CENTS) return 'Enter an amount of $100,000,000 or less.';
   if (!isDate(draft.date)) return 'Pick the date the money came in.';
   return undefined;
 }
@@ -84,7 +89,7 @@ export const addOtherIncomeInput = z.object({
   date: z.iso.date(),
   source: z.string().trim().min(1),
   type: z.enum(OTHER_INCOME_TYPES),
-  amountCents: z.number().int().positive(),
+  amountCents: z.number().int().positive().max(MAX_OTHER_INCOME_CENTS),
   accountId: z.uuid().optional(),
   note: z
     .string()
