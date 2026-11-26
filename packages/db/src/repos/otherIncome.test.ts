@@ -95,10 +95,23 @@ describe('P2-04 other income repository', () => {
   });
 
   it.each([
+    ['removed', { archived_at: new Date('2026-11-01T12:00:00Z') }],
+    ['brokerage', { type: 'brokerage' as const }],
+  ])('refuses a deposit into a %s account', async (_, change) => {
+    await t.db.updateTable('accounts').set(change).where('id', '=', A.accountId).execute();
+
+    await expect(
+      otherIncome.create(t.db, A.ctx(), input({ accountId: A.accountId })),
+    ).rejects.toBeInstanceOf(InvalidInput);
+    expect(await sources('2026-11')).toEqual([]);
+  });
+
+  it.each([
     { source: ' ' },
     { amountCents: 0 },
     { amountCents: -1 },
     { amountCents: 0.5 },
+    { amountCents: 10_000_000_001 },
     { date: '11/12/2026' },
     { type: 'lottery' as 'other' },
   ])('refuses %o', async (over) => {

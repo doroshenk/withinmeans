@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   addOtherIncomeInput,
+  otherIncomeInput,
+  removeOtherIncomeInput,
   OTHER_INCOME_TYPE_LABELS,
   OTHER_INCOME_TYPES,
   otherIncomeDraftError,
@@ -128,6 +130,13 @@ describe('P2-04 the one-time income form', () => {
     expect(otherIncomeDraftError({ ...draft, ...over })).toBe(message);
   });
 
+  it('takes up to $100,000,000, so totals stay exact', () => {
+    expect(otherIncomeDraftError({ ...draft, amountText: '100000000' })).toBeUndefined();
+    expect(otherIncomeDraftError({ ...draft, amountText: '100000000.01' })).toBe(
+      'Enter an amount of $100,000,000 or less.',
+    );
+  });
+
   const input = {
     source: ' Marketplace sale ',
     type: 'sale',
@@ -149,9 +158,30 @@ describe('P2-04 the one-time income form', () => {
     { type: 'lottery' },
     { amountCents: 0 },
     { amountCents: 10.5 },
+    { amountCents: 10_000_000_001 },
     { date: '2026-02-30' },
     { accountId: 'checking' },
   ])('the API refuses %o', (over) => {
     expect(addOtherIncomeInput.safeParse({ ...input, ...over }).success).toBe(false);
+  });
+});
+
+describe('P2-04 reading and removing income', () => {
+  it.each(['2026-01', '2026-10', '2026-12'])('asks for the month %s, or this month', (ym) => {
+    expect(otherIncomeInput.parse({ ym })).toEqual({ ym });
+    expect(otherIncomeInput.parse({})).toEqual({});
+  });
+
+  it.each(['2026-00', '2026-13', '2026-1', '26-11', '2026-11-18', 'x2026-11', 'abcd-11'])(
+    'refuses the month %s',
+    (ym) => {
+      expect(otherIncomeInput.safeParse({ ym }).success).toBe(false);
+    },
+  );
+
+  it('removes by id', () => {
+    const id = '00000000-0000-4000-8000-000000000001';
+    expect(removeOtherIncomeInput.parse({ id })).toEqual({ id });
+    expect(removeOtherIncomeInput.safeParse({ id: 'i1' }).success).toBe(false);
   });
 });

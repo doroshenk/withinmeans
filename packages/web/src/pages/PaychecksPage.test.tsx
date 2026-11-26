@@ -260,6 +260,26 @@ describe('P2-04 one-time income form', () => {
     expect(field('Amount')).toHaveValue('25');
   });
 
+  it('says an entry was saved when only the reload fails, so it is not added twice', async () => {
+    const { client, calls } = fakeClient();
+    const load = client.otherIncome.query;
+    let loads = 0;
+    client.otherIncome.query = (input) =>
+      ++loads === 1 ? load(input) : Promise.reject(new Error('boom'));
+    const user = await open(client);
+
+    await user.type(field('Source'), 'Birthday');
+    await user.type(field('Amount'), '25');
+    await user.click(submit());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Saved, but this page couldn’t refresh. Reload it before trying again.',
+    );
+    expect(calls.add).toHaveBeenCalledOnce();
+    expect(screen.getByRole('status')).toHaveTextContent('Added $25.00 to November 2026.');
+    expect(field('Source')).toHaveValue('');
+  });
+
   it('puts the cursor in the form from the header button', async () => {
     const user = await open(fakeClient().client);
 
