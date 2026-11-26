@@ -38,6 +38,7 @@ const WRITE_PROCEDURES = [
   'stopPaySchedule',
   'restartPaySchedule',
   'markPaycheckReceived',
+  'removePaySchedule',
 ] as const;
 
 /** Mutations that need no membership: anyone may call them (the token or the new login is the credential). */

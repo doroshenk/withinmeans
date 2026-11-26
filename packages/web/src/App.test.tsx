@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { accountsStub } from './pages/accountsStub';
 import { categoriesStub } from './pages/categoriesStub';
+import { paychecksStub } from './pages/paychecksStub';
 import { recurringBillsStub } from './pages/recurringBillsStub';
 import { welcomeStub } from './pages/welcomeStub';
 import userEvent from '@testing-library/user-event';
@@ -51,6 +52,7 @@ function setup(token: string | undefined, location?: { pathname: string; search:
     ...accountsStub,
     ...categoriesStub,
     ...recurringBillsStub,
+    ...paychecksStub,
     ...welcomeStub,
     setupProgress: { query: () => Promise.resolve([]) },
     saveSetupStep: { mutate: () => Promise.resolve({}) },

@@ -137,6 +137,10 @@ export const paySchedules = {
     });
   },
 
+  async remove(_db: Database, _ctx: HouseholdContext, _id: string): Promise<void> {
+    throw new Error('not implemented');
+  },
+
   /**
    * Spec §5.9 "Stop this paycheck": sets `ended_on` to `today` and deletes the paychecks after it
    * that are in open months and not received. Stopping a stopped schedule changes nothing.

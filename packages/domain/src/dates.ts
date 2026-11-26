@@ -54,6 +54,10 @@ const SHORT_MONTHS = [
   'Dec',
 ] as const;
 
+export function formatMonthDay(_date: string): string {
+  throw new Error('not implemented');
+}
+
 /** "Wed, Nov 18" from "2026-11-18". */
 export function formatShortDate(date: string): string {
   const { dayOfWeek, month, day } = Temporal.PlainDate.from(date);

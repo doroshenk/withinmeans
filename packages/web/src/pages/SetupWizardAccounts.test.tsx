@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider } from '../permissions';
 import { accountsStub } from './accountsStub';
 import { categoriesStub } from './categoriesStub';
+import { paychecksStub } from './paychecksStub';
 import { recurringBillsStub } from './recurringBillsStub';
 import { SetupWizard, type SetupClient } from './SetupWizard';
 import { welcomeStub } from './welcomeStub';
@@ -17,6 +18,7 @@ function fakeClient(accountCount: number) {
     saveSetupStep: { mutate: save },
     ...categoriesStub,
     ...recurringBillsStub,
+    ...paychecksStub,
     ...welcomeStub,
     ...accountsStub,
     setupAccounts: {

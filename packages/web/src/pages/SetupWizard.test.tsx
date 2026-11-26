@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider, type Role } from '../permissions';
 import { accountsStub } from './accountsStub';
 import { categoriesStub } from './categoriesStub';
+import { paychecksStub } from './paychecksStub';
 import { recurringBillsStub } from './recurringBillsStub';
 import { welcomeStub } from './welcomeStub';
 import { SetupWizard, type SetupClient } from './SetupWizard';
@@ -28,6 +29,7 @@ function fakeClient(initial: Row[] = []) {
     ...accountsStub,
     ...categoriesStub,
     ...recurringBillsStub,
+    ...paychecksStub,
     ...welcomeStub,
   };
   return { client, save };
@@ -236,6 +238,7 @@ describe('P1-08 setup wizard', () => {
       ...accountsStub,
       ...categoriesStub,
       ...recurringBillsStub,
+      ...paychecksStub,
       ...welcomeStub,
       setupProgress: { query: () => Promise.reject(new Error('boom')) },
       saveSetupStep: { mutate: vi.fn() },
@@ -387,7 +390,7 @@ describe('P1-13 setup step 9: review and finish', () => {
     const expected = [
       ['Welcome', 'Done', 'Edit'],
       ['Bank accounts', 'Not started', 'Finish this'],
-      ['Paychecks', 'Skipped · Coming soon', 'Add now'],
+      ['Paychecks', 'Skipped', 'Add now'],
       ['Bill categories', 'Not started', 'Finish this'],
       ['Recurring bills', 'Not started', 'Finish this'],
       ['Credit cards', 'Coming soon', 'Add now'],

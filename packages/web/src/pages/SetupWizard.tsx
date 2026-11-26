@@ -15,11 +15,12 @@ import { GENERIC_ERROR } from '../auth/errors';
 import { useCan } from '../permissions';
 import { AccountsStep, type AccountsClient } from './AccountsStep';
 import { CategoriesStep, type CategoriesClient } from './CategoriesStep';
+import type { PaychecksClient } from './PaychecksStep';
 import { RecurringBillsStep, type RecurringBillsClient } from './RecurringBillsStep';
 import { WelcomeStep, type WelcomeClient } from './WelcomeStep';
 
 export interface SetupClient
-  extends AccountsClient, CategoriesClient, RecurringBillsClient, WelcomeClient {
+  extends AccountsClient, CategoriesClient, PaychecksClient, RecurringBillsClient, WelcomeClient {
   setupProgress: {
     query: () => Promise<{ step: number; status: 'done' | 'skipped' }[]>;
   };
