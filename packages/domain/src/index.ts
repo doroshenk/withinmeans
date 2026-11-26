@@ -13,3 +13,4 @@ export * from './monthBills';
 export * from './paydays';
 export * from './recurringOverview';
 export * from './paychecks';
+export * from './otherIncome';

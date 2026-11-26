@@ -12,6 +12,7 @@ import { invites } from './invites.js';
 import { memberships } from './memberships.js';
 import { months } from './months.js';
 import { openMonth } from './openMonth.js';
+import { otherIncome } from './otherIncome.js';
 import { paychecks } from './paychecks.js';
 import { paySchedules } from './paySchedules.js';
 import { recurringBills } from './recurringBills.js';
@@ -314,6 +315,36 @@ const cases: Case[] = [
   },
 
   {
+    name: 'otherIncome.listForMonth',
+    write: false,
+    run: (db, ctx, t) => otherIncome.listForMonth(db, ctx, t.ym),
+  },
+  {
+    name: 'otherIncome.listRecent',
+    write: false,
+    run: (db, ctx) => otherIncome.listRecent(db, ctx),
+  },
+  {
+    name: 'otherIncome.create',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) =>
+      otherIncome.create(db, ctx, {
+        date: '2026-11-12',
+        source: 'Gift',
+        type: 'gift',
+        amountCents: 2_500,
+        accountId: t.accountId,
+      }),
+  },
+  {
+    name: 'otherIncome.remove',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) => otherIncome.remove(db, ctx, t.otherIncomeId),
+  },
+
+  {
     name: 'setupProgress.list',
     write: false,
     marker: (t) => `"step":${t.setupStep}`,
@@ -422,6 +453,7 @@ describe('P1-01 isolation: coverage of the table', () => {
       recurringBills,
       paySchedules,
       paychecks,
+      otherIncome,
       setupProgress,
       householdExport,
     };
