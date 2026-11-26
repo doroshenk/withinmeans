@@ -1,3 +1,4 @@
+import type { OtherIncomeType } from '@withinmeans/domain';
 import { Kysely, PostgresDialect, type Generated } from 'kysely';
 import pg from 'pg';
 
@@ -151,7 +152,7 @@ export interface OtherIncomeTable {
   /** 'YYYY-MM-DD' */
   date: string;
   source: string;
-  type: 'side_work' | 'sale' | 'refund' | 'gift' | 'bonus' | 'other';
+  type: OtherIncomeType;
   amount_cents: number;
   account_id: string | null;
   note: string | null;

@@ -1451,3 +1451,177 @@ button.category-swatch {
     color: var(--color-muted);
   }
 }
+
+/* One-time income (P2-04, design/Paychecks.png): the form beside the month's list. */
+.notice {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.income-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  align-items: start;
+  gap: 24px;
+}
+
+.income-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0 16px;
+}
+
+.income-wide {
+  grid-column: 1 / -1;
+}
+
+.income-recent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.chip-button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-input);
+  border-radius: 999px;
+  background: var(--color-bg);
+  color: var(--color-ink-2);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.income-submit {
+  width: 100%;
+}
+
+.income-total {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.income-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.income-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border-card);
+}
+
+.income-initial {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.income-side_work {
+  background: #ddefec;
+  color: #0b4f54;
+}
+
+.income-sale {
+  background: #f8edcf;
+  color: #6b4e00;
+}
+
+.income-refund {
+  background: #dfeaf6;
+  color: #1f4e85;
+}
+
+.income-gift {
+  background: #f7e1eb;
+  color: #8a2557;
+}
+
+.income-bonus {
+  background: #e9e5f7;
+  color: #4a3a99;
+}
+
+.income-other {
+  background: #f3eadc;
+  color: #4a4038;
+}
+
+.income-what {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.income-what span {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.income-amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.income-confirm {
+  flex-basis: 100%;
+}
+
+.section-empty {
+  margin-top: 12px;
+  padding: 20px;
+  border: 1px dashed var(--color-border-input);
+  border-radius: 14px;
+}
+
+.section-empty p {
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+  .income-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .income-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Narrow rows keep the source name on one line where they can. */
+@media (max-width: 767px) {
+  .income-list li {
+    gap: 8px;
+  }
+
+  .income-initial {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+
+  .income-list .icon-danger {
+    min-width: 44px;
+    padding-inline: 0;
+  }
+}

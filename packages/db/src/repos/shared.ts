@@ -1,5 +1,5 @@
 import type { Transaction } from 'kysely';
-import { Conflict, InvalidInput, NotFound } from '../context.js';
+import { Conflict, InvalidInput, NotFound, type HouseholdContext } from '../context.js';
 import type { Database, DB } from '../db.js';
 import { withRetry } from '../retry.js';
 
@@ -57,4 +57,43 @@ export function inTransaction<T>(
 /** An update or delete that matched nothing means the id is not in the caller's household. */
 export function mustHaveChanged(affected: bigint | undefined, what: string): void {
   if (affected === undefined || affected === 0n) throw new NotFound(`${what} not found`);
+}
+
+/**
+ * Spec §5.11: closed months are read-only. Runs inside the caller's transaction and locks the
+ * Month row, so that closing the month at the same moment can't slip past this check. A month
+ * that was never opened has no row and is not closed.
+ */
+export async function assertMonthNotClosed(
+  trx: Transaction<DB>,
+  ctx: HouseholdContext,
+  ym: string,
+): Promise<void> {
+  const month = await trx
+    .selectFrom('months')
+    .select('status')
+    .where('household_id', '=', ctx.householdId)
+    .where('ym', '=', ym)
+    .forUpdate()
+    .executeTakeFirst();
+  if (month?.status === 'closed') throw new Conflict('That month is closed');
+}
+
+/** The account asked for, which must be the household's, or else its primary checking account. */
+export async function depositAccountId(
+  trx: Transaction<DB>,
+  ctx: HouseholdContext,
+  accountId: string | undefined,
+): Promise<string | null> {
+  const query = trx.selectFrom('accounts').select('id').where('household_id', '=', ctx.householdId);
+  if (accountId === undefined) {
+    const primary = await query
+      .where('is_primary_checking', '=', true)
+      .where('archived_at', 'is', null)
+      .executeTakeFirst();
+    return primary?.id ?? null;
+  }
+  const found = await query.where('id', '=', accountId).executeTakeFirst();
+  if (found === undefined) throw new NotFound('Account not found');
+  return found.id;
 }

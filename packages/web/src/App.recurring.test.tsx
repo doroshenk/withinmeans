@@ -6,6 +6,7 @@ import type { AuthClient } from './auth/types';
 import { accountsStub } from './pages/accountsStub';
 import { categoriesStub } from './pages/categoriesStub';
 import type { MeResult } from './pages/Hello';
+import { otherIncomeStub } from './pages/otherIncomeStub';
 import { recurringBillsStub } from './pages/recurringBillsStub';
 import { welcomeStub } from './pages/welcomeStub';
 
@@ -29,6 +30,7 @@ function start(me: () => Promise<MeResult>) {
     ...accountsStub,
     ...categoriesStub,
     ...recurringBillsStub,
+    ...otherIncomeStub,
     ...welcomeStub,
     setupProgress: { query: () => Promise.resolve([]) },
     saveSetupStep: { mutate: () => Promise.resolve({}) },

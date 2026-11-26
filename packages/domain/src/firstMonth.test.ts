@@ -1,6 +1,12 @@
 import { Temporal } from 'temporal-polyfill';
 import { describe, expect, it } from 'vitest';
-import { firstMonthFor, firstMonthOptions, monthLabel, startFirstMonthInput } from './firstMonth';
+import {
+  firstMonthFor,
+  firstMonthOptions,
+  monthLabel,
+  monthName,
+  startFirstMonthInput,
+} from './firstMonth';
 
 const TODAY = Temporal.PlainDate.from('2026-11-18');
 
@@ -51,6 +57,10 @@ describe('P1-09 first month (spec §3 step 1)', () => {
       'November',
       'December',
     ]);
+  });
+
+  it('P2-04: names a month without its year', () => {
+    expect(monthName('2026-11')).toBe('November');
   });
 
   it('rejects a malformed month label input', () => {

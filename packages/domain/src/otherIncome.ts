@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import type { YearMonth } from './dates';
-import type { Cents } from './money';
+import { parseDollars } from './accounts';
+import { parseYm, type YearMonth } from './dates';
+import { sumCents, type Cents } from './money';
 
 export const OTHER_INCOME_TYPES = [
   'side_work',
@@ -13,12 +14,12 @@ export const OTHER_INCOME_TYPES = [
 export type OtherIncomeType = (typeof OTHER_INCOME_TYPES)[number];
 
 export const OTHER_INCOME_TYPE_LABELS: Record<OtherIncomeType, string> = {
-  side_work: '',
-  sale: '',
-  refund: '',
-  gift: '',
-  bonus: '',
-  other: '',
+  side_work: 'Side work',
+  sale: 'Sale',
+  refund: 'Refund',
+  gift: 'Gift',
+  bonus: 'Bonus',
+  other: 'Other',
 };
 
 export interface OtherIncomeItem {
@@ -42,32 +43,54 @@ export interface OtherIncomeDraft {
   date: string;
 }
 
+/** "YYYY-MM-DD" strings sort in calendar order. */
+const newestFirst = (a: { date: string }, b: { date: string }) => b.date.localeCompare(a.date);
+
+/** Spec §5.6: an entry counts in the month of its date. Newest first. */
 export function otherIncomeForMonth<T extends { date: string }>(
-  _items: readonly T[],
-  _ym: YearMonth,
+  items: readonly T[],
+  ym: YearMonth,
 ): T[] {
-  throw new Error('not implemented');
+  parseYm(ym);
+  return items.filter((item) => item.date.startsWith(`${ym}-`)).sort(newestFirst);
 }
 
-export function otherIncomeTotalCents(_items: readonly { amountCents: Cents }[]): Cents {
-  throw new Error('not implemented');
+export function otherIncomeTotalCents(items: readonly { amountCents: Cents }[]): Cents {
+  return sumCents(items.map((item) => item.amountCents));
 }
 
-export function recentSources(_items: readonly OtherIncomeItem[]): RecentSource[] {
-  throw new Error('not implemented');
+const RECENT_SOURCES = 3;
+
+/** The form's shortcuts: the last few sources used, each as it was entered most recently. */
+export function recentSources(items: readonly (RecentSource & { date: string })[]): RecentSource[] {
+  const latest = new Map<string, RecentSource>();
+  for (const { source, type, accountId } of [...items].sort(newestFirst)) {
+    if (!latest.has(source)) latest.set(source, { source, type, accountId });
+  }
+  return [...latest.values()].slice(0, RECENT_SOURCES);
 }
 
-export function otherIncomeDraftError(_draft: OtherIncomeDraft): string | undefined {
-  throw new Error('not implemented');
+const isDate = (text: string) => z.iso.date().safeParse(text).success;
+
+/** What is wrong with the form, if anything. */
+export function otherIncomeDraftError(draft: OtherIncomeDraft): string | undefined {
+  if (draft.source.trim() === '') return 'Say where the money came from.';
+  if ((parseDollars(draft.amountText) ?? 0) <= 0) return 'Enter an amount more than zero.';
+  if (!isDate(draft.date)) return 'Pick the date the money came in.';
+  return undefined;
 }
 
 export const addOtherIncomeInput = z.object({
-  date: z.string(),
-  source: z.string(),
+  date: z.iso.date(),
+  source: z.string().trim().min(1),
   type: z.enum(OTHER_INCOME_TYPES),
-  amountCents: z.number(),
-  accountId: z.string().optional(),
-  note: z.string().optional(),
+  amountCents: z.number().int().positive(),
+  accountId: z.uuid().optional(),
+  note: z
+    .string()
+    .trim()
+    .transform((note) => (note === '' ? undefined : note))
+    .optional(),
 });
 export const removeOtherIncomeInput = z.object({ id: z.uuid() });
 export const otherIncomeInput = z.object({
