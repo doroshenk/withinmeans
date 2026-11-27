@@ -13,6 +13,7 @@
     "coverage": "vitest run --coverage --passWithNoTests",
     "typecheck": "tsc -p .",
     "migrate": "tsx src/cli/migrate.ts",
+    "seed": "tsx src/cli/seed.ts",
     "conformance": "vitest run --no-file-parallelism"
   },
   "dependencies": {
