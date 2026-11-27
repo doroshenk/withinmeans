@@ -8,6 +8,7 @@ import {
   type BillsMonthSummary,
 } from '@withinmeans/domain';
 import { useId } from 'react';
+import { categoryChipStyle } from '../recurring/categoryChipStyle';
 import type { BillsData } from './types';
 
 /** "By category": the month's totals, largest first. */
@@ -28,7 +29,12 @@ export function CategoryCard({
       <ul className="category-totals">
         {totals.rows.map((row) => (
           <li key={row.categoryId ?? 'cards'}>
-            <span>{row.name}</span>
+            <span
+              className={row.colorIndex === null ? 'category-chip' : 'category-chip category-tint'}
+              {...(row.colorIndex !== null && { style: categoryChipStyle(row.colorIndex) })}
+            >
+              {row.name}
+            </span>
             <strong>{formatMoney(row.cents)}</strong>
             <div className="progress" aria-hidden="true">
               <span

@@ -88,7 +88,7 @@ export function WeeksCard({
             aria-expanded={open[index]}
             onClick={() => setOpen((now) => now.map((o, i) => (i === index ? !o : o)))}
           >
-            <span>
+            <span className="bill-week-title">
               <strong>{`Week ${w.week}`}</strong>
               {` · ${w.range}`}
             </span>
@@ -100,10 +100,14 @@ export function WeeksCard({
                 }`}
             </span>
             {w.state !== 'none' && (
-              <span className={`bill-badge bill-badge-${w.state}`}>{STATE_LABEL[w.state]}</span>
+              <span className={`bill-badge bill-badge-state bill-badge-${w.state}`}>
+                {STATE_LABEL[w.state]}
+              </span>
             )}
             <strong className="bill-week-total">{formatMoney(w.totalCents)}</strong>
-            <span aria-hidden="true">{open[index] ? '▴' : '▾'}</span>
+            <span className="bill-week-chevron" aria-hidden="true">
+              {open[index] ? '▴' : '▾'}
+            </span>
           </button>
           {open[index] &&
             (w.bills.length === 0 ? (

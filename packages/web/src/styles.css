@@ -1942,9 +1942,8 @@ button.category-swatch {
 
 .bill-week-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   min-height: 48px;
   padding: 10px 14px;
@@ -1965,6 +1964,12 @@ button.category-swatch {
 
 .bill-week-total {
   font-variant-numeric: tabular-nums;
+}
+
+.bill-week-title,
+.bill-week-total,
+.bill-badge {
+  white-space: nowrap;
 }
 
 .bill-badge {
@@ -2101,6 +2106,7 @@ button.category-swatch {
 .category-totals li {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
   font-variant-numeric: tabular-nums;
@@ -2109,6 +2115,13 @@ button.category-swatch {
 .category-totals .progress {
   flex-basis: 100%;
   margin-top: -4px;
+}
+
+/* The credit cards line has no category colour. */
+.category-totals .category-chip:not(.category-tint) {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-surface);
 }
 
 .side-list li {
@@ -2152,13 +2165,48 @@ button.category-swatch {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .bill-week-count {
-    flex-basis: 100%;
-    order: 1;
-    margin-left: 0;
+  .bill-week-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'title total chevron'
+      'count state state'
+      'now now now';
+    row-gap: 6px;
+  }
+
+  .bill-week-title {
+    grid-area: title;
   }
 
   .bill-week-total {
+    grid-area: total;
+  }
+
+  .bill-week-chevron {
+    grid-area: chevron;
+  }
+
+  .bill-week-count {
+    grid-area: count;
+    margin-left: 0;
+  }
+
+  .bill-badge-state {
+    grid-area: state;
+    justify-self: end;
+  }
+
+  .bill-badge-now {
+    grid-area: now;
+    justify-self: start;
+  }
+
+  .bill-what {
+    flex-basis: 120px;
+  }
+
+  .bill-actions {
     margin-left: auto;
   }
 }
