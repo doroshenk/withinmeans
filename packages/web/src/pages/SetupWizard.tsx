@@ -3,6 +3,7 @@ import {
   type FirstMonthChoice,
   type ReviewRow,
   markStep,
+  setupCardsError,
   resumeStep,
   reviewRows,
   setupAccountsError,
@@ -15,13 +16,21 @@ import { useEffect, useState } from 'react';
 import { GENERIC_ERROR } from '../auth/errors';
 import { useCan } from '../permissions';
 import { AccountsStep, type AccountsClient } from './AccountsStep';
+import type { CardsClient } from './cards/types';
+import { CardsStep } from './CardsStep';
 import { CategoriesStep, type CategoriesClient } from './CategoriesStep';
 import { PaychecksStep, type PaychecksClient } from './PaychecksStep';
 import { RecurringBillsStep, type RecurringBillsClient } from './RecurringBillsStep';
 import { WelcomeStep, type WelcomeClient } from './WelcomeStep';
 
 export interface SetupClient
-  extends AccountsClient, CategoriesClient, PaychecksClient, RecurringBillsClient, WelcomeClient {
+  extends
+    AccountsClient,
+    CardsClient,
+    CategoriesClient,
+    PaychecksClient,
+    RecurringBillsClient,
+    WelcomeClient {
   setupProgress: {
     query: () => Promise<{ step: number; status: 'done' | 'skipped' }[]>;
   };
@@ -43,8 +52,8 @@ type Load =
 
 const LAST = SETUP_STEPS.length;
 
-/** Steps with no screen yet. The ticket that builds a step removes it (P2-07, P3-01, P3-05). */
-const COMING_SOON: ReadonlySet<number> = new Set([6, 7, 8]);
+/** Steps with no screen yet. The ticket that builds a step removes it (P3-01, P3-05). */
+const COMING_SOON: ReadonlySet<number> = new Set([7, 8]);
 
 const STATUS_LABEL = { todo: '', done: 'Done', skipped: 'Skipped' } as const;
 
@@ -108,6 +117,14 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
       if (step.id === 3 && status === 'done') {
         const { schedules } = await client.setupPaychecks.query();
         const problem = setupPaychecksError(schedules.filter((s) => s.endedOn === null).length);
+        if (problem !== undefined) {
+          setBlocked(problem);
+          return;
+        }
+      }
+      // Step 6 is skipped, or finished with at least one card.
+      if (step.id === 6 && status === 'done') {
+        const problem = setupCardsError((await client.creditCards.query()).length);
         if (problem !== undefined) {
           setBlocked(problem);
           return;
@@ -212,6 +229,8 @@ export function SetupWizard({ client, householdName, onExit }: SetupWizardProps)
           <CategoriesStep client={client} />
         ) : step.id === 5 ? (
           <RecurringBillsStep client={client} />
+        ) : step.id === 6 ? (
+          <CardsStep client={client} />
         ) : (
           soon && <p className="wizard-soon">Coming soon</p>
         )}

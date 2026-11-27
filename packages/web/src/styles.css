@@ -2218,3 +2218,89 @@ button.category-swatch {
     margin-left: auto;
   }
 }
+
+/* Credit cards (P2-07, design/Bills.png). */
+.card-rows {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--color-bg);
+}
+
+.card-row-missing {
+  border: 1px dashed var(--color-border-input);
+  background: none;
+}
+
+.card-what {
+  display: grid;
+  flex: 1 1 150px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.card-what span {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.card-what .card-plan {
+  font-weight: 600;
+  color: var(--color-ok-text);
+}
+
+.card-what .card-missing,
+.card-previous {
+  font-weight: 600;
+  color: var(--color-warning-text);
+}
+
+.card-previous {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.card-amount {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.card-pay {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-already-paid {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.card-counts {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--color-bg);
+}

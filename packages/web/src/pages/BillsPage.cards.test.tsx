@@ -177,7 +177,9 @@ describe('P2-07 credit cards on Bills', () => {
   });
 
   it('offers to add a card when there are none', async () => {
-    const { client, calls } = fakeClient({ data: november({ cards: [] }) });
+    // A section's empty state shows on a page that otherwise has data (spec §6.14).
+    const income = [{ id: 'i', type: 'sale' as const, amountCents: 100 }];
+    const { client, calls } = fakeClient({ data: november({ cards: [], otherIncome: income }) });
     const user = await open(client);
     expect(cards()).toHaveTextContent('No credit cards yet');
 

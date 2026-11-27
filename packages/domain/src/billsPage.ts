@@ -138,10 +138,12 @@ export function billsMonthSummary(
 ): BillsMonthSummary {
   const paid = month.bills.filter((b) => b.paid);
   const billsCents = totalOf(month.bills);
-  const paidCents = totalOf(paid);
+  const cardsPaidCents = sumCents(month.cards.map((c) => c.paidCents ?? 0));
+  const paidCents = sumCents([totalOf(paid), cardsPaidCents]);
   const outCents = moneyOut(month);
   const otherCents = otherIncomeTotalCents(month.otherIncome);
   const checkingMovedCents = month.checkingMovedCents ?? 0;
+  const share = outCents > 0 ? percentOf(paidCents, outCents) : 0;
   return {
     incomeCents: subCents(moneyIn(month), checkingMovedCents),
     paychecksReceived: month.paychecks.filter((p) => p.receivedCents !== null).length,
@@ -153,7 +155,8 @@ export function billsMonthSummary(
     cardsCents: subCents(outCents, billsCents),
     outCents,
     paidCents,
-    paidPct: outCents > 0 ? percentOf(paidCents, outCents) : 0,
+    // A card can be paid more than planned.
+    paidPct: share > 100 ? 100 : share,
     paidCount: paid.length,
     billCount: month.bills.length,
     leftCents: kept(month),

@@ -96,6 +96,7 @@ function fakeClient(options: { data?: BillsData; fail?: boolean; loadFails?: boo
     };
   };
   const client: BillsPageClient = {
+    ...billsPageStub,
     billsPage: {
       query: (input) => {
         calls.query(input);

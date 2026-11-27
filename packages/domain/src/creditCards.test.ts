@@ -9,6 +9,7 @@ import {
   cardDueDate,
   cardMonthRows,
   cardPlanText,
+  cardPreviousText,
   carriedCents,
   carryText,
   defaultPlanChoice,
@@ -19,6 +20,7 @@ import {
   plannedForChoice,
   removeCreditCardInput,
   saveCardStatementInput,
+  setupCardsError,
   statementDraftError,
   statementError,
   unmarkCardPaidInput,
@@ -81,6 +83,12 @@ describe('P2-07 statement rules (spec §5.10)', () => {
         minimumCents: 38_744,
       }).success,
     ).toBe(false);
+  });
+
+  it('accepts a statement within the rules', () => {
+    const input = { cardId: '11111111-1111-4111-8111-111111111111', ym: '2026-11', ...ok };
+
+    expect(saveCardStatementInput.safeParse(input).success).toBe(true);
   });
 
   it.each([
@@ -262,6 +270,17 @@ describe('P2-07 row texts (design/Bills.png)', () => {
     );
   });
 
+  it('says what the last statement was, and the change once a balance is typed', () => {
+    expect(cardPreviousText(9_820, null, '2026-11')).toBe('October statement: $98.20');
+    expect(cardPreviousText(9_820, 14_236, '2026-11')).toBe(
+      'October statement: $98.20 · up $44.16',
+    );
+    expect(cardPreviousText(9_820, 9_000, '2027-01')).toBe(
+      'December statement: $98.20 · down $8.20',
+    );
+    expect(cardPreviousText(100, 100, '2026-11')).toBe('October statement: $1.00 · no change');
+  });
+
   it('compares with the month before', () => {
     expect(cardChangeText(128_417, 110_255, '2026-11')).toBe('+$181.62 vs Oct');
     expect(cardChangeText(96_840, 104_010, '2026-11')).toBe('−$71.70 vs Oct');
@@ -323,6 +342,11 @@ describe('P2-07 the forms', () => {
     expect(markCardPaidInput.safeParse({ ...paid, paidCents: -1 }).success).toBe(false);
     expect(unmarkCardPaidInput.safeParse(paid).success).toBe(true);
     expect(unmarkCardPaidInput.safeParse({ ...paid, ym: '2026-13' }).success).toBe(false);
+  });
+
+  it('finishes setup step 6 only with a card', () => {
+    expect(setupCardsError(0)).toBe('Add a card, or skip for now.');
+    expect(setupCardsError(1)).toBeUndefined();
   });
 
   const draft = {

@@ -5,6 +5,7 @@ import {
   today,
   type addBillInput,
   type BillKind,
+  type CardRow,
   type openMonthInput,
   type OtherIncomeType,
   type setBillPaidInput,
@@ -12,6 +13,7 @@ import {
 } from '@withinmeans/domain';
 import { TRPCError } from '@trpc/server';
 import type { z } from 'zod';
+import { monthCards } from './creditCards.js';
 import { translated } from './errors.js';
 import type { MemberContext } from './invitePartner.js';
 import { pagePaychecks, type PagePaycheck } from './paychecks.js';
@@ -45,6 +47,8 @@ export interface BillsPageView {
   categories: { id: string; name: string; colorIndex: number }[];
   paychecks: PagePaycheck[];
   otherIncome: { id: string; type: OtherIncomeType; amountCents: number }[];
+  /** Spec §5.10: each card's row for the month. */
+  cards: CardRow[];
 }
 
 /** The household's first month and its date today. */
@@ -107,12 +111,13 @@ export async function billsPage(ctx: Ctx, ym?: string): Promise<BillsPageView> {
   const shown = ym ?? household.today.slice(0, 7);
   const month = await months.get(ctx.db, ctx.household, shown);
   const started = month !== undefined;
-  const [stored, preview, allCategories, paychecks, income] = await Promise.all([
+  const [stored, preview, allCategories, paychecks, income, cards] = await Promise.all([
     storedBills(ctx, shown),
     started ? [] : previewBills(ctx, shown, household.today),
     categories.list(ctx.db, ctx.household, { includeArchived: true }),
     pagePaychecks(ctx, shown, started, household.today),
     otherIncome.listForMonth(ctx.db, ctx.household, shown),
+    monthCards(ctx, shown),
   ]);
   return {
     today: household.today,
@@ -125,6 +130,7 @@ export async function billsPage(ctx: Ctx, ym?: string): Promise<BillsPageView> {
     ),
     categories: allCategories.map((c) => ({ id: c.id, name: c.name, colorIndex: c.color_index })),
     paychecks,
+    cards,
     otherIncome: income.map((i) => ({
       id: i.id,
       type: i.type,
