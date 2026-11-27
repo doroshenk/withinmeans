@@ -58,7 +58,12 @@ export function averageCents(values: readonly Cents[]): Cents | null {
   return Math.floor((total * 2 + values.length) / (values.length * 2));
 }
 
-/** How many whole times `unit` fits in `amount`. */
-export function wholeTimes(_amount: Cents, _unit: Cents): number {
-  throw new Error('not implemented');
+/** How many whole times `unit` (positive) fits in `amount` (zero or more). */
+export function wholeTimes(amount: Cents, unit: Cents): number {
+  assertCents(amount, 'amount');
+  assertCents(unit, 'unit');
+  if (amount < 0) throw new RangeError('amount must not be negative');
+  if (unit <= 0) throw new RangeError('unit must be greater than zero');
+  // Integer math: removing the remainder first makes the division exact.
+  return (amount - (amount % unit)) / unit;
 }
