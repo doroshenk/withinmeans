@@ -115,12 +115,13 @@ export function QuickAddDialog({ quickAdd, onClose }: { quickAdd: QuickAdd; onCl
       const key = ++keys.current;
       setAdded((list) => [
         { ...entry, key, undo: undo?.(saved) },
-        // Saving a card's balance again replaces it.
+        // Saving a card's balance again for the same month replaces it; the date may have moved.
         ...list.filter(
           (e) =>
             !(entry.type === 'card' && e.type === 'card') ||
             e.name !== entry.name ||
-            e.date !== entry.date,
+            // "YYYY-MM"
+            e.date.slice(0, 7) !== entry.date.slice(0, 7),
         ),
       ]);
     });

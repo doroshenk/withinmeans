@@ -27,6 +27,8 @@ export interface StatementInput {
   minimumCents: number;
   plannedPaymentCents: number;
   alreadyPaid?: boolean;
+  /** "YYYY-MM-DD" in month `ym`. */
+  dueDate?: string;
 }
 
 /** The credit card calls the Bills page makes. */

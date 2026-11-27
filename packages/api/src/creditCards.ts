@@ -56,6 +56,7 @@ export async function monthCards(ctx: Ctx, ym: string): Promise<CardRow[]> {
       minimumCents: Number(s.minimum_cents),
       plannedPaymentCents: Number(s.planned_payment_cents),
       paidCents: s.paid_cents === null ? null : Number(s.paid_cents),
+      dueDate: s.due_date,
     })),
     ym,
   );
@@ -72,11 +73,15 @@ export const removeCreditCard = (ctx: Ctx, input: { id: string }) =>
 
 export const saveCardStatement = (ctx: Ctx, input: z.infer<typeof saveCardStatementInput>) =>
   translated(() => {
-    const { alreadyPaid, ...statement } = input;
+    const { alreadyPaid, dueDate, ...statement } = input;
     return cardStatements.save(
       ctx.db,
       ctx.household,
-      { ...statement, ...(alreadyPaid !== undefined && { alreadyPaid }) },
+      {
+        ...statement,
+        ...(alreadyPaid !== undefined && { alreadyPaid }),
+        ...(dueDate !== undefined && { dueDate }),
+      },
       now(ctx),
     );
   });

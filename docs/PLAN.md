@@ -158,7 +158,7 @@ Network Solutions changes can take a few hours to take effect. Don't touch the r
 |---|---|---|---|
 | Phase 0 — Walking skeleton | 13 | `v0.0.1` | A thin, deployed thread through every layer: repo and CI, AWS account, every CDK stack, Cognito sign-in, one API call that reads DSQL, the custom domain, backups. Ends deployed to dev **and** prod. |
 | Phase 1 — Foundation | 14 | `v0.1.0` | Sign-up (solo or partner), invites, sign-in, roles, the app shell, setup wizard steps 1, 2, 4, 5 and 9, and the JSON export. |
-| Phase 2 — Bills and paychecks | 13 | `v0.2.0` | The "within means" core: openMonth, bills, cards, paychecks, other income, money in/out. **Real use in prod starts here, alongside the Google Sheet for one month.** |
+| Phase 2 — Bills and paychecks | 14 | `v0.2.0` | The "within means" core: openMonth, bills, cards, paychecks, other income, money in/out. **Real use in prod starts here, alongside the Google Sheet for one month.** |
 | Phase 3 — Investments and money moves | 12 | `v0.3.0` | Holdings, options, dividends, splits, weekly money moves with carry-over, reinvest suggestions, bills covered. |
 | Phase 4 — Dashboard, accounts and months | 8 | `v0.4.0` | The dashboard with This week, the Accounts page with forecast and reconcile, the Start-a-new-month flow, locking and Unlock. |
 | Phase 5 — Year in review | 3 | `v0.5.0` | Year in review with projections, and the in-browser PDF. |
@@ -896,6 +896,28 @@ The "within means" core: openMonth, bills, cards, paychecks, other income, money
 - [ ] No test is skipped or weakened, and the same tests run on DSQL as before
 
 
+#### P2-14 · A due date on each month's card statement
+
+**Spec:** §4, §5.8, §5.10, §6.2
+**Blocked by:** P2-07
+
+**Goal.** A card's payment date moves a little from month to month. Each card statement has its own due date: it starts at the card's due day and can be changed every month, without changing the card or any other month.
+
+**Tests to write first (red):**
+
+- [ ] A new card statement defaults to the card's due day in that month, and a shorter month uses its last day
+- [ ] A changed due date is saved with that month's statement only: the card and other months keep theirs
+- [ ] A due date outside the statement's month is rejected
+- [ ] A statement saved without a due date shows the card's due day
+- [ ] The Bills page and the Quick Add card balance form have a "Payment due" field, pre-filled, and the card row shows the saved date
+- [ ] The JSON export includes the statement's due date
+
+**Also done when:**
+
+- [ ] New forward-only migration adds the column without changing existing rows
+- [ ] `docs/SPEC.md` §4 (CardStatement) and §5.10 describe the per-month due date; the forecast (§5.8) and "This week" (§5.13) use it
+
+
 ### Phase 3 — Investments and money moves → `v0.3.0`
 
 Holdings, options, dividends, splits, weekly money moves with carry-over, reinvest suggestions, bills covered.
@@ -1376,7 +1398,7 @@ The phone-only flows, bottom sheets, remaining empty states and the accessibilit
 4. **Open the repo folder itself:** `File → Open Folder… → C:\dev\WithinMeans\withinmeans`. Open the repo, not its parent, so Claude Code loads the repo's `CLAUDE.md`, `.claude/settings.json` and the `/work-ticket` skill.
 5. **Start each conversation in plan mode:** VS Code settings (`Ctrl+,`) → Extensions → Claude Code → *Initial Permission Mode* → `plan`. Every new ticket then starts with a plan you approve before any file changes.
 6. **Install the repo's Claude Code tooling:** in a terminal at the repo root run `node scripts/install-tooling.mjs` whenever a `setup/` folder appears. It moves Claude Code settings, skills and agents (and GitHub templates) from `setup/` into `.claude/` and `.github/`. Then commit everything (`git add -A && git commit -m "docs: development plan, rules and tooling" && git push`).
-7. **Create the GitHub issues once:** in a terminal at the repo root run `node scripts/create-issues.mjs`. It uses your `gh` login to create the phase labels, the 7 milestones and the 70 issues, then links each *Blocked by* to real issue numbers. Safe to re-run: it skips tickets that already exist.
+7. **Create the GitHub issues once:** in a terminal at the repo root run `node scripts/create-issues.mjs`. It uses your `gh` login to create the phase labels, the 7 milestones and the 71 issues, then links each *Blocked by* to real issue numbers. Safe to re-run: it skips tickets that already exist.
 8. **Turn on the run-on-save test view:** in the Testing sidebar, run Vitest in watch mode. You'll see red turn green as Claude works.
 
 ### 10.2 The ticket loop

@@ -224,6 +224,8 @@ export function CardPanel(props: PanelProps) {
   const { client } = quickAdd;
   const lists = useLists(() => client.billsPage.query({}));
   const [picked, setPicked] = useState<string | null>(null);
+  /** The date typed into a form, for the preview below it. */
+  const [typed, setTyped] = useState<{ form: string; date: string } | null>(null);
 
   return (
     <Loaded lists={lists}>
@@ -252,11 +254,12 @@ export function CardPanel(props: PanelProps) {
             </p>
           );
         }
+        // A new form when the card or what is saved for it changes.
+        const formKey = `${card.cardId} ${card.dueDate} ${JSON.stringify(card.statement)}`;
         return (
           <>
             <CardStatementForm
-              // A new form when the card or what is saved for it changes.
-              key={`${card.cardId} ${JSON.stringify(card.statement)}`}
+              key={formKey}
               card={card}
               cards={data.cards}
               ym={data.ym}
@@ -265,15 +268,18 @@ export function CardPanel(props: PanelProps) {
               onProblem={onProblem}
               onPick={(cardId) => {
                 onProblem(null);
+                // The next form starts from its card's own date.
+                setTyped(null);
                 setPicked(cardId);
               }}
+              onDueDate={(date) => setTyped({ form: formKey, date })}
               onCancel={onClose}
               onSave={(input) =>
                 void onSave({
                   type: 'card',
                   name: `${card.nickname} balance`,
                   amountCents: input.plannedPaymentCents,
-                  date: card.dueDate,
+                  date: input.dueDate ?? card.dueDate,
                   save: () => client.saveCardStatement.mutate(input),
                 }).then((saved) => {
                   // Stay on this card, to show what is now saved.
@@ -281,7 +287,12 @@ export function CardPanel(props: PanelProps) {
                 })
               }
             />
-            <Preview text={quickAddPreviewText('card', card.dueDate)} />
+            <Preview
+              text={quickAddPreviewText(
+                'card',
+                typed?.form === formKey ? typed.date : card.dueDate,
+              )}
+            />
           </>
         );
       }}

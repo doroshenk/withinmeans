@@ -1,5 +1,7 @@
 import {
+  cardDueDate,
   cardPreviousText,
+  daysInMonth,
   defaultPlanChoice,
   dollarText,
   formatMoney,
@@ -31,6 +33,8 @@ export interface CardStatementFormProps {
   /** Shows the draft's problem; null clears it. */
   onProblem: (problem: string | null) => void;
   onPick: (cardId: string) => void;
+  /** Told what is typed into "Payment due". */
+  onDueDate?: (date: string) => void;
   onCancel: () => void;
   onSave: (input: StatementInput) => void;
 }
@@ -44,6 +48,7 @@ export function CardStatementForm({
   problem,
   onProblem,
   onPick,
+  onDueDate,
   onCancel,
   onSave,
 }: CardStatementFormProps) {
@@ -60,6 +65,7 @@ export function CardStatementForm({
       : '',
   );
   const [alreadyPaid, setAlreadyPaid] = useState(false);
+  const [dueDate, setDueDate] = useState(card.dueDate);
   const month = monthName(ym);
   // What is typed so far; an amount out of range counts as not typed until it is saved.
   const statementCents = parseCardAmount(balance);
@@ -77,6 +83,7 @@ export function CardStatementForm({
       minimumText: minimum,
       choice,
       otherText: other,
+      due: { ym, dateText: dueDate },
     });
     onProblem(error ?? null);
     if (error !== undefined) return;
@@ -87,6 +94,7 @@ export function CardStatementForm({
       minimumCents: parseCardAmount(minimum) ?? 0,
       plannedPaymentCents: planned ?? 0,
       alreadyPaid,
+      dueDate,
     });
   };
 
@@ -136,6 +144,20 @@ export function CardStatementForm({
         </div>
         {money('balance', 'Statement balance', balance, setBalance)}
         {money('minimum', 'Minimum payment', minimum, setMinimum)}
+        <div className="field">
+          <label htmlFor={`${id}-due`}>Payment due</label>
+          <input
+            id={`${id}-due`}
+            type="date"
+            min={cardDueDate(ym, 1)}
+            max={cardDueDate(ym, daysInMonth(ym))}
+            value={dueDate}
+            onChange={(e) => {
+              setDueDate(e.target.value);
+              onDueDate?.(e.target.value);
+            }}
+          />
+        </div>
       </div>
       {card.previousCents !== null && (
         <p className="card-previous">{cardPreviousText(card.previousCents, statementCents, ym)}</p>

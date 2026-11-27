@@ -7,6 +7,7 @@ import {
   cardChangeText,
   cardDraftError,
   cardDueDate,
+  cardDueDateError,
   cardMonthRows,
   cardPlanText,
   cardPreviousText,
@@ -320,6 +321,7 @@ describe('P2-07 the forms', () => {
     expect(Object.keys(saveCardStatementInput.shape).sort()).toEqual([
       'alreadyPaid',
       'cardId',
+      'dueDate',
       'minimumCents',
       'plannedPaymentCents',
       'statementCents',
@@ -397,5 +399,99 @@ describe('P2-07 the forms', () => {
     expect(paidDraftError('')).toBe('Enter the amount paid.');
     expect(paidDraftError('-1')).toBe('Enter the amount paid.');
     expect(paidDraftError('100,000,000.01')).toBe('Enter an amount of $100,000,000 or less.');
+  });
+});
+
+describe('P2-14 each statement has its own due date', () => {
+  const dates = (rows: ReturnType<typeof cardMonthRows>) => rows.map((r) => [r.cardId, r.dueDate]);
+
+  it('A new card statement defaults to the card’s due day, a shorter month to its last day', () => {
+    const rows = cardMonthRows([card({ id: 'a', dueDay: 31 })], [], '2027-02');
+
+    expect(rows[0]?.dueDate).toBe('2027-02-28');
+  });
+
+  it('A statement saved without a due date shows the card’s due day', () => {
+    const saved = statement({ cardId: 'a', ym: '2026-11', dueDate: null });
+
+    const rows = cardMonthRows([card({ id: 'a', dueDay: 25 })], [saved], '2026-11');
+
+    expect(rows[0]?.dueDate).toBe('2026-11-25');
+  });
+
+  it('A changed due date belongs to that month only', () => {
+    const cards = [card({ id: 'a', dueDay: 25 })];
+    const saved = [statement({ cardId: 'a', ym: '2026-11', dueDate: '2026-11-26' })];
+
+    expect(cardMonthRows(cards, saved, '2026-11')[0]).toMatchObject({
+      dueDay: 25,
+      dueDate: '2026-11-26',
+    });
+    expect(cardMonthRows(cards, saved, '2026-12')[0]?.dueDate).toBe('2026-12-25');
+  });
+
+  it('orders the month’s rows by the date each is due that month', () => {
+    const cards = [card({ id: 'early', dueDay: 22 }), card({ id: 'late', dueDay: 25 })];
+    const moved = [statement({ cardId: 'early', ym: '2026-11', dueDate: '2026-11-28' })];
+
+    expect(dates(cardMonthRows(cards, moved, '2026-11'))).toEqual([
+      ['late', '2026-11-25'],
+      ['early', '2026-11-28'],
+    ]);
+  });
+
+  it.each([
+    ['2026-11', '2026-11-01'],
+    ['2026-11', '2026-11-30'],
+    ['2028-02', '2028-02-29'],
+  ])('accepts a date inside %s: %s', (ym, date) => {
+    expect(cardDueDateError(ym, date)).toBeUndefined();
+  });
+
+  it.each([
+    ['2026-11', '2026-12-02', 'Pick a payment date in November.'],
+    ['2026-11', '2026-10-31', 'Pick a payment date in November.'],
+    ['2026-11', '2025-11-25', 'Pick a payment date in November.'],
+    ['2026-11', '2026-11-31', 'Pick a payment date in November.'],
+    ['2027-02', '2027-02-29', 'Pick a payment date in February.'],
+    ['2026-11', '', 'Pick a payment date in November.'],
+    ['2026-11', 'soon', 'Pick a payment date in November.'],
+  ])('A due date outside the statement’s month is rejected: %s %s', (ym, date, message) => {
+    expect(cardDueDateError(ym, date)).toBe(message);
+  });
+
+  const input = {
+    cardId: '11111111-1111-4111-8111-111111111111',
+    ym: '2026-11',
+    statementCents: 14_236,
+    minimumCents: 2_500,
+    plannedPaymentCents: 14_236,
+  };
+
+  it('the API input takes a due date in the month, or none', () => {
+    expect(saveCardStatementInput.parse(input)).not.toHaveProperty('dueDate');
+    expect(saveCardStatementInput.parse({ ...input, dueDate: '2026-11-26' })).toHaveProperty(
+      'dueDate',
+      '2026-11-26',
+    );
+    for (const dueDate of ['2026-12-02', '2026-11-31', '']) {
+      expect(saveCardStatementInput.safeParse({ ...input, dueDate }).success).toBe(false);
+    }
+  });
+
+  const draft = {
+    cardId: 'gas',
+    statementText: '142.36',
+    minimumText: '25',
+    choice: 'full' as const,
+    otherText: '',
+  };
+
+  it('the form checks the payment date against its month', () => {
+    const due = (dateText: string) => ({ ...draft, due: { ym: '2026-11', dateText } });
+
+    expect(statementDraftError(due('2026-11-26'))).toBeUndefined();
+    expect(statementDraftError(due('2026-12-02'))).toBe('Pick a payment date in November.');
+    expect(statementDraftError(due(''))).toBe('Pick a payment date in November.');
   });
 });

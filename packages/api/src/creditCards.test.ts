@@ -199,3 +199,34 @@ describe('P2-07 credit cards API', () => {
     expect(await (await caller('sub-view')).creditCards()).toHaveLength(1);
   });
 });
+
+describe('P2-14 each statement has its own due date (API)', () => {
+  const row = async (owner: Awaited<ReturnType<typeof caller>>, ym: string) =>
+    (await owner.billsPage({ ym })).cards[0];
+
+  it('shows the saved date in its month, and the card’s day in the others', async () => {
+    const { owner, cardId } = await setUp();
+
+    await owner.saveCardStatement({ ...november(cardId), dueDate: '2026-11-04' });
+
+    expect(await row(owner, '2026-11')).toMatchObject({ dueDay: 2, dueDate: '2026-11-04' });
+    expect((await row(owner, '2026-12'))?.dueDate).toBe('2026-12-02');
+  });
+
+  it('A statement saved without a due date shows the card’s due day', async () => {
+    const { owner, cardId } = await setUp();
+
+    await owner.saveCardStatement(november(cardId));
+
+    expect((await row(owner, '2026-11'))?.dueDate).toBe('2026-11-02');
+  });
+
+  it('A due date outside the statement’s month is rejected', async () => {
+    const { owner, cardId } = await setUp();
+
+    await expect(
+      owner.saveCardStatement({ ...november(cardId), dueDate: '2026-12-02' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect((await row(owner, '2026-11'))?.statement).toBeNull();
+  });
+});
