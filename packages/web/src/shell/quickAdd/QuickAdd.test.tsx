@@ -231,6 +231,12 @@ describe('P2-10 opening Quick Add', () => {
     expect(close).toHaveFocus();
   });
 
+  it('badges the types as design/QuickAdd.png does', async () => {
+    await openAdd(fakeClient().client);
+
+    expect(typeButton(/^Other income/).querySelector('[aria-hidden]')).toHaveTextContent('I');
+  });
+
   it('opens from the phone’s Add tab', async () => {
     vi.stubGlobal('matchMedia', (media: string) => ({
       matches: true,
@@ -395,6 +401,14 @@ describe('P2-10 Confirmation names the right week and month and uses role="statu
     expect(await status()).toHaveTextContent(
       'Saved Gas card balance to Bills & cash flow, week 4 of November 2026.',
     );
+  });
+
+  it('moves to the confirmation, which a phone may have scrolled away from', async () => {
+    const { user } = await openAdd(fakeClient().client);
+
+    await fill.bill(user, billForm());
+
+    await waitFor(async () => expect(await status()).toHaveFocus());
   });
 
   it('says nothing was saved when saving fails', async () => {
