@@ -135,6 +135,8 @@ describe('P2-12: scripts/backup-now.sh', () => {
     const run = backup({ describeFails: true });
 
     expect(run.status).not.toBe(0);
+    // It stops at the first failed check instead of polling on until it gives up.
+    expect(run.polls).toBe(1);
   });
 
   it('P2-12: Prod pipeline fails if the pre-migration backup job fails (no stack output)', () => {

@@ -202,6 +202,14 @@ describe('P2-12: a failed backup stops the prod deploy', () => {
   });
 });
 
+describe('P2-12: the deploy job outlasts the backup wait', () => {
+  it('P2-12: a stuck backup fails by the script giving up, not by a cancelled run', () => {
+    const job = Object.values(load('deploy.yml').jobs)[0];
+    // The script waits 60 minutes; the job also installs, builds and deploys.
+    expect(job?.['timeout-minutes']).toBeGreaterThanOrEqual(90);
+  });
+});
+
 describe('P2-12: conformance.yml (the release waits for it to be green)', () => {
   it('P2-12: gives the suite on real DSQL at least 45 minutes (it has outgrown 20)', () => {
     const job = Object.values(load('conformance.yml').jobs)[0];

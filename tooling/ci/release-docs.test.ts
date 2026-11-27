@@ -28,6 +28,20 @@ describe('P2-12: docs/runbooks/release.md', () => {
     expect(text()).toMatch(pattern);
   });
 
+  it('says to choose the partner mode at sign-up, the only time a partner can be invited', () => {
+    const first = text().split('## First release with real data')[1]?.split('\n## ')[0] ?? '';
+    const signUp = read('packages/web/src/pages/SignUp.tsx');
+    for (const label of ['Me and a partner', 'Just me', 'Send invite & finish']) {
+      expect(signUp.replaceAll('&amp;', '&')).toContain(label);
+      expect(first).toContain(label);
+    }
+    expect(first).not.toMatch(/Invite your partner, if you are two/);
+  });
+
+  it('restores from the backup of the first attempt, not one a re-run took', () => {
+    expect(text()).toMatch(/first run of the release/);
+  });
+
   it('is what CLAUDE.md sends a session to before a release', () => {
     expect(read('CLAUDE.md')).toContain('docs/runbooks/release.md');
   });
