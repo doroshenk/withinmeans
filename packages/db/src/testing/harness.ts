@@ -56,21 +56,28 @@ export async function createTestDb(): Promise<TestDb> {
   await admin.destroy();
 
   const db = open(schema);
-  await migrate(db, MIGRATIONS_DIR, runTestDdl);
-  return {
-    db,
-    schema,
-    async destroy() {
-      // DSQL allows one DDL statement per transaction, so drop tables one at a time, then the schema.
-      const tables = await sql<{
-        table_name: string;
-      }>`SELECT table_name FROM information_schema.tables
-        WHERE table_schema = ${schema}`.execute(db);
-      for (const { table_name } of tables.rows) {
-        await runTestDdl(db, `DROP TABLE ${quoteIdent(schema)}.${quoteIdent(table_name)}`);
-      }
-      await runTestDdl(db, `DROP SCHEMA ${quoteIdent(schema)}`);
-      await db.destroy();
-    },
+  const destroy = async (): Promise<void> => {
+    // DSQL allows one DDL statement per transaction, so drop tables one at a time, then the schema.
+    const tables = await withRetry(
+      () =>
+        sql<{
+          table_name: string;
+        }>`SELECT table_name FROM information_schema.tables
+          WHERE table_schema = ${schema}`.execute(db),
+      { maxTries: 12, delayMs: 25 },
+    );
+    for (const { table_name } of tables.rows) {
+      await runTestDdl(db, `DROP TABLE ${quoteIdent(schema)}.${quoteIdent(table_name)}`);
+    }
+    await runTestDdl(db, `DROP SCHEMA ${quoteIdent(schema)}`);
+    await db.destroy();
   };
+  try {
+    await migrate(db, MIGRATIONS_DIR, runTestDdl);
+  } catch (error) {
+    // The caller gets nothing to destroy. A schema that cannot be dropped now is swept later.
+    await destroy().catch(() => undefined);
+    throw error;
+  }
+  return { db, schema, destroy };
 }

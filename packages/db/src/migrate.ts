@@ -28,14 +28,16 @@ export async function migrate(
     `CREATE TABLE IF NOT EXISTS schema_migrations (
       name text PRIMARY KEY, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())`,
   );
-  const applied = new Map(
-    (
-      await sql<{
+  // A read can conflict too (OC001), straight after a schema change.
+  const recorded = await withRetry(
+    () =>
+      sql<{
         name: string;
         checksum: string;
-      }>`SELECT name, checksum FROM schema_migrations`.execute(db)
-    ).rows.map((r) => [r.name, r.checksum]),
+      }>`SELECT name, checksum FROM schema_migrations`.execute(db),
+    { maxTries: 12, delayMs: 25 },
   );
+  const applied = new Map(recorded.rows.map((r) => [r.name, r.checksum]));
   const ran: string[] = [];
   const files = readdirSync(dir)
     .filter((f) => f.endsWith('.sql'))
