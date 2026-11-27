@@ -38,7 +38,8 @@ describe('Hello', () => {
   });
 
   it('says hello without a name when the user has no profile yet', async () => {
-    render(<Hello client={clientReturning(Promise.resolve({ user: null, household: null }))} />);
+    const me = { user: null, household: { name: 'The Examples', role: 'owner' } } as MeResult;
+    render(<Hello client={clientReturning(Promise.resolve(me))} />);
 
     expect(await screen.findByRole('heading', { name: 'Hello there' })).toBeInTheDocument();
   });
@@ -114,7 +115,7 @@ describe('Hello', () => {
   it('P1-14: no download without a household', async () => {
     render(<Hello client={clientReturning(Promise.resolve({ user: null, household: null }))} />);
 
-    await screen.findByRole('heading', { name: 'Hello there' });
+    await screen.findByRole('heading', { name: 'This login isn’t in a household' });
     expect(screen.queryByRole('button', { name: 'Download my data' })).not.toBeInTheDocument();
   });
 

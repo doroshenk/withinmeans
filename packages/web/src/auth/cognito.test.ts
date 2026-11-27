@@ -170,3 +170,37 @@ describe('createCognitoAuth', () => {
     });
   });
 });
+
+describe('P2-15: the email of the saved session', () => {
+  const saved = (payload: Record<string, unknown> | Error, valid = true) =>
+    state.currentUser.set(localStorage, {
+      getSession: (cb: (e: Error | null, s: unknown) => void) => {
+        if (payload instanceof Error) cb(payload, null);
+        else cb(null, { isValid: () => valid, getIdToken: () => ({ payload }) });
+      },
+    });
+
+  it('reads it from the ID token', async () => {
+    saved({ email: 'sam@example.test' });
+
+    expect(await auth().getEmail?.()).toBe('sam@example.test');
+  });
+
+  it.each([
+    ['no saved user', undefined],
+    ['a token without one', {}],
+    ['a session error', new Error('refresh failed')],
+  ])('is undefined with %s', async (_name, payload) => {
+    if (payload !== undefined) saved(payload);
+
+    expect(auth().getEmail).toBeTypeOf('function');
+    expect(await auth().getEmail?.()).toBeUndefined();
+  });
+
+  it('is undefined for an expired session', async () => {
+    saved({ email: 'sam@example.test' }, false);
+
+    expect(auth().getEmail).toBeTypeOf('function');
+    expect(await auth().getEmail?.()).toBeUndefined();
+  });
+});
