@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { GENERIC_ERROR } from '../auth/errors';
 import { RoleProvider } from '../permissions';
 import type { MeResult } from './Hello';
+import { NoHousehold, type NoHouseholdProps } from './NoHousehold';
 import { SetupWizard, type SetupClient } from './SetupWizard';
 
-export interface SetupPageProps {
+export interface SetupPageProps extends Omit<NoHouseholdProps, 'email'> {
   client: SetupClient & { me: { query: () => Promise<MeResult> } };
   onExit: () => void;
 }
@@ -12,7 +13,7 @@ export interface SetupPageProps {
 type State = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; me: MeResult };
 
 /** Loads who the member is (for the role and household name), then shows the wizard. */
-export function SetupPage({ client, onExit }: SetupPageProps) {
+export function SetupPage({ client, onExit, ...account }: SetupPageProps) {
   const [state, setState] = useState<State>({ kind: 'loading' });
 
   useEffect(() => {
@@ -27,8 +28,13 @@ export function SetupPage({ client, onExit }: SetupPageProps) {
   }, [client]);
 
   if (state.kind === 'loading') return <p role="status">Loading…</p>;
-  if (state.kind === 'error' || state.me.household === null) {
-    return <p role="alert">{GENERIC_ERROR}</p>;
+  if (state.kind === 'error') return <p role="alert">{GENERIC_ERROR}</p>;
+  if (state.me.household === null) {
+    return (
+      <main className="hello">
+        <NoHousehold email={state.me.user?.email} {...account} />
+      </main>
+    );
   }
   return (
     <RoleProvider role={state.me.household.role}>

@@ -87,6 +87,12 @@ export function App({ auth, createClient, location = window.location }: AppProps
     setTarget((now) => ({ ym, visit: now.visit + 1 }));
     setView((current) => PAGES[route] ?? current);
   }, []);
+  const signOut = () => {
+    auth.signOut();
+    setView('sign-in');
+  };
+  const sessionEmail = useCallback(() => auth.getEmail?.() ?? Promise.resolve(undefined), [auth]);
+  const account = { onSignOut: signOut, sessionEmail };
   const withQuickAdd = (screen: ReactNode) => (
     <QuickAddProvider client={client} onView={viewEntry}>
       {screen}
@@ -118,11 +124,13 @@ export function App({ auth, createClient, location = window.location }: AppProps
       />
     );
   }
-  if (view === 'setup') return <SetupPage client={client} onExit={() => setView('hello')} />;
+  if (view === 'setup') {
+    return <SetupPage client={client} onExit={() => setView('hello')} {...account} />;
+  }
   if (view === 'bills' || view === 'recurring' || view === 'paychecks') {
     const month = target.ym === undefined ? {} : { initialYm: target.ym };
     return withQuickAdd(
-      <MemberScreen client={client} route={view} onNavigate={navigate}>
+      <MemberScreen client={client} route={view} onNavigate={navigate} {...account}>
         {view === 'bills' && (
           <BillsPage key={target.visit} client={client} onNavigate={navigate} {...month} />
         )}
@@ -147,10 +155,7 @@ export function App({ auth, createClient, location = window.location }: AppProps
       client={client}
       onNavigate={navigate}
       onStartSetup={() => setView('setup')}
-      onSignOut={() => {
-        auth.signOut();
-        setView('sign-in');
-      }}
+      {...account}
     />,
   );
 }

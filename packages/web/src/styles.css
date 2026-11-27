@@ -193,6 +193,18 @@ h2,
   line-height: 1.1;
 }
 
+/* A login with no household (P2-15). */
+.no-household {
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+}
+
+/* A long email address wraps instead of widening a phone. */
+.no-household p {
+  overflow-wrap: anywhere;
+}
+
 /* Phone, 390px: one column, the pitch becomes a short banner. */
 @media (max-width: 800px) {
   .auth {
