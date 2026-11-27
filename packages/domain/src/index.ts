@@ -20,3 +20,4 @@ export * from './cashflow';
 export * from './billsPage';
 export * from './creditCards';
 export * from './quickAdd';
+export * from './reinvest';

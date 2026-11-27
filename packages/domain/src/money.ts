@@ -57,3 +57,13 @@ export function averageCents(values: readonly Cents[]): Cents | null {
   const total = sumCents(values);
   return Math.floor((total * 2 + values.length) / (values.length * 2));
 }
+
+/** How many whole times `unit` (positive) fits in `amount` (zero or more). */
+export function wholeTimes(amount: Cents, unit: Cents): number {
+  assertCents(amount, 'amount');
+  assertCents(unit, 'unit');
+  if (amount < 0) throw new RangeError('amount must not be negative');
+  if (unit <= 0) throw new RangeError('unit must be greater than zero');
+  // Integer math: removing the remainder first makes the division exact.
+  return (amount - (amount % unit)) / unit;
+}
