@@ -119,15 +119,50 @@ describe('P2-11 the dev seed (spec §10)', () => {
       ['Streaming', 3_600, 28, 'Subscriptions'],
       ['Lawn supplies', 4_500, 21, 'Home'],
       ['Water & sewer', 6_800, 18, 'Utilities'],
-      ['Internet', 8_000, 9, 'Utilities'],
-      ['Phone', 9_500, 11, 'Utilities'],
+      ['Internet', 8_000, 10, 'Utilities'],
+      ['Phone', 9_500, 14, 'Utilities'],
       ['HOA dues', 11_000, 25, 'Housing'],
-      ['Pool service', 12_000, 3, 'Home'],
-      ['Car insurance', 14_200, 13, 'Insurance'],
+      ['Pool service', 12_000, 6, 'Home'],
+      ['Car insurance', 14_200, 12, 'Insurance'],
       ['Electric', 16_400, 5, 'Utilities'],
       ['Mortgage', 185_000, 1, 'Housing'],
     ]);
     expect(await bills.listForMonth(t.db, ctx, '2026-11')).toHaveLength(12);
+  });
+
+  it('puts the same 8 bills on autopay as design/Recurring.png', async () => {
+    await run();
+
+    const rows = await recurringBills.list(t.db, ctx);
+
+    expect(
+      rows
+        .filter((r) => r.autopay)
+        .map((r) => r.name)
+        .sort(),
+    ).toEqual([
+      'CD contribution · 1',
+      'CD contribution · 2',
+      'Car insurance',
+      'Electric',
+      'Internet',
+      'Mortgage',
+      'Phone',
+      'Streaming',
+    ]);
+  });
+
+  it('has the checking and savings balances of design/Accounts.png', async () => {
+    await run();
+
+    const listed = await accounts.listWithBalance(t.db, ctx);
+
+    expect(listed.map((a) => [a.name, a.balance_cents]).sort()).toEqual([
+      // Cash is not on the artboard: its balance is made up.
+      ['Cash', 12_000],
+      ['Everyday checking', 114_012],
+      ['High-yield savings', 1_842_055],
+    ]);
   });
 
   it('marks Nov 6 received at $3,272.18 and leaves Nov 20 expected', async () => {
@@ -197,6 +232,27 @@ describe('P2-11 running it again', () => {
     expect(await recurringBills.list(t.db, ctx)).toHaveLength(12);
     expect(await people()).toHaveLength(2);
     expect(moneyIn(await november())).toBe(703_138);
+  });
+
+  it('a rebuild that fails part way leaves the seeded household as it was', async () => {
+    await run();
+    const before = await people();
+    const ids = (await recurringBills.list(t.db, ctx)).map((r) => r.id).sort();
+    /** The same database, failing when the members are written back. */
+    const failing = t.db.withPlugin({
+      transformQuery: ({ node }) => {
+        if (node.kind === 'InsertQueryNode' && node.into?.table.identifier.name === 'memberships') {
+          throw new Error('connection lost');
+        }
+        return node;
+      },
+      transformResult: ({ result }) => Promise.resolve(result),
+    });
+
+    await expect(seedDev(failing, { now: NOW, reset: true })).rejects.toThrow('connection lost');
+
+    expect(await people()).toEqual(before);
+    expect((await recurringBills.list(t.db, ctx)).map((r) => r.id).sort()).toEqual(ids);
   });
 
   it('never touches another household', async () => {
@@ -272,6 +328,85 @@ describe('P2-11 signing in to the seeded household', () => {
     expect(await people()).toEqual([
       ['Jo', 'owner'],
       ['Sam', 'full'],
+    ]);
+  });
+
+  const login = (name: string, email = `${name}@dev.example.test`) =>
+    signUp.createHousehold(t.db, {
+      mode: 'solo',
+      householdName: `${name}'s`,
+      userName: name,
+      email,
+      cognitoSub: `sub-${name}`,
+      timezone: 'America/New_York',
+      firstMonth: '2026-11',
+    });
+
+  it('will not make a third member', async () => {
+    await signedUp();
+    await run({ ownerEmail: OWNER, leaveHousehold: true });
+    await login('kit');
+    await run({ reset: true, ownerEmail: 'kit@dev.example.test', leaveHousehold: true });
+    const third = await login('lee');
+
+    await expect(
+      run({ reset: true, ownerEmail: 'lee@dev.example.test', leaveHousehold: true }),
+    ).rejects.toThrow(/two members/);
+
+    expect(await people()).toEqual([
+      ['Jo', 'full'],
+      ['kit', 'owner'],
+    ]);
+    const still = await identity.findByCognitoSub(t.db, 'sub-lee');
+    expect(still?.membership?.householdId).toBe(third.householdId);
+  });
+
+  it.each(['john@example.test', 'partner@example.test'])(
+    'will not take the made-up %s as a login',
+    async (email) => {
+      await run();
+
+      await expect(run({ reset: true, ownerEmail: email })).rejects.toThrow(/made-up/);
+
+      expect(await people()).toHaveLength(2);
+    },
+  );
+
+  it('will not leave another household without its owner', async () => {
+    const own = await signedUp();
+    const partner = await login('pat');
+    // Pat joins Jo's household as its second member.
+    await t.db.deleteFrom('memberships').where('user_id', '=', partner.userId).execute();
+    await t.db
+      .insertInto('memberships')
+      .values({ household_id: own.householdId, user_id: partner.userId, role: 'full' })
+      .execute();
+
+    await expect(run({ ownerEmail: OWNER, leaveHousehold: true })).rejects.toThrow(/other member/);
+
+    expect((await membership())?.householdId).toBe(own.householdId);
+    expect(await people()).toEqual([]);
+  });
+
+  it('lets a partner leave their household', async () => {
+    const own = await signedUp();
+    await login('pat');
+    const pat = await identity.findByCognitoSub(t.db, 'sub-pat');
+    await t.db
+      .deleteFrom('memberships')
+      .where('user_id', '=', pat?.user.id ?? '')
+      .execute();
+    await t.db
+      .insertInto('memberships')
+      .values({ household_id: own.householdId, user_id: pat?.user.id ?? '', role: 'full' })
+      .execute();
+
+    await run({ ownerEmail: 'pat@dev.example.test', leaveHousehold: true });
+
+    expect((await membership())?.householdId).toBe(own.householdId);
+    expect(await people()).toEqual([
+      ['Sam', 'full'],
+      ['pat', 'owner'],
     ]);
   });
 
