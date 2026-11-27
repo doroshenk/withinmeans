@@ -4,7 +4,7 @@ import { sql } from 'kysely';
 import { createDb, type Database } from '../db.js';
 import { runDdl } from '../ddl.js';
 import { createDsqlDb } from '../dsql.js';
-import { migrate } from '../migrate.js';
+import { migrate, MIGRATIONS_DIR } from '../migrate.js';
 import { withRetry } from '../retry.js';
 import { testTarget } from './target.js';
 
@@ -56,7 +56,7 @@ export async function createTestDb(): Promise<TestDb> {
   await admin.destroy();
 
   const db = open(schema);
-  await migrate(db);
+  await migrate(db, MIGRATIONS_DIR, runTestDdl);
   return {
     db,
     schema,

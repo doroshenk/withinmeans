@@ -14,9 +14,16 @@ const DDL = /^(--[^\n]*\n|\/\*[\s\S]*?\*\/|\s)*(CREATE|ALTER|DROP|COMMENT)\b/i;
 
 export const MIGRATIONS_DIR = new URL('../migrations/', import.meta.url);
 
-/** Forward-only: applies new *.sql files in name order, each in its own transaction. */
-export async function migrate(db: Database, dir: URL = MIGRATIONS_DIR): Promise<string[]> {
-  await runDdl(
+/**
+ * Forward-only: applies new *.sql files in name order, each in its own transaction. `ddl` runs each
+ * schema change; the test harness passes a more patient one.
+ */
+export async function migrate(
+  db: Database,
+  dir: URL = MIGRATIONS_DIR,
+  ddl: typeof runDdl = runDdl,
+): Promise<string[]> {
+  await ddl(
     db,
     `CREATE TABLE IF NOT EXISTS schema_migrations (
       name text PRIMARY KEY, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())`,
@@ -58,8 +65,9 @@ export async function migrate(db: Database, dir: URL = MIGRATIONS_DIR): Promise<
       // statement runs on its own and the bookkeeping row is written afterwards. A failure part-way
       // leaves earlier statements applied and the migration unrecorded: write DDL to be re-runnable
       // (IF NOT EXISTS).
-      for (const statement of statements) await runDdl(db, statement);
-      await record(db);
+      for (const statement of statements) await ddl(db, statement);
+      // A conflicted insert did not commit. Without its row the migration would run again.
+      await withRetry(() => record(db), { maxTries: 12, delayMs: 25 });
     } else {
       // The transaction is all or nothing, so a conflicted try can run again. DSQL reports one
       // (OC001) when the schema has just changed, as after an earlier DDL migration.
