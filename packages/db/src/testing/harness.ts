@@ -36,6 +36,13 @@ async function opener(): Promise<(schema?: string) => Database> {
 
 const quoteIdent = (name: string): string => `"${name.replaceAll('"', '""')}"`;
 
+/** `runDdl` for the harness's own schema changes, which collide with other test files'. */
+export async function runTestDdl(db: Database, statement: string): Promise<void> {
+  void db;
+  void statement;
+  throw new Error('not implemented');
+}
+
 /**
  * Gives the caller a fresh schema with all migrations applied, and drops it afterwards. Runs on
  * Docker Postgres by default, or on the real DSQL cluster when DSQL_ENDPOINT is set (the
