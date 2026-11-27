@@ -160,7 +160,7 @@ Bill             id, ym, recurring_bill_id?, name, category_id, due_date,
 CreditCard       id, nickname, due_day, usual_plan(full|min|varies), archived_at
 CardStatement    id, card_id, ym, statement_cents, minimum_cents, planned_payment_cents, paid_cents?, paid_at?, due_date?
                  -- no statement row yet = "no balance entered" (shows as missing, not $0)
-                 -- due_date falls in month ym; empty = the card's due_day in that month
+                 -- due_date falls in month ym; empty = the card's due_day in that month (an unchanged date is stored empty)
 
 PaySchedule      id, name, frequency(weekly|biweekly|semimonthly|monthly), anchor_date, usual_cents, account_id, ended_on?
 Paycheck         id, schedule_id, expected_date, expected_cents, received_date?, received_cents?   -- generated per month

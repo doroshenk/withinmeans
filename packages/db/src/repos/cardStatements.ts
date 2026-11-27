@@ -1,4 +1,4 @@
-import { cardDueDateError, MAX_CARD_CENTS, statementError } from '@withinmeans/domain';
+import { cardDueDate, cardDueDateError, MAX_CARD_CENTS, statementError } from '@withinmeans/domain';
 import type { Selectable, Transaction } from 'kysely';
 import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '../context.js';
 import type { CardStatementsTable, Database, DB } from '../db.js';
@@ -88,18 +88,22 @@ export const cardStatements = {
       statement_cents: input.statementCents,
       minimum_cents: input.minimumCents,
       planned_payment_cents: input.plannedPaymentCents,
-      ...(dueDate !== undefined && { due_date: dueDate }),
     };
     await inTransaction(db, async (trx) => {
       const card = await lockCard(trx, ctx, cardId);
       await assertMonthNotClosed(trx, ctx, ym);
       const existing = await find(trx, ctx, cardId, ym);
+      // An empty date already means the card's own, so that one is not written. A deploy runs this
+      // code before the migration that adds the column, and such a save must still work then.
+      const keepsCardDay =
+        (existing?.due_date ?? null) === null && dueDate === cardDueDate(ym, card.due_day);
+      const due = dueDate === undefined || keepsCardDay ? {} : { due_date: dueDate };
       const payNow = input.alreadyPaid === true && (existing?.paid_at ?? null) === null;
       const paid = payNow ? { paid_cents: input.plannedPaymentCents, paid_at: now } : {};
       if (existing !== undefined) {
         await trx
           .updateTable('card_statements')
-          .set({ ...entered, ...paid })
+          .set({ ...entered, ...due, ...paid })
           .where('id', '=', existing.id)
           .where('household_id', '=', ctx.householdId)
           .execute();
@@ -113,6 +117,7 @@ export const cardStatements = {
           card_id: cardId,
           ym,
           ...entered,
+          ...due,
           paid_cents: null,
           paid_at: null,
           ...paid,

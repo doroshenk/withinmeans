@@ -268,6 +268,8 @@ export function CardPanel(props: PanelProps) {
               onProblem={onProblem}
               onPick={(cardId) => {
                 onProblem(null);
+                // The next form starts from its card's own date.
+                setTyped(null);
                 setPicked(cardId);
               }}
               onDueDate={(date) => setTyped({ form: formKey, date })}
