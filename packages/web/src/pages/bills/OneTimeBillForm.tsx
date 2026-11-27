@@ -6,7 +6,7 @@ import {
   oneTimeBillDraftError,
   parseDollars,
 } from '@withinmeans/domain';
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type { BillFields, BillsData, BillsPageRow } from './types';
 
 export interface OneTimeBillFormProps {
@@ -22,6 +22,10 @@ export interface OneTimeBillFormProps {
   onProblem: (problem: string | null) => void;
   onCancel: () => void;
   onSave: (fields: BillFields, paid: boolean) => void;
+  /** False where something else should keep the focus when the form appears. */
+  autoFocus?: boolean;
+  /** Quick Add's line saying where the entry will go. */
+  destination?: (date: string, category: string | undefined) => ReactNode;
 }
 
 /** Spec §6.2: adds a one-time bill, or changes one month's bill. */
@@ -35,6 +39,8 @@ export function OneTimeBillForm({
   onProblem,
   onCancel,
   onSave,
+  autoFocus = true,
+  destination,
 }: OneTimeBillFormProps) {
   const id = useId();
   const [name, setName] = useState(bill?.name ?? '');
@@ -85,7 +91,7 @@ export function OneTimeBillForm({
           <input
             id={`${id}-name`}
             type="text"
-            autoFocus
+            autoFocus={autoFocus}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -141,6 +147,7 @@ export function OneTimeBillForm({
           ))}
         </fieldset>
       )}
+      {destination?.(date, categories.find((c) => c.id === categoryId)?.name)}
       <div className="form-actions">
         <button type="button" className="button button-quiet" onClick={onCancel}>
           Cancel

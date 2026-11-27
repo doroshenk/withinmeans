@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useCan } from '../permissions';
+import { useQuickAdd } from './quickAdd/context';
+import { QuickAddDialog } from './quickAdd/QuickAddDialog';
 import { PHONE_QUERY, useMediaQuery } from './useMediaQuery';
 
 export type Route =
@@ -41,24 +43,31 @@ const MORE: { route: Route; label: string }[] = [
 /** The responsive frame: sidebar from 768px up, tab bar below. */
 export function Shell({ route, onNavigate, children }: ShellProps) {
   const phone = useMediaQuery(PHONE_QUERY);
+  const can = useCan();
+  const quickAdd = useQuickAdd();
+  const [adding, setAdding] = useState(false);
+  const nav = { route, onNavigate, onAdd: () => setAdding(true) };
   return (
     <div className="shell">
-      {phone ? null : <Sidebar route={route} onNavigate={onNavigate} />}
+      {phone ? null : <Sidebar {...nav} />}
       <div className="shell-main">{children}</div>
-      {phone ? <TabBar route={route} onNavigate={onNavigate} /> : null}
+      {phone ? <TabBar {...nav} /> : null}
+      {adding && can.write && quickAdd !== null && (
+        <QuickAddDialog quickAdd={quickAdd} onClose={() => setAdding(false)} />
+      )}
     </div>
   );
 }
 
-type NavProps = Pick<ShellProps, 'route' | 'onNavigate'>;
+type NavProps = Pick<ShellProps, 'route' | 'onNavigate'> & { onAdd: () => void };
 
-function Sidebar({ route, onNavigate }: NavProps) {
+function Sidebar({ route, onNavigate, onAdd }: NavProps) {
   const can = useCan();
   return (
     <aside className="sidebar">
       <p className="brand">Within Means</p>
       {can.write && (
-        <button type="button" className="button">
+        <button type="button" className="button" onClick={onAdd}>
           + Add
         </button>
       )}
@@ -89,7 +98,7 @@ function Sidebar({ route, onNavigate }: NavProps) {
   );
 }
 
-function TabBar({ route, onNavigate }: NavProps) {
+function TabBar({ route, onNavigate, onAdd }: NavProps) {
   const can = useCan();
   const [moreOpen, setMoreOpen] = useState(false);
   const go = (to: Route) => {
@@ -127,7 +136,15 @@ function TabBar({ route, onNavigate }: NavProps) {
         {tab('dashboard', 'Home')}
         {tab('bills', 'Bills')}
         {can.write && (
-          <button type="button" className="tab-add" aria-label="Add">
+          <button
+            type="button"
+            className="tab-add"
+            aria-label="Add"
+            onClick={() => {
+              setMoreOpen(false);
+              onAdd();
+            }}
+          >
             <span aria-hidden="true">+</span>
           </button>
         )}
