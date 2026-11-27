@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { AcceptInviteInput, InvitePartnerInput, SignUpInput } from '@withinmeans/domain';
 import type { AuthClient } from './auth/types';
 import { Accept, type InviteDetails } from './pages/Accept';
+import { BillsPage } from './pages/BillsPage';
+import type { BillsPageClient } from './pages/bills/types';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Hello, type HelloProps } from './pages/Hello';
 import { MemberScreen } from './pages/MemberScreen';
@@ -20,6 +22,7 @@ export interface AppProps {
   createClient: (auth: AuthClient) => HelloProps['client'] &
     SetupClient &
     RecurringClient &
+    BillsPageClient &
     PaychecksPageClient & {
       signUp: { mutate: (input: SignUpInput) => Promise<unknown> };
       invitePartner: { mutate: (input: InvitePartnerInput) => Promise<PendingInvite> };
@@ -39,12 +42,14 @@ type View =
   | 'hello'
   | 'accept'
   | 'setup'
+  | 'bills'
   | 'recurring'
   | 'paychecks';
 
 /** The pages that exist so far; later tickets add theirs. */
 const PAGES: Partial<Record<Route, View>> = {
   dashboard: 'hello',
+  bills: 'bills',
   recurring: 'recurring',
   paychecks: 'paychecks',
 };
@@ -94,14 +99,12 @@ export function App({ auth, createClient, location = window.location }: AppProps
     );
   }
   if (view === 'setup') return <SetupPage client={client} onExit={() => setView('hello')} />;
-  if (view === 'recurring' || view === 'paychecks') {
+  if (view === 'bills' || view === 'recurring' || view === 'paychecks') {
     return (
       <MemberScreen client={client} route={view} onNavigate={navigate}>
-        {view === 'recurring' ? (
-          <RecurringPage client={client} />
-        ) : (
-          <PaychecksPage client={client} />
-        )}
+        {view === 'bills' && <BillsPage client={client} onNavigate={navigate} />}
+        {view === 'recurring' && <RecurringPage client={client} />}
+        {view === 'paychecks' && <PaychecksPage client={client} />}
       </MemberScreen>
     );
   }

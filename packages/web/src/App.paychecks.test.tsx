@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import type { AuthClient } from './auth/types';
 import { accountsStub } from './pages/accountsStub';
+import { billsPageStub } from './pages/billsPageStub';
 import { categoriesStub } from './pages/categoriesStub';
 import type { MeResult } from './pages/Hello';
 import { otherIncomeStub } from './pages/otherIncomeStub';
@@ -33,6 +34,7 @@ function start(me: () => Promise<MeResult>) {
     ...categoriesStub,
     ...recurringBillsStub,
     ...otherIncomeStub,
+    ...billsPageStub,
     ...paychecksPageStub,
     ...paychecksStub,
     ...welcomeStub,

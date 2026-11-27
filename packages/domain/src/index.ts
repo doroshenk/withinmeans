@@ -17,3 +17,4 @@ export * from './otherIncome';
 export * from './paySetup';
 export * from './paycheckPage';
 export * from './cashflow';
+export * from './billsPage';

@@ -43,6 +43,11 @@ const WRITE_PROCEDURES = [
   'removePaySchedule',
   'updatePaySchedule',
   'unmarkPaycheckReceived',
+  'openMonth',
+  'addBill',
+  'updateBill',
+  'setBillPaid',
+  'removeBill',
 ] as const;
 
 /** Mutations that need no membership: anyone may call them (the token or the new login is the credential). */

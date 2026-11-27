@@ -128,6 +128,51 @@ function newSchedule(input: z.infer<typeof addPayScheduleInput>) {
   };
 }
 
+/** The paychecks a month not started yet will expect, with each schedule's name. */
+function previewPaychecks(schedules: PayScheduleView[], ym: string, today: string) {
+  return monthPaycheckPreview(schedules, ym, today).map((p) => ({
+    id: null,
+    ...p,
+    scheduleName: schedules.find((s) => s.id === p.scheduleId)?.name ?? '',
+    receivedDate: null,
+    receivedCents: null,
+  }));
+}
+
+/** Looks up an account's name, even one since removed. */
+function accountNamer(all: { id: string; name: string }[]) {
+  const names = new Map(all.map((a) => [a.id, a.name]));
+  return (id: string | null): string | null => (id === null ? null : (names.get(id) ?? null));
+}
+
+/** Each paycheck with the account its schedule pays into. */
+function withAccountNames(
+  rows: Omit<PagePaycheck, 'accountName'>[],
+  schedules: PayScheduleView[],
+  accountName: (id: string | null) => string | null,
+): PagePaycheck[] {
+  return rows.map((p) => ({
+    ...p,
+    accountName: accountName(schedules.find((s) => s.id === p.scheduleId)?.accountId ?? null),
+  }));
+}
+
+/** A month's paychecks as a page shows them: stored ones, or a preview if it isn't started. */
+export async function pagePaychecks(
+  ctx: Ctx,
+  ym: string,
+  started: boolean,
+  today: string,
+): Promise<PagePaycheck[]> {
+  const [stored, schedules, allAccounts] = await Promise.all([
+    listPaychecks(ctx, ym),
+    listPaySchedules(ctx),
+    accounts.list(ctx.db, ctx.household, { includeArchived: true }),
+  ]);
+  const rows = started ? stored : previewPaychecks(schedules, ym, today);
+  return withAccountNames(rows, schedules, accountNamer(allAccounts));
+}
+
 /** Spec §6.4: a month's paychecks (a preview if it isn't started), schedules and accounts. */
 export async function paychecksPage(ctx: Ctx, ym?: string): Promise<PaychecksPageView> {
   const date = await householdToday(ctx);
@@ -138,29 +183,15 @@ export async function paychecksPage(ctx: Ctx, ym?: string): Promise<PaychecksPag
     listPaySchedules(ctx),
     accounts.list(ctx.db, ctx.household, { includeArchived: true }),
   ]);
-  const accountNames = new Map(allAccounts.map((a) => [a.id, a.name]));
-  const accountName = (id: string | null) => (id === null ? null : (accountNames.get(id) ?? null));
-  const byId = new Map(schedules.map((s) => [s.id, s]));
+  const accountName = accountNamer(allAccounts);
 
-  const rows =
-    month === undefined
-      ? monthPaycheckPreview(schedules, shown, date).map((p) => ({
-          id: null,
-          ...p,
-          scheduleName: byId.get(p.scheduleId)?.name ?? '',
-          receivedDate: null,
-          receivedCents: null,
-        }))
-      : stored;
+  const rows = month === undefined ? previewPaychecks(schedules, shown, date) : stored;
 
   return {
     today: date,
     ym: shown,
     status: month === undefined ? 'not-started' : month.status,
-    paychecks: rows.map((p) => ({
-      ...p,
-      accountName: accountName(byId.get(p.scheduleId)?.accountId ?? null),
-    })),
+    paychecks: withAccountNames(rows, schedules, accountName),
     schedules: await Promise.all(
       schedules.map(async (s) => {
         const latest = await paychecks.listReceived(ctx.db, ctx.household, s.id, AVERAGE_PAYCHECKS);

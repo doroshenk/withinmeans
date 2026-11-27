@@ -6,6 +6,7 @@ import { clearAll, seedHousehold, snapshotHousehold, type Seeded } from '../test
 import { createTestDb, type TestDb } from '../testing/harness.js';
 import { accounts } from './accounts.js';
 import { balanceSnapshots } from './balanceSnapshots.js';
+import { bills } from './bills.js';
 import { categories } from './categories.js';
 import { householdExport } from './householdExport.js';
 import { invites } from './invites.js';
@@ -97,6 +98,49 @@ const cases: Case[] = [
     name: 'months.openMonth',
     write: true,
     run: (db, ctx) => openMonth(db, ctx, '2026-12', new Date('2026-12-01T12:00:00Z')),
+  },
+
+  {
+    name: 'bills.listForMonth',
+    write: false,
+    run: (db, ctx, t) => bills.listForMonth(db, ctx, t.ym),
+  },
+  {
+    name: 'bills.create',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) =>
+      bills.create(db, ctx, {
+        name: 'Tires',
+        amountCents: 6_000,
+        dueDate: '2026-11-24',
+        categoryId: t.categoryId,
+        paid: false,
+      }),
+  },
+  {
+    name: 'bills.update',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) =>
+      bills.update(db, ctx, t.billId, {
+        name: 'Renamed',
+        amountCents: 51_000,
+        dueDate: `${t.ym}-02`,
+        categoryId: t.categoryId,
+      }),
+  },
+  {
+    name: 'bills.setPaid',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) => bills.setPaid(db, ctx, t.billId, true, new Date('2026-11-18T12:00:00Z')),
+  },
+  {
+    name: 'bills.remove',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) => bills.remove(db, ctx, t.billId),
   },
 
   { name: 'categories.list', write: false, run: (db, ctx) => categories.list(db, ctx) },
@@ -496,6 +540,7 @@ describe('P1-01 isolation: coverage of the table', () => {
       memberships,
       invites,
       months: { ...months, openMonth },
+      bills,
       categories,
       accounts,
       balanceSnapshots,
