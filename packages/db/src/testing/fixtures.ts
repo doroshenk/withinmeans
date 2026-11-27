@@ -48,10 +48,22 @@ export const HOUSEHOLD_TABLES = [
   'card_statements',
 ] as const;
 
+/**
+ * Waits for statements sent at once, so that none is still running when the caller goes on, then
+ * reports the first that failed. On Aurora DSQL each statement is a slow round trip, so tests send
+ * them together. DSQL has no foreign keys (nor do the migrations), so their order is free.
+ */
+async function together<T>(statements: Promise<T>[]): Promise<T[]> {
+  const settled = await Promise.allSettled(statements);
+  return settled.map((one) => {
+    if (one.status === 'rejected') throw one.reason;
+    return one.value;
+  });
+}
+
 export async function clearAll(db: Database): Promise<void> {
-  for (const table of HOUSEHOLD_TABLES) await db.deleteFrom(table).execute();
-  await db.deleteFrom('users').execute();
-  await db.deleteFrom('households').execute();
+  const tables = [...HOUSEHOLD_TABLES, 'users', 'households'] as const;
+  await together(tables.map((table) => db.deleteFrom(table).execute()));
 }
 
 export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<Seeded> {
@@ -76,198 +88,203 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
   const ym = label === 'A' ? '2026-11' : '2026-10';
   const secret = `${label}-secret`;
   const h = ids.householdId;
-  await db
-    .insertInto('households')
-    .values({
-      id: h,
-      name: `${secret} household`,
-      mode: 'duo',
-      timezone: 'America/New_York',
-      first_month: ym,
-    })
-    .execute();
-  await db
-    .insertInto('users')
-    .values({
-      id: ids.userId,
-      email: `${label.toLowerCase()}@example.test`,
-      name: `${secret} user`,
-      cognito_sub: `sub-${label}`,
-    })
-    .execute();
-  await db
-    .insertInto('memberships')
-    .values({ household_id: h, user_id: ids.userId, role: 'owner' })
-    .execute();
-  await db
-    .insertInto('categories')
-    .values({
-      id: ids.categoryId,
-      household_id: h,
-      name: `${secret} category`,
-      name_key: `${secret} category`.toLowerCase(),
-      sort: 7,
-      archived_at: null,
-    })
-    .execute();
-  await db
-    .insertInto('accounts')
-    .values({
-      id: ids.accountId,
-      household_id: h,
-      name: `${secret} account`,
-      type: 'checking',
-      archived_at: null,
-    })
-    .execute();
-  await db
-    .insertInto('balance_snapshots')
-    .values({
-      id: ids.snapshotId,
-      household_id: h,
-      account_id: ids.accountId,
-      date: `${ym}-05`,
-      balance_cents: 100_000,
-      note: `${secret} note`,
-    })
-    .execute();
-  await db
-    .insertInto('recurring_bills')
-    .values({
-      id: ids.recurringBillId,
-      household_id: h,
-      name: `${secret} bill`,
-      estimate_cents: 50_000,
-      due_day: 1,
-      category_id: ids.categoryId,
-      account_id: ids.accountId,
-      start_ym: ym,
-      end_ym: null,
-    })
-    .execute();
-  await db
-    .insertInto('bills')
-    .values({
-      id: ids.billId,
-      household_id: h,
-      ym,
-      recurring_bill_id: ids.recurringBillId,
-      name: `${secret} bill`,
-      category_id: ids.categoryId,
-      due_date: `${ym}-01`,
-      estimate_cents: 50_000,
-      actual_cents: null,
-      paid_at: null,
-      kind: 'recurring',
-    })
-    .execute();
-  await db
-    .insertInto('months')
-    .values({
-      household_id: h,
-      ym,
-      started_at: new Date(`${ym}-01T12:00:00Z`),
-      closed_at: null,
-    })
-    .execute();
-  await db
-    .insertInto('pay_schedules')
-    .values({
-      id: ids.payScheduleId,
-      household_id: h,
-      name: `${secret} job`,
-      frequency: 'monthly',
-      anchor_date: `${ym}-25`,
-      semimonthly_day_1: null,
-      semimonthly_day_2: null,
-      usual_cents: 200_000,
-      account_id: ids.accountId,
-      ended_on: null,
-    })
-    .execute();
-  await db
-    .insertInto('pay_schedules')
-    .values({
-      id: ids.stoppedScheduleId,
-      household_id: h,
-      name: `${secret} old job`,
-      frequency: 'monthly',
-      anchor_date: `${ym}-27`,
-      semimonthly_day_1: null,
-      semimonthly_day_2: null,
-      usual_cents: 100_000,
-      account_id: null,
-      ended_on: `${ym}-02`,
-    })
-    .execute();
-  await db
-    .insertInto('paychecks')
-    .values({
-      id: ids.paycheckId,
-      household_id: h,
-      schedule_id: ids.payScheduleId,
-      expected_date: `${ym}-25`,
-      expected_cents: 200_000,
-      received_date: null,
-      received_cents: null,
-    })
-    .execute();
-  await db
-    .insertInto('other_income')
-    .values({
-      id: ids.otherIncomeId,
-      household_id: h,
-      date: `${ym}-12`,
-      source: `${secret} sale`,
-      type: 'sale',
-      amount_cents: 12_000,
-      account_id: ids.accountId,
-      note: `${secret} income note`,
-    })
-    .execute();
-  await db
-    .insertInto('credit_cards')
-    .values({
-      id: ids.cardId,
-      household_id: h,
-      nickname: `${secret} card`,
-      due_day: 22,
-      usual_plan: 'full',
-      archived_at: null,
-    })
-    .execute();
-  await db
-    .insertInto('card_statements')
-    .values({
-      id: ids.statementId,
-      household_id: h,
-      card_id: ids.cardId,
-      ym,
-      statement_cents: 80_000,
-      minimum_cents: 2_500,
-      planned_payment_cents: 80_000,
-      paid_cents: null,
-      paid_at: null,
-    })
-    .execute();
-  await db
-    .insertInto('invites')
-    .values({
-      id: ids.inviteId,
-      household_id: h,
-      name: `${secret} invitee`,
-      email: `invitee-${label.toLowerCase()}@example.test`,
-      role: 'view',
-      token: ids.inviteToken,
-      expires_at: new Date('2026-12-01T00:00:00Z'),
-      accepted_at: null,
-      invited_by: ids.userId,
-    })
-    .execute();
-  await db
-    .insertInto('setup_progress')
-    .values({ household_id: h, step: setupStep, status: 'done' })
-    .execute();
+  await together<unknown>([
+    db
+      .insertInto('households')
+      .values({
+        id: h,
+        name: `${secret} household`,
+        mode: 'duo',
+        timezone: 'America/New_York',
+        first_month: ym,
+      })
+      .execute(),
+    db
+      .insertInto('users')
+      .values({
+        id: ids.userId,
+        email: `${label.toLowerCase()}@example.test`,
+        name: `${secret} user`,
+        cognito_sub: `sub-${label}`,
+      })
+      .execute(),
+    db
+      .insertInto('memberships')
+      .values({ household_id: h, user_id: ids.userId, role: 'owner' })
+      .execute(),
+    db
+      .insertInto('categories')
+      .values({
+        id: ids.categoryId,
+        household_id: h,
+        name: `${secret} category`,
+        name_key: `${secret} category`.toLowerCase(),
+        sort: 7,
+        archived_at: null,
+      })
+      .execute(),
+    db
+      .insertInto('accounts')
+      .values({
+        id: ids.accountId,
+        household_id: h,
+        name: `${secret} account`,
+        type: 'checking',
+        archived_at: null,
+      })
+      .execute(),
+    db
+      .insertInto('balance_snapshots')
+      .values({
+        id: ids.snapshotId,
+        household_id: h,
+        account_id: ids.accountId,
+        date: `${ym}-05`,
+        balance_cents: 100_000,
+        note: `${secret} note`,
+      })
+      .execute(),
+    db
+      .insertInto('recurring_bills')
+      .values({
+        id: ids.recurringBillId,
+        household_id: h,
+        name: `${secret} bill`,
+        estimate_cents: 50_000,
+        due_day: 1,
+        category_id: ids.categoryId,
+        account_id: ids.accountId,
+        start_ym: ym,
+        end_ym: null,
+      })
+      .execute(),
+    db
+      .insertInto('bills')
+      .values({
+        id: ids.billId,
+        household_id: h,
+        ym,
+        recurring_bill_id: ids.recurringBillId,
+        name: `${secret} bill`,
+        category_id: ids.categoryId,
+        due_date: `${ym}-01`,
+        estimate_cents: 50_000,
+        actual_cents: null,
+        paid_at: null,
+        kind: 'recurring',
+      })
+      .execute(),
+    db
+      .insertInto('months')
+      .values({
+        household_id: h,
+        ym,
+        started_at: new Date(`${ym}-01T12:00:00Z`),
+        closed_at: null,
+      })
+      .execute(),
+    // One after the other: `created_at` puts the running schedule first.
+    db
+      .insertInto('pay_schedules')
+      .values({
+        id: ids.payScheduleId,
+        household_id: h,
+        name: `${secret} job`,
+        frequency: 'monthly',
+        anchor_date: `${ym}-25`,
+        semimonthly_day_1: null,
+        semimonthly_day_2: null,
+        usual_cents: 200_000,
+        account_id: ids.accountId,
+        ended_on: null,
+      })
+      .execute()
+      .then(() =>
+        db
+          .insertInto('pay_schedules')
+          .values({
+            id: ids.stoppedScheduleId,
+            household_id: h,
+            name: `${secret} old job`,
+            frequency: 'monthly',
+            anchor_date: `${ym}-27`,
+            semimonthly_day_1: null,
+            semimonthly_day_2: null,
+            usual_cents: 100_000,
+            account_id: null,
+            ended_on: `${ym}-02`,
+          })
+          .execute(),
+      ),
+    db
+      .insertInto('paychecks')
+      .values({
+        id: ids.paycheckId,
+        household_id: h,
+        schedule_id: ids.payScheduleId,
+        expected_date: `${ym}-25`,
+        expected_cents: 200_000,
+        received_date: null,
+        received_cents: null,
+      })
+      .execute(),
+    db
+      .insertInto('other_income')
+      .values({
+        id: ids.otherIncomeId,
+        household_id: h,
+        date: `${ym}-12`,
+        source: `${secret} sale`,
+        type: 'sale',
+        amount_cents: 12_000,
+        account_id: ids.accountId,
+        note: `${secret} income note`,
+      })
+      .execute(),
+    db
+      .insertInto('credit_cards')
+      .values({
+        id: ids.cardId,
+        household_id: h,
+        nickname: `${secret} card`,
+        due_day: 22,
+        usual_plan: 'full',
+        archived_at: null,
+      })
+      .execute(),
+    db
+      .insertInto('card_statements')
+      .values({
+        id: ids.statementId,
+        household_id: h,
+        card_id: ids.cardId,
+        ym,
+        statement_cents: 80_000,
+        minimum_cents: 2_500,
+        planned_payment_cents: 80_000,
+        paid_cents: null,
+        paid_at: null,
+      })
+      .execute(),
+    db
+      .insertInto('invites')
+      .values({
+        id: ids.inviteId,
+        household_id: h,
+        name: `${secret} invitee`,
+        email: `invitee-${label.toLowerCase()}@example.test`,
+        role: 'view',
+        token: ids.inviteToken,
+        expires_at: new Date('2026-12-01T00:00:00Z'),
+        accepted_at: null,
+        invited_by: ids.userId,
+      })
+      .execute(),
+    db
+      .insertInto('setup_progress')
+      .values({ household_id: h, step: setupStep, status: 'done' })
+      .execute(),
+  ]);
   return {
     label,
     ...ids,
@@ -279,17 +296,25 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
 
 /** Every row that belongs to the household, from every table, in a stable order. */
 export async function snapshotHousehold(db: Database, s: Seeded): Promise<string[]> {
-  const rows: string[] = [];
-  const own = [
-    await db.selectFrom('households').selectAll().where('id', '=', s.householdId).execute(),
-    await db.selectFrom('users').selectAll().where('id', '=', s.userId).execute(),
-  ];
-  for (const set of own) for (const r of set) rows.push(JSON.stringify(r));
-  for (const table of HOUSEHOLD_TABLES) {
-    const result = await sql<
-      Record<string, unknown>
-    >`SELECT * FROM ${sql.table(table)} WHERE household_id = ${s.householdId}`.execute(db);
-    for (const r of result.rows) rows.push(`${table}:${JSON.stringify(r)}`);
-  }
-  return rows.sort();
+  const rows = await together([
+    db
+      .selectFrom('households')
+      .selectAll()
+      .where('id', '=', s.householdId)
+      .execute()
+      .then((set) => set.map((r) => JSON.stringify(r))),
+    db
+      .selectFrom('users')
+      .selectAll()
+      .where('id', '=', s.userId)
+      .execute()
+      .then((set) => set.map((r) => JSON.stringify(r))),
+    ...HOUSEHOLD_TABLES.map(async (table) => {
+      const result = await sql<
+        Record<string, unknown>
+      >`SELECT * FROM ${sql.table(table)} WHERE household_id = ${s.householdId}`.execute(db);
+      return result.rows.map((r) => `${table}:${JSON.stringify(r)}`);
+    }),
+  ]);
+  return rows.flat().sort();
 }
