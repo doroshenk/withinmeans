@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider, type Role } from '../permissions';
@@ -529,6 +529,52 @@ describe('P2-06 edit and delete', () => {
 
     expect(await within(region('Bills, week by week')).findByRole('alert')).toBeInTheDocument();
     expect(row('Water & sewer')).toBeInTheDocument();
+  });
+});
+
+describe('P2-06 a save that fails after its form was left', () => {
+  /** A client whose save waits until `fail` is called. */
+  function slowFailure() {
+    let fail = () => {};
+    const { client } = fakeClient();
+    const slow: BillsPageClient = {
+      ...client,
+      updateBill: {
+        mutate: () =>
+          new Promise((_resolve, reject) => {
+            fail = () => reject(new Error('boom'));
+          }),
+      },
+    };
+    return { client: slow, fail: () => fail() };
+  }
+  const saveWater = async (client: BillsPageClient) => {
+    const opened = await open(client);
+    await opened.user.click(screen.getByRole('button', { name: 'Edit Water & sewer' }));
+    await opened.user.click(screen.getByRole('button', { name: 'Save bill' }));
+    return opened;
+  };
+
+  it('is still reported when the form was cancelled', async () => {
+    const { client, fail } = slowFailure();
+    const { user } = await saveWater(client);
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    act(fail);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Water & sewer wasn’t saved.');
+  });
+
+  it('is not shown on another bill’s form', async () => {
+    const { client, fail } = slowFailure();
+    const { user } = await saveWater(client);
+
+    await user.click(screen.getByRole('button', { name: 'Edit Streaming' }));
+    act(fail);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Water & sewer wasn’t saved.');
+    const form = screen.getByRole('form', { name: 'Edit Streaming' });
+    expect(within(form).queryByRole('alert')).not.toBeInTheDocument();
   });
 });
 

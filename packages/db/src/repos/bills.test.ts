@@ -204,6 +204,21 @@ describe('P2-06 bills repository: edit and delete', () => {
     expect(await row(added.id)).toMatchObject({ estimate_cents: 8_000, actual_cents: 8_000 });
   });
 
+  it('does not let a one-time bill become $0', async () => {
+    const added = await bills.create(t.db, A.ctx(), input(), NOW);
+
+    await expect(
+      bills.update(t.db, A.ctx(), added.id, edit({ amountCents: 0 })),
+    ).rejects.toBeInstanceOf(InvalidInput);
+    expect((await row(added.id))?.estimate_cents).toBe(6_000);
+  });
+
+  it('lets a recurring bill come to $0 in a month', async () => {
+    await bills.update(t.db, A.ctx(), A.billId, edit({ amountCents: 0 }));
+
+    expect((await seeded())?.actual_cents).toBe(0);
+  });
+
   it('keeps a bill in its month', async () => {
     await expect(
       bills.update(t.db, A.ctx(), A.billId, edit({ dueDate: '2026-12-09' })),
