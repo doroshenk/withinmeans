@@ -34,8 +34,15 @@ function folder(name: string, text: string): URL {
 }
 
 describe('P2-13: setting up a test schema outlasts conflicts too', () => {
-  it('P2-13: createTestDb runs the migrations with the patient retry', () => {
-    expect(migrate).toHaveBeenCalledWith(expect.anything(), MIGRATIONS_DIR, runTestDdl);
+  it('P2-13: createTestDb runs the migrations with the patient retry', async () => {
+    // Made here: Vitest forgets calls made before a test starts.
+    const own = await createTestDb();
+
+    try {
+      expect(migrate).toHaveBeenCalledWith(expect.anything(), MIGRATIONS_DIR, runTestDdl);
+    } finally {
+      await own.destroy();
+    }
   });
 
   it('P2-13: migrate runs every schema change through the runner it is given', async () => {
