@@ -26,6 +26,8 @@ import type { NewCardInput, StatementInput } from './cards/types';
 export interface BillsPageProps {
   client: BillsPageClient;
   onNavigate?: (route: Route) => void;
+  /** The month to open on ("YYYY-MM"); this month when not given. */
+  initialYm?: string;
 }
 
 const RELOAD_ERROR = 'Saved, but this page couldn’t refresh. Reload it before trying again.';
