@@ -23,7 +23,8 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Longer than the 60 minutes backup-now.sh waits, so a stuck backup fails there and says why.
+    timeout-minutes: 90
     env:
       # The certificate ARNs contain the account ID, so they live in GitHub variables, not the repo.
       CERTIFICATE_ARN: ${{ inputs.stage == 'prod' && vars.PROD_CERTIFICATE_ARN || vars.DEV_CERTIFICATE_ARN }}

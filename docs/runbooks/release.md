@@ -76,8 +76,10 @@ the migrations recorded as finished and runs the failed file again from its firs
    (`v0.2.1`). A migration that already ran in prod is corrected by a **new** migration. If the
    broken one can never succeed, so that it blocks every later one, stop and decide how to fix
    it before changing any file.
-4. Data damaged: restore into a new cluster from the recovery point taken just before the
-   migration, following [restore.md](restore.md). Never restore over the live cluster.
+4. Data damaged: restore into a new cluster, following [restore.md](restore.md). Use the
+   recovery point taken by the **first run of the release** (its job ID is in that attempt's backup
+   log): a re-run takes another backup, of the database as the failure left it. Never restore over
+   the live cluster.
 
 ## Migration rules from v0.2.0
 
@@ -96,10 +98,15 @@ Prod has had only `v0.0.1`, so this release applies every migration since then.
 
 - [ ] SES: your address and your partner's are verified
       (see [aws-account.md](aws-account.md), Email), or the invite cannot be sent.
-- [ ] After the release, sign up on `within.doroshenk.com` and pick your first month.
-- [ ] Work through setup: bank accounts and cushion, paychecks, bill categories, recurring bills
-      and credit cards. Investments and income splits show "coming soon" until `v0.3.0`.
-- [ ] Invite your partner, if you are two.
+- [ ] Before signing up, decide whether you are one or two. A partner can be invited **only during
+      sign-up**, and a **Just me** household can never add one.
+- [ ] After the release, sign up on `within.doroshenk.com`. If you are two, choose
+      **Me and a partner** (the default is **Just me**), create your login, then fill in your
+      partner and choose **Send invite & finish** without leaving the page. The invite expires
+      in 7 days.
+- [ ] Choose **Start setting up**, pick your first month, then work through bank accounts and
+      cushion, paychecks, bill categories, recurring bills and credit cards. Investments and income
+      splits show "coming soon" until `v0.3.0`.
 - [ ] Enter nicknames only: never a card or account number.
 
 ## The side-by-side month
