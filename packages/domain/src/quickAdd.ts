@@ -76,8 +76,19 @@ export function quickAddDetail(type: QuickAddType, date: string): string {
   return `${QUICK_ADD_PAGES[type].name} · ${formatShortDate(date)}`;
 }
 
+/**
+ * The paychecks Quick Add can mark: stored ones in open months that are not received yet, oldest
+ * first. It is given the months around today, since pay can land early or late.
+ */
 export function paychecksWaiting<
   P extends { id: string | null; expectedDate: string; receivedCents: number | null },
->(_months: readonly { status: string; paychecks: readonly P[] }[]): (P & { id: string })[] {
-  throw new Error('not implemented');
+>(months: readonly { status: string; paychecks: readonly P[] }[]): (P & { id: string })[] {
+  return (
+    months
+      .filter((month) => month.status === 'open')
+      .flatMap((month) => month.paychecks)
+      .filter((pay): pay is P & { id: string } => pay.id !== null && pay.receivedCents === null)
+      // "YYYY-MM-DD" strings sort in calendar order.
+      .sort((a, b) => a.expectedDate.localeCompare(b.expectedDate))
+  );
 }

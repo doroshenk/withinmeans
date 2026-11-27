@@ -306,8 +306,8 @@ export function BillsPage({ client, onNavigate = () => {}, initialYm }: BillsPag
       )}
       {changeable && balanceCard && (
         <CardStatementForm
-          // A new form for each card, so it starts from that card's values.
-          key={balanceCard.cardId}
+          // A new form for each card, and when its saved values change (from Quick Add).
+          key={`${balanceCard.cardId} ${JSON.stringify(balanceCard.statement)}`}
           card={balanceCard}
           cards={data.cards}
           ym={data.ym}

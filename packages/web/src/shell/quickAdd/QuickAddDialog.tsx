@@ -66,9 +66,13 @@ function useModal(onClose: () => void) {
 /** Spec §5.14, design/QuickAdd.png: add an entry from any page, with each page's own form. */
 export function QuickAddDialog({ quickAdd, onClose }: { quickAdd: QuickAdd; onClose: () => void }) {
   const id = useId();
-  const dialog = useModal(onClose);
-  const [type, setType] = useState<QuickAddType>('bill');
   const [saving, setSaving] = useState(false);
+  // The modal stays until a save answers, so that a failure is never missed.
+  const close = () => {
+    if (!saving) onClose();
+  };
+  const dialog = useModal(close);
+  const [type, setType] = useState<QuickAddType>('bill');
   const [problem, setProblem] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [added, setAdded] = useState<Added[]>([]);
@@ -109,10 +113,20 @@ export function QuickAddDialog({ quickAdd, onClose }: { quickAdd: QuickAdd; onCl
     run(change, setProblem, (saved) => {
       setStatus(quickAddLandedText(entry.type, entry.name, entry.date));
       const key = ++keys.current;
-      setAdded((list) => [{ ...entry, key, undo: undo?.(saved) }, ...list]);
+      setAdded((list) => [
+        { ...entry, key, undo: undo?.(saved) },
+        // Saving a card's balance again replaces it.
+        ...list.filter(
+          (e) =>
+            !(entry.type === 'card' && e.type === 'card') ||
+            e.name !== entry.name ||
+            e.date !== entry.date,
+        ),
+      ]);
     });
 
   const go = (route: 'bills' | 'paychecks' | 'recurring', ym?: string) => {
+    if (saving) return;
     onClose();
     quickAdd.onView(route, ym);
   };
@@ -131,7 +145,13 @@ export function QuickAddDialog({ quickAdd, onClose }: { quickAdd: QuickAdd; onCl
             <h2 id={`${id}-title`}>Add</h2>
             <p>Everything lands on the right page and week automatically.</p>
           </div>
-          <button type="button" className="icon-button" aria-label="Close" onClick={onClose}>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Close"
+            disabled={saving}
+            onClick={close}
+          >
             <span aria-hidden="true">✕</span>
           </button>
         </div>
@@ -146,6 +166,7 @@ export function QuickAddDialog({ quickAdd, onClose }: { quickAdd: QuickAdd; onCl
                 type="button"
                 className="qa-type"
                 aria-pressed={t.id === type}
+                disabled={saving}
                 onClick={() => {
                   setProblem(null);
                   setStatus(null);
@@ -177,7 +198,7 @@ export function QuickAddDialog({ quickAdd, onClose }: { quickAdd: QuickAdd; onCl
               problem={problem}
               onProblem={setProblem}
               onSave={save}
-              onClose={onClose}
+              onClose={close}
               onGo={(route) => go(route)}
             />
             {(added.length > 0 || undoProblem !== null) && (

@@ -3,6 +3,7 @@ import {
   formatMoney,
   formatShortDate,
   monthName,
+  paychecksWaiting,
   quickAddPreviewText,
   type QuickAddType,
 } from '@withinmeans/domain';
@@ -146,25 +147,21 @@ export function PaycheckPanel(props: PanelProps) {
   const { quickAdd, saving, problem, onProblem, onSave, onClose } = props;
   const { client } = quickAdd;
   const [picked, setPicked] = useState<string | null>(null);
-  const [round, setRound] = useState(0);
-  // The paychecks still to be marked in the open months around today: pay can land early or late.
+  /** Marked since `from` was loaded, so not offered again if the list cannot be reloaded. */
+  const [marked, setMarked] = useState<{ from: unknown; ids: string[] }>({ from: null, ids: [] });
   const lists = useLists(async () => {
     const current = await client.paychecksPage.query({});
     const others = await Promise.all(
       [-1, 1].map((step) => client.paychecksPage.query({ ym: addMonths(current.ym, step) })),
     );
-    return [current, ...others]
-      .filter((month) => month.status === 'open')
-      .flatMap((month) => month.paychecks)
-      .flatMap((pay) =>
-        pay.id === null || pay.receivedCents !== null ? [] : [{ ...pay, id: pay.id }],
-      )
-      .sort((a, b) => a.expectedDate.localeCompare(b.expectedDate));
+    return paychecksWaiting([current, ...others]);
   });
 
   return (
     <Loaded lists={lists}>
-      {(waiting) => {
+      {(loaded) => {
+        const hidden = marked.from === loaded ? marked.ids : [];
+        const waiting = loaded.filter((p) => !hidden.includes(p.id));
         const pay = waiting.find((p) => p.id === picked) ?? waiting[0];
         if (pay === undefined) {
           return <p>No paycheck is waiting to be marked in the months you have started.</p>;
@@ -194,7 +191,9 @@ export function PaycheckPanel(props: PanelProps) {
               </p>
             )}
             <ReceivedForm
-              key={`${pay.id} ${round}`}
+              // A new form for each paycheck, which leaves the focus where it is.
+              key={pay.id}
+              autoFocus={false}
               pay={pay}
               saving={saving}
               onProblem={onProblem}
@@ -209,7 +208,7 @@ export function PaycheckPanel(props: PanelProps) {
                   save: () => client.markPaycheckReceived.mutate({ id: pay.id, ...value }),
                   undo: () => () => client.unmarkPaycheckReceived.mutate({ id: pay.id }),
                 });
-                if (saved) setRound((n) => n + 1);
+                if (saved) setMarked({ from: loaded, ids: [...hidden, pay.id] });
               }}
             />
             <Preview text={quickAddPreviewText('paycheck', pay.expectedDate)} />
@@ -225,7 +224,6 @@ export function CardPanel(props: PanelProps) {
   const { client } = quickAdd;
   const lists = useLists(() => client.billsPage.query({}));
   const [picked, setPicked] = useState<string | null>(null);
-  const [round, setRound] = useState(0);
 
   return (
     <Loaded lists={lists}>
@@ -257,7 +255,8 @@ export function CardPanel(props: PanelProps) {
         return (
           <>
             <CardStatementForm
-              key={`${card.cardId} ${round}`}
+              // A new form when the card or what is saved for it changes.
+              key={`${card.cardId} ${JSON.stringify(card.statement)}`}
               card={card}
               cards={data.cards}
               ym={data.ym}
@@ -277,10 +276,8 @@ export function CardPanel(props: PanelProps) {
                   date: card.dueDate,
                   save: () => client.saveCardStatement.mutate(input),
                 }).then((saved) => {
-                  if (!saved) return;
-                  // Stay on this card, showing what is now saved.
-                  setPicked(card.cardId);
-                  setRound((n) => n + 1);
+                  // Stay on this card, to show what is now saved.
+                  if (saved) setPicked(card.cardId);
                 })
               }
             />

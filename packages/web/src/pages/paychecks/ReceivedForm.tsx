@@ -14,10 +14,19 @@ interface ReceivedFormProps {
   onProblem: (problem: string | null) => void;
   onCancel: () => void;
   onSave: (value: Omit<Received, 'id'>) => Promise<void>;
+  /** False where something else should keep the focus when the form appears. */
+  autoFocus?: boolean;
 }
 
 /** Spec §5.9 "Mark received": the amount that landed (prefilled with the expected one) and when. */
-export function ReceivedForm({ pay, saving, onProblem, onCancel, onSave }: ReceivedFormProps) {
+export function ReceivedForm({
+  pay,
+  saving,
+  onProblem,
+  onCancel,
+  onSave,
+  autoFocus = true,
+}: ReceivedFormProps) {
   const id = useId();
   const [amount, setAmount] = useState(dollarText(pay.expectedCents));
   const [date, setDate] = useState(pay.expectedDate);
@@ -50,7 +59,7 @@ export function ReceivedForm({ pay, saving, onProblem, onCancel, onSave }: Recei
           id={`${id}-amount`}
           type="text"
           inputMode="decimal"
-          autoFocus
+          autoFocus={autoFocus}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
         />
