@@ -140,8 +140,8 @@ export function BillsPage({ client, onNavigate = () => {} }: BillsPageProps) {
   // Nothing moves to checking until Phase 3.
   const summary = billsMonthSummary({ ...data, cards: cardCashflow(data.cards) });
   const hasCards = data.cards.length > 0;
-  /** Anything to add up: without it the page is only its empty state. */
-  const hasAmounts = !isEmpty || hasIncome || hasCards;
+  /** Anything to add up: without it the page shows its empty state and preview. */
+  const hasAmounts = !isEmpty || hasIncome || data.cards.some((c) => c.statement !== null);
 
   const setForm = (next: Editing) => {
     openForm.current = next;
@@ -337,7 +337,7 @@ export function BillsPage({ client, onNavigate = () => {} }: BillsPageProps) {
           onRecurring={() => onNavigate('recurring')}
         />
       )}
-      {hasAmounts && (
+      {(hasAmounts || hasCards) && (
         <div className={isEmpty ? 'bill-side bill-side-wide' : 'bill-columns'}>
           {!isEmpty && (
             <WeeksCard
@@ -392,15 +392,17 @@ export function BillsPage({ client, onNavigate = () => {} }: BillsPageProps) {
               }
               onAddCard={() => show({ kind: 'card' })}
             />
-            <PaychecksCard
-              month={month}
-              today={data.today}
-              paychecks={data.paychecks}
-              otherIncome={data.otherIncome}
-              otherCents={summary.otherCents}
-              onManage={() => onNavigate('paychecks')}
-            />
-            <AddsUpCard month={month} summary={summary} />
+            {hasAmounts && (
+              <PaychecksCard
+                month={month}
+                today={data.today}
+                paychecks={data.paychecks}
+                otherIncome={data.otherIncome}
+                otherCents={summary.otherCents}
+                onManage={() => onNavigate('paychecks')}
+              />
+            )}
+            {hasAmounts && <AddsUpCard month={month} summary={summary} />}
           </div>
         </div>
       )}

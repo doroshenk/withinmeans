@@ -5,6 +5,8 @@ import { useCan } from '../permissions';
 import { CardForm } from './cards/CardForm';
 import type { CardsClient, CreditCardView, NewCardInput } from './cards/types';
 
+const RELOAD_ERROR = 'Saved, but this page couldn’t refresh. Reload it before trying again.';
+
 type Load = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; cards: CreditCardView[] };
 
 /** Spec §3 step 6: the credit cards (nickname, usual due day, usual payment). */
@@ -37,14 +39,19 @@ export function CardsStep({ client }: { client: CardsClient }) {
     setProblem(null);
     try {
       await change();
-      setLoad({ kind: 'ready', cards: await fetchCards() });
-      return true;
     } catch (error) {
       setProblem(apiErrorMessage(error));
-      return false;
-    } finally {
       setSaving(false);
+      return false;
     }
+    // The change is saved. If this reload fails, keep what is shown.
+    try {
+      setLoad({ kind: 'ready', cards: await fetchCards() });
+    } catch {
+      setProblem(RELOAD_ERROR);
+    }
+    setSaving(false);
+    return true;
   };
 
   return (

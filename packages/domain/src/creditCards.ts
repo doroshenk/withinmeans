@@ -267,8 +267,13 @@ export function statementDraftError(draft: StatementDraft): string | undefined {
   return statementError({ statementCents, minimumCents, plannedPaymentCents });
 }
 
-export function parseCardAmount(_text: string): Cents | null {
-  throw new Error('not implemented');
+/**
+ * A typed amount from $0 to the card limit; null for anything else, so that a form can total what
+ * is typed so far without meeting a number too large to add up.
+ */
+export function parseCardAmount(text: string): Cents | null {
+  const cents = parseDollars(text);
+  return cents !== undefined && isAmount(cents) ? cents : null;
 }
 
 /** What is wrong with the amount typed into "mark paid", if anything. */

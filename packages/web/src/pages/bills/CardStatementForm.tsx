@@ -4,7 +4,7 @@ import {
   dollarText,
   formatMoney,
   monthName,
-  parseDollars,
+  parseCardAmount,
   planChoiceOf,
   plannedForChoice,
   statementDraftError,
@@ -61,12 +61,13 @@ export function CardStatementForm({
   );
   const [alreadyPaid, setAlreadyPaid] = useState(false);
   const month = monthName(ym);
-  const statementCents = parseDollars(balance) ?? null;
+  // What is typed so far; an amount out of range counts as not typed until it is saved.
+  const statementCents = parseCardAmount(balance);
   const planned = plannedForChoice(
     choice,
     statementCents ?? 0,
-    parseDollars(minimum) ?? 0,
-    parseDollars(other) ?? null,
+    parseCardAmount(minimum) ?? 0,
+    parseCardAmount(other),
   );
 
   const submit = () => {
@@ -83,7 +84,7 @@ export function CardStatementForm({
       cardId: card.cardId,
       ym,
       statementCents: statementCents ?? 0,
-      minimumCents: parseDollars(minimum) ?? 0,
+      minimumCents: parseCardAmount(minimum) ?? 0,
       plannedPaymentCents: planned ?? 0,
       alreadyPaid,
     });
