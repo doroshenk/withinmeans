@@ -304,7 +304,9 @@ describe('P2-06 weeks', () => {
   });
 
   it('says when a week has no bills', async () => {
-    await open(fakeClient({ data: november({ bills: [BILLS[4]!] }) }).client);
+    await open(
+      fakeClient({ data: november({ bills: BILLS.filter((b) => b.name === 'Streaming') }) }).client,
+    );
 
     expect(region('Week 3')).toHaveTextContent('Nothing due this week');
   });

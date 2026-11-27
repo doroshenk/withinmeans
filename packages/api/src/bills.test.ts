@@ -172,6 +172,25 @@ describe('P2-06 the Bills page query', () => {
     expect((await owner.billsPage({ ym })).status).toBe('not-started');
   });
 
+  it('orders bills due the same day by name, and shows one with no estimate at its actual', async () => {
+    const { owner, categoryId } = await setUp();
+    const { id } = await owner.addBill({
+      name: 'Alarm',
+      amountCents: 2_000,
+      dueDate: '2026-11-18',
+      categoryId,
+      paid: true,
+    });
+    await t.db.updateTable('bills').set({ estimate_cents: null }).where('id', '=', id).execute();
+
+    const page = await owner.billsPage({});
+
+    expect(page.bills.map((b) => [b.name, b.estimateCents])).toEqual([
+      ['Alarm', 2_000],
+      ['Water & sewer', 6_800],
+    ]);
+  });
+
   it("includes the month's one-time income", async () => {
     const { owner } = await setUp();
     await owner.addAccount({ name: 'Checking', type: 'checking', balanceCents: 0 });

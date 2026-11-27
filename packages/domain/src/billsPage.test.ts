@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   addBillInput,
+  billAddedText,
   billCategoryTotals,
   billEditDraftError,
   billsMonthSummary,
@@ -160,6 +161,17 @@ describe('P2-06 the tiles (spec §5.6, §6.2)', () => {
     });
   });
 
+  it('counts only the paychecks that were received', () => {
+    const summary = billsMonthSummary({
+      bills: [],
+      paychecks: [...paychecks, { expectedCents: 1, receivedCents: null }],
+      otherIncome: [],
+      cards: [],
+    });
+
+    expect([summary.paychecksReceived, summary.paycheckCount]).toEqual([1, 3]);
+  });
+
   it('can be left with less than nothing', () => {
     const summary = billsMonthSummary({ bills, paychecks: [], otherIncome: [], cards: [] });
 
@@ -195,6 +207,18 @@ describe('P2-06 by category (spec §6.2)', () => {
       { categoryId: 'auto', name: 'Auto', colorIndex: 6, cents: 9_200, barPct: 33 },
     ]);
     expect(totals.oneTimeCents).toBe(9_200);
+  });
+
+  it('orders equal totals by name', () => {
+    const tied = [
+      line({ name: 'Water', dueDate: '2026-11-01' }),
+      line({ name: 'Rent', dueDate: '2026-11-01', categoryId: 'housing' }),
+    ];
+
+    expect(billCategoryTotals(tied, categories, 0).rows.map((r) => r.name)).toEqual([
+      'Housing',
+      'Utilities',
+    ]);
   });
 
   it('shows credit cards as their own line', () => {
@@ -233,7 +257,7 @@ describe('P2-06 months not started (spec §5.11)', () => {
       estimateCents: 6_800,
       dueDay: 18,
       categoryId: 'utilities',
-      startYm: '2026-11',
+      startYm: '2026-01',
       endYm: null,
     },
   ];
@@ -264,6 +288,13 @@ describe('P2-06 months not started (spec §5.11)', () => {
     expect(canOpenMonth(ym, '2026-10', TODAY)).toBe(expected);
   });
 
+  it('rejects a month that is not "YYYY-MM"', () => {
+    expect(() => monthBillPreview([], '2026-13', TODAY)).toThrow(RangeError);
+    expect(() => canOpenMonth('2026-13', '2026-10', TODAY)).toThrow(RangeError);
+    expect(() => canOpenMonth('2026-11', 'soon', TODAY)).toThrow(RangeError);
+    expect(() => billWeeks([], '2026-13', TODAY)).toThrow(RangeError);
+  });
+
   it('lets a first month further ahead than next month be opened', () => {
     expect(canOpenMonth('2027-02', '2027-02', TODAY)).toBe(true);
     expect(canOpenMonth('2027-01', '2027-02', TODAY)).toBe(false);
@@ -282,12 +313,17 @@ describe('P2-06 the bill forms', () => {
     [{ name: ' ' }, 'Give the bill a name.'],
     [{ amountText: '' }, 'Enter an amount greater than $0.'],
     [{ amountText: '0' }, 'Enter an amount greater than $0.'],
+    [{ amountText: '-5' }, 'Enter an amount greater than $0.'],
     [{ amountText: '100,000,000.01' }, 'Enter an amount of $100,000,000 or less.'],
     [{ date: '' }, 'Pick the date it is due.'],
     [{ categoryId: '' }, 'Pick a category.'],
   ])('says what is wrong with %o', (over, message) => {
     expect(oneTimeBillDraftError({ ...draft, ...over })).toBe(message);
     expect(billEditDraftError({ ...draft, ...over }, '2026-11')).toBe(message);
+  });
+
+  it('says which week and month a new bill landed in', () => {
+    expect(billAddedText('Tires', '2026-11-24')).toBe('Added Tires to week 4 of November 2026.');
   });
 
   it('keeps an edited bill in its month', () => {
@@ -299,6 +335,12 @@ describe('P2-06 the bill forms', () => {
   it('lets an edit set an amount of $0, for a bill that came to nothing', () => {
     expect(billEditDraftError({ ...draft, amountText: '0' }, '2026-11', 'recurring')).toBe(
       undefined,
+    );
+  });
+
+  it('rejects a negative amount on a recurring bill too', () => {
+    expect(billEditDraftError({ ...draft, amountText: '-5' }, '2026-11', 'recurring')).toBe(
+      'Enter an amount greater than $0.',
     );
   });
 
