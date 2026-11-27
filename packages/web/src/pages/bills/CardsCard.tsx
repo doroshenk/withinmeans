@@ -127,7 +127,17 @@ function CardItem({
               {card.previousCents !== null &&
                 ` · ${cardChangeText(statement.statementCents, card.previousCents, ym)}`}
             </span>
-            <span className="card-plan">{cardPlanText(statement)}</span>
+            <span
+              // Amber when part of the balance will carry over (design/Bills.png).
+              className={
+                statement.paidCents === null &&
+                statement.plannedPaymentCents < statement.statementCents
+                  ? 'card-plan card-plan-part'
+                  : 'card-plan'
+              }
+            >
+              {cardPlanText(statement)}
+            </span>
           </>
         )}
         {carried !== null && <span className="card-missing">{carried}</span>}

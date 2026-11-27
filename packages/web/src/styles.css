@@ -2013,7 +2013,7 @@ button.category-swatch {
   list-style: none;
 }
 
-.bill-row {
+.bill-rows .bill-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -2023,7 +2023,7 @@ button.category-swatch {
   background: var(--color-warning-bg);
 }
 
-.bill-row-paid {
+.bill-rows .bill-row-paid {
   background: none;
 }
 
@@ -2261,6 +2261,7 @@ button.category-swatch {
 }
 
 .card-what .card-missing,
+.card-what .card-plan-part,
 .card-previous {
   font-weight: 600;
   color: var(--color-warning-text);
