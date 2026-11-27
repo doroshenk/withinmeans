@@ -7,4 +7,6 @@ export interface AuthClient {
   resetPassword(email: string, code: string, newPassword: string): Promise<void>;
   signOut(): void;
   getAccessToken(): Promise<string | undefined>;
+  /** The email of the signed-in session. Only for showing who is signed in. */
+  getEmail?(): Promise<string | undefined>;
 }

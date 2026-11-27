@@ -6,6 +6,7 @@ import { RoleProvider } from '../permissions';
 import { saveFile as saveToDisk } from '../saveFile';
 import { Shell, type Route } from '../shell/Shell';
 import { DownloadData } from './DownloadData';
+import { NoHousehold, type NoHouseholdProps } from './NoHousehold';
 
 export type MeResult = inferRouterOutputs<AppRouter>['me'];
 
@@ -19,6 +20,7 @@ export interface HelloProps {
   /** Saves a downloaded file; injected so tests can watch it. */
   saveFile?: (name: string, text: string) => void;
   onSignOut?: () => void;
+  sessionEmail?: NoHouseholdProps['sessionEmail'];
   /** Opens the setup wizard (spec §3). */
   onStartSetup?: () => void;
   /** The sidebar or tab bar asked for another page. */
@@ -30,6 +32,7 @@ type State = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; me: MeRe
 export function Hello({
   client,
   onSignOut,
+  sessionEmail,
   onStartSetup,
   onNavigate = () => {},
   saveFile = saveToDisk,
@@ -47,29 +50,37 @@ export function Hello({
     };
   }, [client]);
 
+  const homeless = state.kind === 'ready' && state.me.household === null;
+
   return (
     <RoleProvider role={state.kind === 'ready' ? state.me.household?.role : undefined}>
       <Shell route="dashboard" onNavigate={onNavigate}>
         <main className="hello">
           {state.kind === 'loading' && <p role="status">Loading…</p>}
           {state.kind === 'error' && <p role="alert">{GENERIC_ERROR}</p>}
-          {state.kind === 'ready' && (
+          {state.kind === 'ready' && state.me.household === null && (
+            <NoHousehold
+              email={state.me.user?.email}
+              sessionEmail={sessionEmail}
+              onSignOut={onSignOut}
+            />
+          )}
+          {state.kind === 'ready' && state.me.household !== null && (
             <>
               <h1>{`Hello ${state.me.user?.name ?? 'there'}`}</h1>
-              {state.me.household && <p>{state.me.household.name}</p>}
+              <p>{state.me.household.name}</p>
               {/* Placeholder until the Phase 4 dashboard. */}
               <p>Your dashboard is coming soon.</p>
-              {onStartSetup && state.me.household && state.me.household.role !== 'view' && (
+              {onStartSetup && state.me.household.role !== 'view' && (
                 <button type="button" className="button" onClick={onStartSetup}>
                   Start setting up
                 </button>
               )}
-              {state.me.household && (
-                <DownloadData exportData={() => client.exportData.query()} saveFile={saveFile} />
-              )}
+              <DownloadData exportData={() => client.exportData.query()} saveFile={saveFile} />
             </>
           )}
-          {onSignOut && (
+          {/* The no-household message has its own. */}
+          {onSignOut && !homeless && (
             <button type="button" className="button button-quiet" onClick={onSignOut}>
               Sign out
             </button>

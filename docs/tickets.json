@@ -844,6 +844,26 @@
       "console": []
     },
     {
+      "id": "P2-15",
+      "phase": 2,
+      "title": "Say that a login has no household",
+      "refs": "§3",
+      "goal": "A signed-in login with no household is told so, with a way to sign out, instead of \"Something went wrong. Please try again.\"",
+      "tests": [
+        "Each member page (Bills & cash flow, Recurring bills, Paychecks) shows the message, not the generic error, when `me` has no household",
+        "Setup shows the same message",
+        "The Dashboard shows the same message in place of \"Hello there\" and \"Your dashboard is coming soon\"",
+        "The message has a Sign out button that signs out and returns to the sign-in screen",
+        "A failed `me` call still shows the generic error",
+        "A login with no household sees no write controls and no \"+ Add\""
+      ],
+      "done": [
+        "Checked at 1440px and 390px"
+      ],
+      "blocked": [],
+      "console": []
+    },
+    {
       "id": "P3-01",
       "phase": 3,
       "title": "Holdings, prices and share trades",

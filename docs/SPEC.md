@@ -94,6 +94,10 @@ Design: `SignIn.dc.html`, `Setup.dc.html`
 
 The person who created the household is the owner and always has full access.
 
+### A login with no household
+
+A signed-in login that is in no household (for example one made outside sign-up) sees "This login isn't in a household" with its email and a **Sign out** button, on the Dashboard, on every member page and in setup. There are no write controls.
+
 ### First-time setup wizard (9 steps)
 
 - **Saving:** each step saves when the user continues. The user can leave and resume, and jump to any step from the stepper.

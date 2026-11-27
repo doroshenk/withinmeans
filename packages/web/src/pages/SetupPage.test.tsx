@@ -47,7 +47,7 @@ describe('P1-08 SetupPage', () => {
     expect(screen.queryByRole('button', { name: 'Save & continue' })).not.toBeInTheDocument();
   });
 
-  it('shows a generic error when me fails or there is no household', async () => {
+  it('shows a generic error when me fails, and says when there is no household', async () => {
     const { unmount } = render(
       <SetupPage client={client(Promise.reject(new Error('boom')))} onExit={() => {}} />,
     );
@@ -60,6 +60,8 @@ describe('P1-08 SetupPage', () => {
         onExit={() => {}}
       />,
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong');
+    expect(
+      await screen.findByRole('heading', { name: 'This login isn’t in a household' }),
+    ).toBeInTheDocument();
   });
 });
