@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider, type Role } from '../permissions';
 import { accountsStub } from './accountsStub';
+import { cardsStub } from './cardsStub';
 import { categoriesStub } from './categoriesStub';
 import { paychecksStub } from './paychecksStub';
 import { recurringBillsStub } from './recurringBillsStub';
@@ -27,6 +28,7 @@ function fakeClient(initial: Row[] = []) {
     },
     saveSetupStep: { mutate: save },
     ...accountsStub,
+    ...cardsStub,
     ...categoriesStub,
     ...recurringBillsStub,
     ...paychecksStub,
@@ -139,7 +141,7 @@ describe('P1-08 setup wizard', () => {
     const { user } = open(fakeClient().client);
     await screen.findByText('Step 1 of 9');
 
-    await user.click(stepButton(/^Credit cards/));
+    await user.click(stepButton(/^Investments/));
 
     expect(screen.getByText('Coming soon')).toBeInTheDocument();
   });
@@ -236,6 +238,7 @@ describe('P1-08 setup wizard', () => {
   it('shows "Loading…" first and a generic error if progress cannot be loaded', async () => {
     const client: SetupClient = {
       ...accountsStub,
+      ...cardsStub,
       ...categoriesStub,
       ...recurringBillsStub,
       ...paychecksStub,
@@ -394,7 +397,7 @@ describe('P1-13 setup step 9: review and finish', () => {
       ['Paychecks', 'Skipped', 'Add now'],
       ['Bill categories', 'Not started', 'Finish this'],
       ['Recurring bills', 'Not started', 'Finish this'],
-      ['Credit cards', 'Skipped · Coming soon', 'Add now'],
+      ['Credit cards', 'Skipped', 'Add now'],
       ['Investments', 'Coming soon', 'Add now'],
       ['Where income goes', 'Coming soon', 'Finish this'],
     ] as const;
@@ -417,13 +420,13 @@ describe('P1-13 setup step 9: review and finish', () => {
     const { client, save } = fakeClient();
     const { user } = open(client);
     await screen.findByText('Step 1 of 9');
-    await user.click(stepButton(/^Credit cards/));
+    await user.click(stepButton(/^Investments/));
 
     expect(screen.queryByRole('button', { name: 'Save & continue' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Skip for now' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next →' }));
 
-    expect(screen.getByText('Step 7 of 9')).toBeInTheDocument();
+    expect(screen.getByText('Step 8 of 9')).toBeInTheDocument();
     expect(save).not.toHaveBeenCalled();
   });
 
@@ -449,13 +452,19 @@ describe('P1-13 setup step 9: review and finish', () => {
   });
 
   it('reopening a finished setup does not land on a coming-soon step', async () => {
-    open(fakeClient([1, 2, 3, 4, 5, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
+    open(fakeClient([1, 2, 3, 4, 5, 6, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
 
     expect(await screen.findByText('Step 9 of 9')).toBeInTheDocument();
   });
 
+  it('P2-07: reopening a finished setup lands on step 6 if it was never answered', async () => {
+    open(fakeClient([1, 2, 3, 4, 5, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
+
+    expect(await screen.findByText('Step 6 of 9')).toBeInTheDocument();
+  });
+
   it('P2-09: reopening a finished setup lands on step 3 if it was never answered', async () => {
-    open(fakeClient([1, 2, 4, 5, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
+    open(fakeClient([1, 2, 4, 5, 6, 9].map((step) => ({ step, status: 'done' }) as Row)).client);
 
     expect(await screen.findByText('Step 3 of 9')).toBeInTheDocument();
   });

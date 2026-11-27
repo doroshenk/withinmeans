@@ -5,6 +5,7 @@ import { App } from './App';
 import type { AuthClient } from './auth/types';
 import { accountsStub } from './pages/accountsStub';
 import { billsPageStub } from './pages/billsPageStub';
+import { cardsStub } from './pages/cardsStub';
 import { categoriesStub } from './pages/categoriesStub';
 import type { MeResult } from './pages/Hello';
 import { otherIncomeStub } from './pages/otherIncomeStub';
@@ -37,6 +38,7 @@ function start() {
     acceptInvite: { mutate: unused },
     ...accountsStub,
     ...billsPageStub,
+    ...cardsStub,
     ...categoriesStub,
     ...recurringBillsStub,
     ...otherIncomeStub,

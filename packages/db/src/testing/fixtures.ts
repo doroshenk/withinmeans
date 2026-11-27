@@ -16,6 +16,9 @@ export interface Seeded {
   payScheduleId: string;
   paycheckId: string;
   otherIncomeId: string;
+  /** One card with a statement in `ym`. */
+  cardId: string;
+  statementId: string;
   /** A second schedule, already stopped, with no paychecks. */
   stoppedScheduleId: string;
   inviteId: string;
@@ -41,6 +44,8 @@ export const HOUSEHOLD_TABLES = [
   'pay_schedules',
   'paychecks',
   'other_income',
+  'credit_cards',
+  'card_statements',
 ] as const;
 
 export async function clearAll(db: Database): Promise<void> {
@@ -61,6 +66,8 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
     payScheduleId: randomUUID(),
     paycheckId: randomUUID(),
     otherIncomeId: randomUUID(),
+    cardId: randomUUID(),
+    statementId: randomUUID(),
     stoppedScheduleId: randomUUID(),
     inviteId: randomUUID(),
     inviteToken: `token-${label}-${randomUUID()}`,
@@ -216,6 +223,31 @@ export async function seedHousehold(db: Database, label: 'A' | 'B'): Promise<See
       amount_cents: 12_000,
       account_id: ids.accountId,
       note: `${secret} income note`,
+    })
+    .execute();
+  await db
+    .insertInto('credit_cards')
+    .values({
+      id: ids.cardId,
+      household_id: h,
+      nickname: `${secret} card`,
+      due_day: 22,
+      usual_plan: 'full',
+      archived_at: null,
+    })
+    .execute();
+  await db
+    .insertInto('card_statements')
+    .values({
+      id: ids.statementId,
+      household_id: h,
+      card_id: ids.cardId,
+      ym,
+      statement_cents: 80_000,
+      minimum_cents: 2_500,
+      planned_payment_cents: 80_000,
+      paid_cents: null,
+      paid_at: null,
     })
     .execute();
   await db

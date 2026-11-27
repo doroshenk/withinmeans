@@ -7,7 +7,9 @@ import { createTestDb, type TestDb } from '../testing/harness.js';
 import { accounts } from './accounts.js';
 import { balanceSnapshots } from './balanceSnapshots.js';
 import { bills } from './bills.js';
+import { cardStatements } from './cardStatements.js';
 import { categories } from './categories.js';
+import { creditCards } from './creditCards.js';
 import { householdExport } from './householdExport.js';
 import { invites } from './invites.js';
 import { memberships } from './memberships.js';
@@ -55,7 +57,63 @@ const markSeededReceived = (db: TestDb['db'], t: Seeded) =>
     receivedDate: '2026-11-18',
   });
 
+const markSeededCardPaid = (db: TestDb['db'], t: Seeded) =>
+  cardStatements.markPaid(db, t.ctx(), t.cardId, t.ym, 80_000, new Date('2026-11-18T12:00:00Z'));
+
 const cases: Case[] = [
+  { name: 'creditCards.list', write: false, run: (db, ctx) => creditCards.list(db, ctx) },
+  {
+    name: 'creditCards.create',
+    write: true,
+    run: (db, ctx) =>
+      creditCards.create(db, ctx, { nickname: 'Gas', dueDay: 27, usualPlan: 'varies' }),
+  },
+  {
+    name: 'creditCards.remove',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) => creditCards.remove(db, ctx, t.cardId, new Date('2026-11-18T12:00:00Z')),
+  },
+  {
+    name: 'cardStatements.listForMonths',
+    write: false,
+    marker: (t) => t.statementId,
+    run: (db, ctx, t) => cardStatements.listForMonths(db, ctx, [t.ym]),
+  },
+  {
+    name: 'cardStatements.save',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) =>
+      cardStatements.save(
+        db,
+        ctx,
+        {
+          cardId: t.cardId,
+          ym: t.ym,
+          statementCents: 90_000,
+          minimumCents: 3_000,
+          plannedPaymentCents: 90_000,
+        },
+        new Date('2026-11-18T12:00:00Z'),
+      ),
+  },
+  {
+    name: 'cardStatements.markPaid',
+    write: true,
+    namesId: true,
+    run: (db, ctx, t) =>
+      cardStatements.markPaid(db, ctx, t.cardId, t.ym, 100, new Date('2026-11-18T12:00:00Z')),
+  },
+  {
+    name: 'cardStatements.unmarkPaid',
+    write: true,
+    namesId: true,
+    // Only a paid statement changes.
+    prepare: markSeededCardPaid,
+    run: (db, ctx, t) => cardStatements.unmarkPaid(db, ctx, t.cardId, t.ym),
+  },
+
   { name: 'memberships.list', write: false, run: (db, ctx) => memberships.list(db, ctx) },
 
   { name: 'invites.listPending', write: false, run: (db, ctx) => invites.listPending(db, ctx) },
@@ -541,6 +599,8 @@ describe('P1-01 isolation: coverage of the table', () => {
       invites,
       months: { ...months, openMonth },
       bills,
+      creditCards,
+      cardStatements,
       categories,
       accounts,
       balanceSnapshots,

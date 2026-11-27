@@ -34,6 +34,11 @@ import {
   removeBillInput,
   setBillPaidInput,
   updateBillInput,
+  addCreditCardInput,
+  markCardPaidInput,
+  removeCreditCardInput,
+  saveCardStatementInput,
+  unmarkCardPaidInput,
 } from '@withinmeans/domain';
 import { setupProgress } from '@withinmeans/db';
 import { z } from 'zod';
@@ -55,6 +60,14 @@ import {
   updateBill,
 } from './bills.js';
 import type { Context } from './context.js';
+import {
+  addCreditCard,
+  listCreditCards,
+  markCardPaid,
+  removeCreditCard,
+  saveCardStatement,
+  unmarkCardPaid,
+} from './creditCards.js';
 import { exportData } from './exportData.js';
 import { firstMonthOptions, startFirstMonth } from './firstMonth.js';
 import { invitePartner, resendInvite } from './invitePartner.js';
@@ -330,6 +343,31 @@ export const appRouter = t.router({
   removeBill: writeProcedure
     .input(removeBillInput)
     .mutation(({ ctx, input }) => removeBill(ctx, input)),
+
+  /** Spec §3 step 6: the cards still in use. */
+  creditCards: memberProcedure.query(({ ctx }) => listCreditCards(ctx)),
+
+  addCreditCard: writeProcedure
+    .input(addCreditCardInput)
+    .mutation(({ ctx, input }) => addCreditCard(ctx, input)),
+
+  /** A card with statements is archived, so its months keep them. */
+  removeCreditCard: writeProcedure
+    .input(removeCreditCardInput)
+    .mutation(({ ctx, input }) => removeCreditCard(ctx, input)),
+
+  /** Spec §5.10: a card's balance, minimum and planned payment for a month. */
+  saveCardStatement: writeProcedure
+    .input(saveCardStatementInput)
+    .mutation(({ ctx, input }) => saveCardStatement(ctx, input)),
+
+  markCardPaid: writeProcedure
+    .input(markCardPaidInput)
+    .mutation(({ ctx, input }) => markCardPaid(ctx, input)),
+
+  unmarkCardPaid: writeProcedure
+    .input(unmarkCardPaidInput)
+    .mutation(({ ctx, input }) => unmarkCardPaid(ctx, input)),
 
   /** Spec §8: the household's full JSON export. A read, so view-only members may call it. */
   exportData: memberProcedure.query(({ ctx }) => exportData(ctx)),

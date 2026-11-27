@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { MeResult } from './Hello';
 import { accountsStub } from './accountsStub';
+import { cardsStub } from './cardsStub';
 import { categoriesStub } from './categoriesStub';
 import { paychecksStub } from './paychecksStub';
 import { recurringBillsStub } from './recurringBillsStub';
@@ -11,6 +12,7 @@ import { SetupPage } from './SetupPage';
 function client(me: Promise<MeResult>) {
   return {
     ...accountsStub,
+    ...cardsStub,
     ...categoriesStub,
     ...recurringBillsStub,
     ...paychecksStub,

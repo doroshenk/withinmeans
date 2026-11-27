@@ -15,6 +15,7 @@ export const billsPageStub: BillsPageClient = {
         categories: [],
         paychecks: [],
         otherIncome: [],
+        cards: [],
       }),
   },
   openMonth: { mutate: done },
@@ -22,4 +23,8 @@ export const billsPageStub: BillsPageClient = {
   updateBill: { mutate: done },
   setBillPaid: { mutate: done },
   removeBill: { mutate: done },
+  addCreditCard: { mutate: done },
+  saveCardStatement: { mutate: done },
+  markCardPaid: { mutate: done },
+  unmarkCardPaid: { mutate: done },
 };
