@@ -57,3 +57,8 @@ export function averageCents(values: readonly Cents[]): Cents | null {
   const total = sumCents(values);
   return Math.floor((total * 2 + values.length) / (values.length * 2));
 }
+
+/** How many whole times `unit` fits in `amount`. */
+export function wholeTimes(_amount: Cents, _unit: Cents): number {
+  throw new Error('not implemented');
+}

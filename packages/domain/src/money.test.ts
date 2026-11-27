@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { addCents, assertCents, formatMoney, subCents, sumCents, percentOf } from './money';
+import {
+  addCents,
+  assertCents,
+  formatMoney,
+  subCents,
+  sumCents,
+  percentOf,
+  wholeTimes,
+} from './money';
 
 const MINUS = '−';
 
@@ -106,5 +114,22 @@ describe('P1-12 percentOf', () => {
     expect(() => percentOf(1, 100.5)).toThrow(/whole must be an integer/);
     expect(() => percentOf(1, 0)).toThrow(/whole must be greater than zero/);
     expect(() => percentOf(1, -5)).toThrow(/whole must be greater than zero/);
+  });
+});
+
+describe('P3-07 wholeTimes', () => {
+  it('counts how many whole units fit', () => {
+    expect(wholeTimes(2_958, 780)).toBe(3);
+    expect(wholeTimes(780, 780)).toBe(1);
+    expect(wholeTimes(779, 780)).toBe(0);
+    expect(wholeTimes(0, 780)).toBe(0);
+  });
+
+  it('needs integer cents, an amount of zero or more and a positive unit', () => {
+    expect(() => wholeTimes(1.5, 1)).toThrow(/amount must be an integer/);
+    expect(() => wholeTimes(1, 1.5)).toThrow(/unit must be an integer/);
+    expect(() => wholeTimes(-1, 1)).toThrow('amount must not be negative');
+    expect(() => wholeTimes(1, 0)).toThrow('unit must be greater than zero');
+    expect(() => wholeTimes(1, -1)).toThrow('unit must be greater than zero');
   });
 });
