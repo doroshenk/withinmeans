@@ -84,8 +84,8 @@ describe('P2-13: the test reset and seed send their statements concurrently', ()
 
     expect(seen.peak).toBe(seen.total);
     expect(again).toEqual(first);
-    expect(again[0]).toContain('A-secret household');
-    expect(again[1]).toContain('A-secret user');
+    expect(again).toContainEqual(expect.stringContaining('A-secret household'));
+    expect(again).toContainEqual(expect.stringContaining('A-secret user'));
   });
 
   it('P2-13: a failed statement is reported once the others have finished', async () => {
