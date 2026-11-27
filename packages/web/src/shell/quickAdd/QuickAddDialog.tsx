@@ -27,6 +27,9 @@ interface Added {
   undo: (() => Promise<unknown>) | undefined;
 }
 
+/** The letters design/QuickAdd.png puts beside the types. */
+const BADGES: Record<QuickAddType, string> = { bill: 'B', income: 'I', paycheck: 'P', card: 'C' };
+
 const FOCUSABLE = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled])';
 
 /** Escape closes, Tab stays inside, and closing returns to whatever opened it. */
@@ -71,6 +74,11 @@ export function QuickAddDialog({ quickAdd, onClose }: { quickAdd: QuickAdd; onCl
   const [added, setAdded] = useState<Added[]>([]);
   const [undoProblem, setUndoProblem] = useState<string | null>(null);
   const keys = useRef(0);
+  const confirmation = useRef<HTMLParagraphElement>(null);
+  // The form that was saved may be gone, or scrolled far from the confirmation.
+  useEffect(() => {
+    if (status !== null) confirmation.current?.focus();
+  }, [status]);
   const info = QUICK_ADD_TYPES.find((t) => t.id === type);
   const Panel = PANELS[type];
 
@@ -145,7 +153,7 @@ export function QuickAddDialog({ quickAdd, onClose }: { quickAdd: QuickAdd; onCl
                 }}
               >
                 <span className={`qa-badge qa-badge-${t.id}`} aria-hidden="true">
-                  {t.label.charAt(0)}
+                  {BADGES[t.id]}
                 </span>
                 <span>
                   <strong>{t.label}</strong>
@@ -158,7 +166,7 @@ export function QuickAddDialog({ quickAdd, onClose }: { quickAdd: QuickAdd; onCl
             <h3>{info?.heading}</h3>
             <p className="help">{info?.help}</p>
             {status !== null && (
-              <p role="status" className="notice">
+              <p ref={confirmation} role="status" tabIndex={-1} className="notice">
                 {status}
               </p>
             )}

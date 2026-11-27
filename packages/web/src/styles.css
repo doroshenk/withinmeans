@@ -2423,6 +2423,7 @@ button.category-swatch {
 
 .qa-panel h3 {
   margin: 0;
+  font-family: 'Fraunces', serif;
   font-size: 24px;
 }
 
@@ -2440,6 +2441,11 @@ button.category-swatch {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* The panel's help says it already. */
+.qa-panel form > .help {
+  display: none;
 }
 
 .qa-preview {
