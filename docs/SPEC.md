@@ -158,8 +158,9 @@ Bill             id, ym, recurring_bill_id?, name, category_id, due_date,
                  -- recurring bills create one Bill per month when the month starts; one-time bills are created directly
 
 CreditCard       id, nickname, due_day, usual_plan(full|min|varies), archived_at
-CardStatement    id, card_id, ym, statement_cents, minimum_cents, planned_payment_cents, paid_cents?, paid_at?
+CardStatement    id, card_id, ym, statement_cents, minimum_cents, planned_payment_cents, paid_cents?, paid_at?, due_date?
                  -- no statement row yet = "no balance entered" (shows as missing, not $0)
+                 -- due_date falls in month ym; empty = the card's due_day in that month
 
 PaySchedule      id, name, frequency(weekly|biweekly|semimonthly|monthly), anchor_date, usual_cents, account_id, ended_on?
 Paycheck         id, schedule_id, expected_date, expected_cents, received_date?, received_cents?   -- generated per month
@@ -296,7 +297,7 @@ Trend: % of recurring total covered, per month of the year.
   - Start from today's checking balance.
   - Add expected paychecks on their dates and any one-time income.
   - Add checking moves when they're done.
-  - Subtract unpaid bills on their due dates and planned card payments on their due days.
+  - Subtract unpaid bills on their due dates and planned card payments on each statement's due date (§5.10).
   - Show the lowest point and compare it to the cushion: "Lowest $1,072.12 today · $72.12 above your $1,000 cushion".
   - Include a "What if a paycheck is late?" toggle that shifts the next payday by a week.
 - **"Balances out of date"** applies when checking or savings hasn't been updated in more than 7 days. It shows in the dashboard's This week list.
@@ -315,6 +316,7 @@ Trend: % of recurring total covered, per month of the year.
 
 - Each month, for each active card, enter the statement balance, the minimum and the planned payment. The planned payment defaults to the card's usual plan.
 - The planned payment can't be more than the statement balance, and the minimum can't be more than the balance.
+- **Payment due date:** each month's statement has its own. It starts at the card's due day in that month (a shorter month uses its last day) and can be changed to any day of that month, without changing the card or other months. A card with no statement, or a statement saved without a date, uses the card's due day.
 - Mark paid with the amount paid. **Any unpaid amount** (statement minus paid) shows as carried on next month's card row, as "carries $187.43".
 - **Missing statement:** a card past its usual statement day (usually around the 17th) with no row is flagged in This week.
 
@@ -364,7 +366,7 @@ The dashboard (§6.1) and phone Home (§6.15) show **This week**: the items due 
 |---|---|
 | Bills you pay yourself | Unpaid and due within 7 days |
 | Autopay bills | Due within 7 days (heads-up) |
-| Card payments | Planned payment due within 7 days |
+| Card payments | Planned payment's due date (§5.10) within 7 days |
 | Missing card statement | 3 days past the card's usual statement date with no statement row |
 | Paycheck not marked received | The day after its expected date |
 | Weekly money moves | Any bucket in the current week with money available |

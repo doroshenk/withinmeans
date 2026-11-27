@@ -34,14 +34,19 @@ export interface StatementAmounts {
   paidCents: Cents | null;
 }
 
-export type StatementItem = StatementAmounts & { cardId: string; ym: YearMonth };
+export type StatementItem = StatementAmounts & {
+  cardId: string;
+  ym: YearMonth;
+  /** "YYYY-MM-DD" in month `ym`; without one, the card's due day. */
+  dueDate?: string | null;
+};
 
 /** One card in one month. */
 export interface CardRow {
   cardId: string;
   nickname: string;
   dueDay: number;
-  /** "YYYY-MM-DD" */
+  /** "YYYY-MM-DD": this month's statement's date, else the card's due day. */
   dueDate: string;
   usualPlan: UsualPlan;
   archived: boolean;
@@ -64,6 +69,8 @@ export interface StatementDraft {
   minimumText: string;
   choice: PlanChoice;
   otherText: string;
+  /** The "Payment due" field, and the month it has to fall in. */
+  due?: { ym: YearMonth; dateText: string };
 }
 
 /** $100,000,000: far above any real balance, and totals stay exact. */
@@ -144,12 +151,14 @@ export function cardDueDate(ym: YearMonth, dueDay: number): string {
 
 /** What is wrong with a statement's due date: it must be a day of the statement's month. */
 export function cardDueDateError(ym: YearMonth, date: string): string | undefined {
-  throw new Error(`not implemented: ${ym} ${date}`);
+  const real = z.iso.date().safeParse(date).success;
+  return real && date.startsWith(`${ym}-`) ? undefined : `Pick a payment date in ${monthName(ym)}.`;
 }
 
 /**
- * The month's card rows, by due day then nickname: every card still in use, and a removed card in
- * a month that has its statement. `statements` holds this month's and last month's.
+ * The month's card rows, by the date each is due, then due day and nickname: every card still in
+ * use, and a removed card in a month that has its statement. `statements` holds this month's and
+ * last month's.
  */
 export function cardMonthRows(
   cards: readonly CreditCardItem[],
@@ -161,7 +170,6 @@ export function cardMonthRows(
     statements.find((s) => s.cardId === cardId && s.ym === month);
   return cards
     .filter((card) => !card.archived || find(card.id, ym) !== undefined)
-    .sort((a, b) => a.dueDay - b.dueDay || a.nickname.localeCompare(b.nickname))
     .map((card) => {
       const current = find(card.id, ym);
       const previous = find(card.id, previousYm);
@@ -169,7 +177,7 @@ export function cardMonthRows(
         cardId: card.id,
         nickname: card.nickname,
         dueDay: card.dueDay,
-        dueDate: cardDueDate(ym, card.dueDay),
+        dueDate: current?.dueDate ?? cardDueDate(ym, card.dueDay),
         usualPlan: card.usualPlan,
         archived: card.archived,
         statement:
@@ -184,7 +192,14 @@ export function cardMonthRows(
         previousCents: previous?.statementCents ?? null,
         carriedCents: carriedCents(previous ?? null),
       };
-    });
+    })
+    .sort(
+      // "YYYY-MM-DD" strings sort in calendar order.
+      (a, b) =>
+        a.dueDate.localeCompare(b.dueDate) ||
+        a.dueDay - b.dueDay ||
+        a.nickname.localeCompare(b.nickname),
+    );
 }
 
 /** The rows as the money-in, money-out rules take them (spec §5.6). */
@@ -258,6 +273,8 @@ export function cardDraftError(draft: CardDraft): string | undefined {
 /** What is wrong with the balance form, if anything. */
 export function statementDraftError(draft: StatementDraft): string | undefined {
   if (draft.cardId === '') return 'Pick a card.';
+  const badDate = draft.due && cardDueDateError(draft.due.ym, draft.due.dateText);
+  if (badDate !== undefined) return badDate;
   const statementCents = parseDollars(draft.statementText);
   if (statementCents === undefined) return 'Enter the statement balance.';
   const minimumCents = parseDollars(draft.minimumText);
@@ -313,9 +330,13 @@ export const saveCardStatementInput = z
     minimumCents: cents,
     plannedPaymentCents: cents,
     alreadyPaid: z.boolean().optional(),
+    /** Left out, the statement keeps the date it has. */
+    dueDate: z.string().optional(),
   })
   .superRefine((value, ctx) => {
-    const message = statementError(value);
+    const message =
+      statementError(value) ??
+      (value.dueDate === undefined ? undefined : cardDueDateError(value.ym, value.dueDate));
     if (message !== undefined) ctx.addIssue({ code: 'custom', message });
   });
 export const markCardPaidInput = z.object({ cardId: id, ym, paidCents: cents });

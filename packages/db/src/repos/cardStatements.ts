@@ -1,4 +1,4 @@
-import { MAX_CARD_CENTS, statementError } from '@withinmeans/domain';
+import { cardDueDateError, MAX_CARD_CENTS, statementError } from '@withinmeans/domain';
 import type { Selectable, Transaction } from 'kysely';
 import { assertCanWrite, InvalidInput, NotFound, type HouseholdContext } from '../context.js';
 import type { CardStatementsTable, Database, DB } from '../db.js';
@@ -15,6 +15,8 @@ export interface NewStatement {
   plannedPaymentCents: number;
   /** Records the planned amount as paid, unless something was already paid. */
   alreadyPaid?: boolean;
+  /** 'YYYY-MM-DD' in month `ym`. Left out, the statement keeps the date it has. */
+  dueDate?: string;
 }
 
 /** The card's statement for the month, or undefined when no balance is entered. */
@@ -78,13 +80,15 @@ export const cardStatements = {
   async save(db: Database, ctx: HouseholdContext, input: NewStatement, now: Date): Promise<void> {
     assertCanWrite(ctx);
     assertYm(input.ym);
-    const problem = statementError(input);
+    const { cardId, ym, dueDate } = input;
+    const problem =
+      statementError(input) ?? (dueDate === undefined ? undefined : cardDueDateError(ym, dueDate));
     if (problem !== undefined) throw new InvalidInput(problem);
-    const { cardId, ym } = input;
-    const amounts = {
+    const entered = {
       statement_cents: input.statementCents,
       minimum_cents: input.minimumCents,
       planned_payment_cents: input.plannedPaymentCents,
+      ...(dueDate !== undefined && { due_date: dueDate }),
     };
     await inTransaction(db, async (trx) => {
       const card = await lockCard(trx, ctx, cardId);
@@ -95,7 +99,7 @@ export const cardStatements = {
       if (existing !== undefined) {
         await trx
           .updateTable('card_statements')
-          .set({ ...amounts, ...paid })
+          .set({ ...entered, ...paid })
           .where('id', '=', existing.id)
           .where('household_id', '=', ctx.householdId)
           .execute();
@@ -108,7 +112,7 @@ export const cardStatements = {
           household_id: ctx.householdId,
           card_id: cardId,
           ym,
-          ...amounts,
+          ...entered,
           paid_cents: null,
           paid_at: null,
           ...paid,

@@ -821,6 +821,29 @@
       "console": []
     },
     {
+      "id": "P2-14",
+      "phase": 2,
+      "title": "A due date on each month's card statement",
+      "refs": "§4, §5.8, §5.10, §6.2",
+      "goal": "A card's payment date moves a little from month to month. Each card statement has its own due date: it starts at the card's due day and can be changed every month, without changing the card or any other month.",
+      "tests": [
+        "A new card statement defaults to the card's due day in that month, and a shorter month uses its last day",
+        "A changed due date is saved with that month's statement only: the card and other months keep theirs",
+        "A due date outside the statement's month is rejected",
+        "A statement saved without a due date shows the card's due day",
+        "The Bills page and the Quick Add card balance form have a \"Payment due\" field, pre-filled, and the card row shows the saved date",
+        "The JSON export includes the statement's due date"
+      ],
+      "done": [
+        "New forward-only migration adds the column without changing existing rows",
+        "`docs/SPEC.md` §4 (CardStatement) and §5.10 describe the per-month due date; the forecast (§5.8) and \"This week\" (§5.13) use it"
+      ],
+      "blocked": [
+        "P2-07"
+      ],
+      "console": []
+    },
+    {
       "id": "P3-01",
       "phase": 3,
       "title": "Holdings, prices and share trades",

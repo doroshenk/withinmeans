@@ -107,6 +107,8 @@ export interface CardStatementsTable {
   planned_payment_cents: number;
   paid_cents: number | null;
   paid_at: Date | null;
+  /** 'YYYY-MM-DD' in month `ym`; null means the card's due day. */
+  due_date: Generated<string | null>;
   created_at: Generated<Date>;
 }
 
