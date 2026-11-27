@@ -38,7 +38,8 @@ for _ in $(seq 1 240); do
     --query State --output text)"
   case "$state" in
     COMPLETED) echo "Backup completed"; exit 0 ;;
-    ABORTED | FAILED | EXPIRED) echo "Backup job ended as $state" >&2; exit 1 ;;
+    # PARTIAL is final too, and not a whole recovery point.
+    ABORTED | FAILED | EXPIRED | PARTIAL) echo "Backup job ended as $state" >&2; exit 1 ;;
     *) echo "State: $state"; sleep 15 ;;
   esac
 done

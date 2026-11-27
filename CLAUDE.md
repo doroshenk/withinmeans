@@ -49,6 +49,7 @@ Two clones of the repo sit side by side, so two tickets never share a working tr
 - **Dates:** `Temporal.PlainDate` and `"YYYY-MM"` strings for business dates; SQL `DATE`. `timestamptz` only for audit fields (`created_at`, `paid_at`, `done_at`), never to decide a week or month.
 - **IDs:** UUIDs. Aurora DSQL has no sequences.
 - **Migrations:** forward-only, in `packages/db/migrations`. Never edit a merged migration. Each migration is DDL-only or DML-only. Must pass the DSQL migration linter: no `SERIAL`/`IDENTITY`/sequences, triggers, non-SQL functions, `TRUNCATE` or temp tables. From `v0.2.0`, breaking changes take two releases (add → backfill → switch → drop later).
+- **Releasing to prod:** follow `docs/runbooks/release.md`. Never tag a commit unless CI, the dev deploy and DSQL conformance are green on it. Prod holds real data from `v0.2.0`: never change its database by hand, and fix a migration that ran there with a new one.
 - **Transactions:** money moves, `openMonth`, Start month and share trades each run in one transaction inside the retry wrapper (DSQL uses optimistic concurrency).
 - **Months** are opened only by `openMonth(ym)`, called from the user's flow. Nothing opens a month on a schedule.
 - **New table checklist:** isolation tests, the T21 view-only test table for its write procedures, and the JSON export (a test fails if it's missing).
