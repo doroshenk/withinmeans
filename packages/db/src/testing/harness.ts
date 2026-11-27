@@ -5,6 +5,7 @@ import { createDb, type Database } from '../db.js';
 import { runDdl } from '../ddl.js';
 import { createDsqlDb } from '../dsql.js';
 import { migrate } from '../migrate.js';
+import { withRetry } from '../retry.js';
 import { testTarget } from './target.js';
 
 export interface TestDb {
@@ -38,9 +39,8 @@ const quoteIdent = (name: string): string => `"${name.replaceAll('"', '""')}"`;
 
 /** `runDdl` for the harness's own schema changes, which collide with other test files'. */
 export async function runTestDdl(db: Database, statement: string): Promise<void> {
-  void db;
-  void statement;
-  throw new Error('not implemented');
+  // Each try here is itself runDdl's 12, with a longer pause between them.
+  await withRetry(() => runDdl(db, statement), { maxTries: 10, delayMs: 200 });
 }
 
 /**
@@ -52,7 +52,7 @@ export async function createTestDb(): Promise<TestDb> {
   const open = await opener();
   const schema = `t_${randomUUID().replaceAll('-', '')}`;
   const admin = open();
-  await runDdl(admin, `CREATE SCHEMA ${quoteIdent(schema)}`);
+  await runTestDdl(admin, `CREATE SCHEMA ${quoteIdent(schema)}`);
   await admin.destroy();
 
   const db = open(schema);
@@ -67,9 +67,9 @@ export async function createTestDb(): Promise<TestDb> {
       }>`SELECT table_name FROM information_schema.tables
         WHERE table_schema = ${schema}`.execute(db);
       for (const { table_name } of tables.rows) {
-        await runDdl(db, `DROP TABLE ${quoteIdent(schema)}.${quoteIdent(table_name)}`);
+        await runTestDdl(db, `DROP TABLE ${quoteIdent(schema)}.${quoteIdent(table_name)}`);
       }
-      await runDdl(db, `DROP SCHEMA ${quoteIdent(schema)}`);
+      await runTestDdl(db, `DROP SCHEMA ${quoteIdent(schema)}`);
       await db.destroy();
     },
   };
