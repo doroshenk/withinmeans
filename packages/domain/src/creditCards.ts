@@ -267,6 +267,10 @@ export function statementDraftError(draft: StatementDraft): string | undefined {
   return statementError({ statementCents, minimumCents, plannedPaymentCents });
 }
 
+export function parseCardAmount(_text: string): Cents | null {
+  throw new Error('not implemented');
+}
+
 /** What is wrong with the amount typed into "mark paid", if anything. */
 export function paidDraftError(amountText: string): string | undefined {
   const paidCents = parseDollars(amountText);

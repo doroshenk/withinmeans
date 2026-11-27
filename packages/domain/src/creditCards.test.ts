@@ -16,6 +16,7 @@ import {
   defaultPlannedPayment,
   markCardPaidInput,
   paidDraftError,
+  parseCardAmount,
   planChoiceOf,
   plannedForChoice,
   removeCreditCardInput,
@@ -375,6 +376,20 @@ describe('P2-07 the forms', () => {
     [{ statementText: '-5' }, 'Enter amounts from $0 to $100,000,000.'],
   ])('says what is wrong with %o', (over, message) => {
     expect(statementDraftError({ ...draft, ...over })).toBe(message);
+  });
+
+  it('reads a typed amount only when it is within the card limits', () => {
+    expect(parseCardAmount('142.36')).toBe(14_236);
+    expect(parseCardAmount('100,000,000')).toBe(10_000_000_000);
+    for (const text of ['', 'abc', '-1', '100,000,000.01', '4111111111111111111']) {
+      expect(parseCardAmount(text)).toBeNull();
+    }
+  });
+
+  it('says a card number typed as a balance is out of range', () => {
+    expect(statementDraftError({ ...draft, statementText: '4111111111111111' })).toBe(
+      'Enter amounts from $0 to $100,000,000.',
+    );
   });
 
   it('checks the amount paid', () => {

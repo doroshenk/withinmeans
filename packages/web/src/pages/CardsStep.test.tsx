@@ -131,6 +131,27 @@ describe('P2-07 setup step 6: credit cards', () => {
     expect(field('Nickname')).toHaveValue('Gas card');
   });
 
+  it('does not look unsaved when only the reload fails', async () => {
+    let loads = 0;
+    const { client, calls } = fakeClient();
+    const user = await open({
+      ...client,
+      creditCards: {
+        query: () =>
+          loads++ === 0 ? client.creditCards.query() : Promise.reject(new Error('boom')),
+      },
+    });
+    await user.type(field('Nickname'), 'Gas card');
+    await user.type(field('Usual due day'), '27');
+
+    await user.click(add());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Saved');
+    // The form is cleared, so a second press cannot add the card twice.
+    expect(field('Nickname')).toHaveValue('');
+    expect(calls.add).toHaveBeenCalledOnce();
+  });
+
   it('says when the cards cannot load', async () => {
     await open({ ...cardsStub, creditCards: { query: () => Promise.reject(new Error('boom')) } });
 

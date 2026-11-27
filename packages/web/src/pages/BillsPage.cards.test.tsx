@@ -176,6 +176,21 @@ describe('P2-07 credit cards on Bills', () => {
     expect(cardRow('Gas card')).toBeInTheDocument();
   });
 
+  it('keeps the empty preview in a month where no card has a balance', async () => {
+    await open(fakeClient({ data: november({ cards: [CARDS[2] as CardRow] }) }).client);
+
+    expect(screen.getByTestId('empty-preview')).toBeInTheDocument();
+    expect(screen.queryByTestId('tile-bills')).not.toBeInTheDocument();
+    expect(cards()).toBeInTheDocument();
+  });
+
+  it('shows only the main empty state in an empty month with no cards', async () => {
+    await open(fakeClient({ data: november({ cards: [] }) }).client);
+
+    expect(screen.getByTestId('empty-preview')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Credit cards' })).not.toBeInTheDocument();
+  });
+
   it('offers to add a card when there are none', async () => {
     // A section's empty state shows on a page that otherwise has data (spec §6.14).
     const income = [{ id: 'i', type: 'sale' as const, amountCents: 100 }];
@@ -306,6 +321,24 @@ describe('P2-07 the card balance form', () => {
     await user.click(within(form()).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('form', { name: /balance$/ })).not.toBeInTheDocument();
   });
+
+  it.each(['Statement balance', 'Minimum payment', 'Amount you plan to pay'])(
+    'survives a card number pasted into %s',
+    async (label) => {
+      const { client, calls } = fakeClient();
+      const user = await open(client);
+      await enter(user, 'Gas card');
+
+      await user.click(field(label));
+      await user.paste('4111111111111111');
+      if (label === 'Minimum payment') await user.click(field('Minimum'));
+      await user.click(save());
+
+      expect(within(form()).getByRole('alert')).toBeInTheDocument();
+      expect(form()).toHaveTextContent('Counts toward November bills: $0.00');
+      expect(calls.save).not.toHaveBeenCalled();
+    },
+  );
 
   it('stays open with the problem when saving fails', async () => {
     const user = await open(fakeClient({ fail: true }).client);
