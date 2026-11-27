@@ -30,7 +30,9 @@ export const householdExport = {
             | 'bills'
             | 'pay_schedules'
             | 'paychecks'
-            | 'other_income',
+            | 'other_income'
+            | 'credit_cards'
+            | 'card_statements',
         ) => trx.selectFrom(table).selectAll().where('household_id', '=', h).execute();
         // One at a time: a transaction has a single connection.
         return {
@@ -68,6 +70,8 @@ export const householdExport = {
           pay_schedules: await all('pay_schedules'),
           paychecks: await all('paychecks'),
           other_income: await all('other_income'),
+          credit_cards: await all('credit_cards'),
+          card_statements: await all('card_statements'),
         };
       },
       'repeatable read',

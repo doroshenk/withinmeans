@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider } from '../permissions';
 import { accountsStub } from './accountsStub';
+import { cardsStub } from './cardsStub';
 import { categoriesStub } from './categoriesStub';
 import { paychecksStub } from './paychecksStub';
 import { recurringBillsStub } from './recurringBillsStub';
@@ -16,6 +17,7 @@ function fakeClient(accountCount: number) {
   const client: SetupClient = {
     setupProgress: { query: () => Promise.resolve([{ step: 1, status: 'done' as const }]) },
     saveSetupStep: { mutate: save },
+    ...cardsStub,
     ...categoriesStub,
     ...recurringBillsStub,
     ...paychecksStub,

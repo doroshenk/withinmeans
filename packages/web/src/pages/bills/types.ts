@@ -1,5 +1,6 @@
-import type { BillLine, OtherIncomeType } from '@withinmeans/domain';
+import type { BillLine, CardRow, OtherIncomeType } from '@withinmeans/domain';
 import type { MonthStatus } from '../../shell/MonthNavigator';
+import type { CardStatementsClient } from '../cards/types';
 import type { PageRow } from '../paychecks/types';
 
 export interface BillsPageRow extends BillLine {
@@ -18,6 +19,7 @@ export interface BillsData {
   categories: { id: string; name: string; colorIndex: number }[];
   paychecks: PageRow[];
   otherIncome: { id: string; type: OtherIncomeType; amountCents: number }[];
+  cards: CardRow[];
 }
 
 export interface BillFields {
@@ -27,7 +29,7 @@ export interface BillFields {
   categoryId: string;
 }
 
-export interface BillsPageClient {
+export interface BillsPageClient extends CardStatementsClient {
   billsPage: { query: (input: { ym?: string }) => Promise<BillsData> };
   openMonth: { mutate: (input: { ym: string }) => Promise<unknown> };
   addBill: { mutate: (input: BillFields & { paid: boolean }) => Promise<unknown> };

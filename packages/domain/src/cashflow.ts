@@ -20,6 +20,8 @@ export interface CardMonth {
   name: string;
   /** Null when no statement has been entered for the month. */
   plannedPaymentCents: Cents | null;
+  /** What was paid; none until the payment is marked paid. */
+  paidCents?: Cents | null;
 }
 
 /** One month's records; the caller picks the month. */

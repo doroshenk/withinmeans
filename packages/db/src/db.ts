@@ -86,6 +86,30 @@ export interface BalanceSnapshotsTable {
   created_at: Generated<Date>;
 }
 
+export interface CreditCardsTable {
+  id: Generated<string>;
+  household_id: string;
+  nickname: string;
+  /** 1 to 31. */
+  due_day: number;
+  usual_plan: 'full' | 'min' | 'varies';
+  archived_at: Date | null;
+  created_at: Generated<Date>;
+}
+
+export interface CardStatementsTable {
+  id: Generated<string>;
+  household_id: string;
+  card_id: string;
+  ym: string;
+  statement_cents: number;
+  minimum_cents: number;
+  planned_payment_cents: number;
+  paid_cents: number | null;
+  paid_at: Date | null;
+  created_at: Generated<Date>;
+}
+
 export interface RecurringBillsTable {
   id: Generated<string>;
   household_id: string;
@@ -181,6 +205,8 @@ export interface DB {
   pay_schedules: PaySchedulesTable;
   paychecks: PaychecksTable;
   other_income: OtherIncomeTable;
+  credit_cards: CreditCardsTable;
+  card_statements: CardStatementsTable;
 }
 
 export type Database = Kysely<DB>;

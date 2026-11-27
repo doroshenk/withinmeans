@@ -67,6 +67,7 @@ const november = (over: Partial<BillsData> = {}): BillsData => ({
   bills: BILLS,
   categories: CATEGORIES,
   paychecks: [paycheck('06', 327_218), paycheck('20', null)],
+  cards: [],
   otherIncome: [
     { id: 'i1', type: 'side_work', amountCents: 35_000 },
     { id: 'i2', type: 'sale', amountCents: 12_000 },
@@ -95,6 +96,7 @@ function fakeClient(options: { data?: BillsData; fail?: boolean; loadFails?: boo
     };
   };
   const client: BillsPageClient = {
+    ...billsPageStub,
     billsPage: {
       query: (input) => {
         calls.query(input);

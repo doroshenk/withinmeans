@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { accountsStub } from './pages/accountsStub';
 import { billsPageStub } from './pages/billsPageStub';
+import { cardsStub } from './pages/cardsStub';
 import { categoriesStub } from './pages/categoriesStub';
 import { otherIncomeStub } from './pages/otherIncomeStub';
 import { paychecksPageStub } from './pages/paychecksPageStub';
@@ -53,6 +54,7 @@ function setup(token: string | undefined, location?: { pathname: string; search:
     inviteDetails: { query: inviteDetails },
     acceptInvite: { mutate: acceptInvite },
     ...accountsStub,
+    ...cardsStub,
     ...categoriesStub,
     ...recurringBillsStub,
     ...otherIncomeStub,

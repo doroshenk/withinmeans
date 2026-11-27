@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RoleProvider } from '../permissions';
 import { accountsStub } from './accountsStub';
+import { cardsStub } from './cardsStub';
 import { categoriesStub } from './categoriesStub';
 import { paychecksStub } from './paychecksStub';
 import { recurringBillsStub } from './recurringBillsStub';
@@ -20,6 +21,7 @@ function open(paycheckCalls: Partial<SetupClient> = {}) {
     saveSetupStep: { mutate: save },
     ...welcomeStub,
     ...accountsStub,
+    ...cardsStub,
     ...categoriesStub,
     ...recurringBillsStub,
     ...paychecksStub,
