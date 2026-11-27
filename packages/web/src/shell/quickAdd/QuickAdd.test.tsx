@@ -1,5 +1,5 @@
 import type { CardRow } from '@withinmeans/domain';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BillsPage } from '../../pages/BillsPage';
@@ -604,5 +604,169 @@ describe('P2-10 the page underneath', () => {
     render(<BillsPage client={{ ...billsPageStub, ...client }} initialYm="2026-12" />);
 
     await waitFor(() => expect(calls.billsQuery).toHaveBeenCalledWith({ ym: '2026-12' }));
+  });
+});
+
+describe('P2-10 after saving, with an API that shows what was saved', () => {
+  /** Like the real API: a saved card balance and a marked paycheck come back changed. */
+  function savingClient() {
+    let statement: CardRow['statement'] = null;
+    const marked = new Set<string>();
+    const { client, calls } = fakeClient();
+    const saving: QuickAddClient & PaychecksPageClient = {
+      ...client,
+      billsPage: {
+        query: () =>
+          Promise.resolve(
+            bills({ cards: [card({ cardId: 'gas', nickname: 'Gas card', statement })] }),
+          ),
+      },
+      saveCardStatement: {
+        mutate: (input) => {
+          calls.statement(input);
+          const { statementCents, minimumCents, plannedPaymentCents } = input;
+          statement = { statementCents, minimumCents, plannedPaymentCents, paidCents: null };
+          return Promise.resolve({});
+        },
+      },
+      paychecksPage: {
+        query: (input) => {
+          const month = paychecksData(input.ym ?? '2026-11');
+          return Promise.resolve({
+            ...month,
+            paychecks: month.paychecks.filter((p) => !marked.has(p.id ?? '')),
+          });
+        },
+      },
+      markPaycheckReceived: {
+        mutate: (input) => {
+          calls.received(input);
+          marked.add(input.id);
+          return Promise.resolve({});
+        },
+      },
+    };
+    return { client: saving, calls };
+  }
+  const field = (label: string) => within(cardForm()).getByLabelText(label);
+
+  it('the card form shows what is now saved, so saving again changes nothing', async () => {
+    const { client, calls } = savingClient();
+    const { user } = await openAdd(client, /^Card balance/);
+
+    await fill.card(user, cardForm());
+    await waitFor(() => expect(field('Statement balance')).toHaveValue('142.36'));
+    expect(field('Minimum payment')).toHaveValue('25.00');
+    await user.clear(field('Statement balance'));
+    await user.type(field('Statement balance'), '150');
+    await user.click(within(cardForm()).getByRole('button', { name: 'Save balance' }));
+
+    await waitFor(() => expect(field('Statement balance')).toHaveValue('150.00'));
+    expect(calls.statement).toHaveBeenLastCalledWith(
+      expect.objectContaining({ statementCents: 15_000, minimumCents: 2_500 }),
+    );
+  });
+
+  it('lists a card saved twice once in "Just added"', async () => {
+    const { user } = await openAdd(savingClient().client, /^Card balance/);
+    await fill.card(user, cardForm());
+    await waitFor(() => expect(field('Statement balance')).toHaveValue('142.36'));
+
+    await user.click(within(cardForm()).getByRole('button', { name: 'Save balance' }));
+
+    await within(dialog()).findByRole('status');
+    expect(screen.getAllByRole('listitem', { name: 'Gas card balance' })).toHaveLength(1);
+  });
+
+  it('keeps the focus on the confirmation after a paycheck leaves the list', async () => {
+    const { user } = await openAdd(savingClient().client, /^Paycheck received/);
+
+    await fill.paycheck(user, receivedForm());
+
+    await waitFor(() =>
+      expect(within(dialog()).getByLabelText('Paycheck')).toHaveValue('p-2026-11-20'),
+    );
+    expect(within(dialog()).getByRole('status')).toHaveFocus();
+  });
+
+  it('keeps the focus on the paycheck list while choosing', async () => {
+    const { user } = await openAdd(fakeClient().client, /^Paycheck received/);
+
+    await pickNov20(user);
+
+    expect(within(dialog()).getByLabelText('Paycheck')).toHaveFocus();
+  });
+
+  it('does not offer a marked paycheck again when the list cannot reload', async () => {
+    let loads = 0;
+    const { client } = fakeClient();
+    const { user } = await openAdd(
+      {
+        ...client,
+        paychecksPage: {
+          // The first three calls are the first load; every reload fails.
+          query: (input) =>
+            loads++ < 3 ? client.paychecksPage.query(input) : Promise.reject(new Error('boom')),
+        },
+      },
+      /^Paycheck received/,
+    );
+
+    await fill.paycheck(user, receivedForm());
+
+    await within(dialog()).findByRole('status');
+    const options = within(within(dialog()).getByLabelText('Paycheck')).getAllByRole('option');
+    expect(options.map((o) => o.getAttribute('value'))).toEqual(['p-2026-11-20']);
+  });
+
+  it('stays on the form being saved until the answer is in', async () => {
+    let fail = () => {};
+    const { client } = fakeClient();
+    const { user } = await openAdd({
+      ...client,
+      addBill: {
+        mutate: () =>
+          new Promise((_resolve, reject) => {
+            fail = () => reject(new Error('boom'));
+          }),
+      },
+    });
+    await fill.bill(user, billForm());
+
+    expect(typeButton(/^Other income/)).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled();
+    await user.keyboard('{Escape}');
+    await user.click(within(billForm()).getByRole('button', { name: 'Cancel' }));
+    expect(dialog()).toBeInTheDocument();
+
+    act(fail);
+    expect(await within(billForm()).findByRole('alert')).toBeInTheDocument();
+    expect(typeButton(/^Other income/)).toBeEnabled();
+  });
+
+  it('a card form open on the page shows what Quick Add saved', async () => {
+    const { client } = savingClient();
+    const user = userEvent.setup();
+    render(
+      <QuickAddProvider client={client} onView={() => {}}>
+        <RoleProvider role="owner">
+          <Shell route="bills" onNavigate={() => {}}>
+            <BillsPage client={{ ...billsPageStub, ...client }} />
+          </Shell>
+        </RoleProvider>
+      </QuickAddProvider>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Enter Gas card balance' }));
+    const onPage = cardForm();
+    await user.click(screen.getByRole('button', { name: '+ Add' }));
+    await user.click(typeButton(/^Card balance/));
+    await loaded();
+    const inDialog = within(dialog()).getByRole('form', { name: 'Enter Gas card balance' });
+
+    await fill.card(user, inDialog);
+
+    await waitFor(() => expect(onPage).not.toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(field('Statement balance')).toHaveValue('142.36');
   });
 });

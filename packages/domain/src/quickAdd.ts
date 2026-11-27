@@ -75,3 +75,9 @@ export function quickAddPreviewText(
 export function quickAddDetail(type: QuickAddType, date: string): string {
   return `${QUICK_ADD_PAGES[type].name} · ${formatShortDate(date)}`;
 }
+
+export function paychecksWaiting<
+  P extends { id: string | null; expectedDate: string; receivedCents: number | null },
+>(_months: readonly { status: string; paychecks: readonly P[] }[]): (P & { id: string })[] {
+  throw new Error('not implemented');
+}

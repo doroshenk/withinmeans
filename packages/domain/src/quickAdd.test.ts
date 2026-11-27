@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  paychecksWaiting,
   QUICK_ADD_PAGES,
   QUICK_ADD_TYPES,
   quickAddDetail,
@@ -85,5 +86,25 @@ describe('P2-10 where an entry lands', () => {
 
   it('describes an entry in the "Just added" list', () => {
     expect(quickAddDetail('card', '2026-11-27')).toBe('Bills & cash flow · Fri, Nov 27');
+  });
+});
+
+describe('P2-10 the paychecks waiting to be marked', () => {
+  const pay = (id: string | null, expectedDate: string, receivedCents: number | null = null) => ({
+    id,
+    expectedDate,
+    receivedCents,
+  });
+
+  it('lists the unmarked paychecks of open months, oldest first', () => {
+    const waiting = paychecksWaiting([
+      { status: 'open', paychecks: [pay('b', '2026-11-20'), pay('a', '2026-11-06', 100)] },
+      { status: 'open', paychecks: [pay('c', '2026-10-23')] },
+      { status: 'closed', paychecks: [pay('d', '2026-09-23')] },
+      { status: 'not-started', paychecks: [pay(null, '2026-12-04'), pay('e', '2026-12-18')] },
+      { status: 'open', paychecks: [pay(null, '2027-01-01')] },
+    ]);
+
+    expect(waiting.map((p) => p.id)).toEqual(['c', 'b']);
   });
 });
