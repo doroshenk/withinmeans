@@ -1,7 +1,8 @@
 /**
  * The spec §10 sample data ("Our household", today = Wed Nov 18, 2026) for the dev stage. Every
  * record goes in through its repository, except the household and its members, which need a fixed
- * id. Due days, categories, account names and balances are not in §10: they follow design/.
+ * id. Due days, categories, autopay, account names and balances are not in §10: they follow
+ * design/, except the Cash account's balance, which is made up.
  */
 import { DEFAULT_CATEGORIES, type OtherIncomeType } from '@withinmeans/domain';
 import type { HouseholdContext, Role } from '../context.js';
@@ -16,6 +17,7 @@ import { paychecks } from '../repos/paychecks.js';
 import { paySchedules } from '../repos/paySchedules.js';
 import { recurringBills } from '../repos/recurringBills.js';
 import { setupProgress } from '../repos/setupProgress.js';
+import { inTransaction } from '../repos/shared.js';
 
 /** The seeded household always has this id, so that a re-run finds it. */
 export const SEED_HOUSEHOLD_ID = '5eed0000-0000-4000-8000-000000000001';
@@ -45,14 +47,14 @@ const PARTNER = { name: 'Sam', email: 'partner@example.test', cognito_sub: 'seed
 /** [name, cents, due day, category, autopay] */
 const BILLS: readonly (readonly [string, number, number, string, boolean])[] = [
   ['Mortgage', 185_000, 1, 'Housing', true],
-  ['Pool service', 12_000, 3, 'Home', false],
+  ['Pool service', 12_000, 6, 'Home', false],
   ['Electric', 16_400, 5, 'Utilities', true],
-  ['Internet', 8_000, 9, 'Utilities', true],
-  ['Phone', 9_500, 11, 'Utilities', true],
-  ['Car insurance', 14_200, 13, 'Insurance', true],
+  ['Internet', 8_000, 10, 'Utilities', true],
+  ['Car insurance', 14_200, 12, 'Insurance', true],
+  ['Phone', 9_500, 14, 'Utilities', true],
   ['Water & sewer', 6_800, 18, 'Utilities', false],
-  ['CD contribution · 1', 2_000, 20, 'Savings', false],
-  ['CD contribution · 2', 2_000, 20, 'Savings', false],
+  ['CD contribution · 1', 2_000, 20, 'Savings', true],
+  ['CD contribution · 2', 2_000, 20, 'Savings', true],
   ['Lawn supplies', 4_500, 21, 'Home', false],
   ['HOA dues', 11_000, 25, 'Housing', false],
   ['Streaming', 3_600, 28, 'Subscriptions', true],
@@ -106,32 +108,48 @@ async function realMembers(db: Database): Promise<Member[]> {
 
 /** The dev login with this email, checked before anything changes. */
 async function loginFor(db: Database, email: string, leave: boolean): Promise<string> {
+  const wanted = email.trim().toLowerCase();
+  if (wanted === JOHN.email || wanted === PARTNER.email) {
+    throw new Error('That is one of the made-up members: give your own dev login');
+  }
   const user = await db
     .selectFrom('users')
     .select('id')
-    .where('email', '=', email.trim().toLowerCase())
+    .where('email', '=', wanted)
     .executeTakeFirst();
   if (user === undefined) {
     throw new Error('No dev login has that email: sign up on the dev site first');
   }
   const elsewhere = await db
     .selectFrom('memberships')
-    .select('household_id')
+    .select(['household_id', 'role'])
     .where('user_id', '=', user.id)
     .where('household_id', '<>', SEED_HOUSEHOLD_ID)
     .executeTakeFirst();
-  if (elsewhere !== undefined && !leave) {
+  if (elsewhere === undefined) return user.id;
+  if (!leave) {
     throw new Error(
       'That login already belongs to a household: add --leave-household to move it here',
     );
   }
+  if (elsewhere.role === 'owner') {
+    const others = await db
+      .selectFrom('memberships')
+      .select('user_id')
+      .where('household_id', '=', elsewhere.household_id)
+      .where('user_id', '<>', user.id)
+      .executeTakeFirst();
+    if (others !== undefined) {
+      throw new Error(
+        'That login owns a household with another member, who would be left without an owner',
+      );
+    }
+  }
   return user.id;
 }
 
-/** Removes the seeded household and every row of it, and nothing else. */
-async function wipe(db: Database, ctx: HouseholdContext): Promise<void> {
-  // The export lists every household-scoped table (a test holds it to that), so none is missed.
-  const tables = Object.keys(await householdExport.read(db, ctx)).filter((n) => n !== 'households');
+/** Removes the seeded household and its rows in `tables`, and nothing else. */
+async function wipe(db: Database, ctx: HouseholdContext, tables: string[]): Promise<void> {
   for (const table of tables) {
     await db
       .deleteFrom(table as 'months')
@@ -187,13 +205,13 @@ async function addRecords(db: Database, ctx: HouseholdContext, now: Date): Promi
   const checking = await accounts.createWithBalance(db, ctx, {
     name: 'Everyday checking',
     type: 'checking',
-    balanceCents: 107_212,
+    balanceCents: 114_012,
     date: '2026-11-18',
   });
   await accounts.createWithBalance(db, ctx, {
     name: 'High-yield savings',
     type: 'savings',
-    balanceCents: 500_000,
+    balanceCents: 1_842_055,
     date: '2026-11-18',
   });
   const cash = await accounts.createWithBalance(db, ctx, {
@@ -256,41 +274,50 @@ export async function seedDev(db: Database, options: SeedOptions): Promise<SeedR
   if (existing !== undefined && options.reset !== true) {
     throw new Error('Dev is already seeded: add --reset to rebuild "Our household"');
   }
-  const ownerId =
-    options.ownerEmail === undefined
-      ? undefined
-      : await loginFor(db, options.ownerEmail, options.leaveHousehold === true);
-
   // The context the repositories take; the user id is filled in once the owner is known.
   const ctx: HouseholdContext = {
     householdId: SEED_HOUSEHOLD_ID,
     userId: '00000000-0000-0000-0000-000000000000',
     role: 'owner',
   };
-  const kept = await realMembers(db);
-  await wipe(db, ctx);
+  // The export lists every household-scoped table (a test holds it to that), so none is missed.
+  // It reads in its own transaction, so it comes before this one.
+  const tables = Object.keys(await householdExport.read(db, ctx)).filter((n) => n !== 'households');
 
-  await db
-    .insertInto('households')
-    .values({
-      id: SEED_HOUSEHOLD_ID,
-      name: 'Our household',
-      mode: 'duo',
-      timezone: 'America/New_York',
-      first_month: YM,
-    })
-    .execute();
-  const members = await membersFor(db, kept, ownerId);
-  // A login is in one household, so the new owner leaves any other.
-  if (ownerId !== undefined) {
-    await db.deleteFrom('memberships').where('user_id', '=', ownerId).execute();
-  }
-  await db
-    .insertInto('memberships')
-    .values(
-      members.map((m) => ({ household_id: SEED_HOUSEHOLD_ID, user_id: m.userId, role: m.role })),
-    )
-    .execute();
+  // One transaction: if it fails, the household and its real logins are as they were.
+  const members = await inTransaction(db, async (trx) => {
+    const kept = await realMembers(trx);
+    const ownerId =
+      options.ownerEmail === undefined
+        ? undefined
+        : await loginFor(trx, options.ownerEmail, options.leaveHousehold === true);
+    if (ownerId !== undefined && kept.length >= 2 && !kept.some((m) => m.userId === ownerId)) {
+      throw new Error('The seeded household already has two members with real logins');
+    }
+    await wipe(trx, ctx, tables);
+    await trx
+      .insertInto('households')
+      .values({
+        id: SEED_HOUSEHOLD_ID,
+        name: 'Our household',
+        mode: 'duo',
+        timezone: 'America/New_York',
+        first_month: YM,
+      })
+      .execute();
+    const next = await membersFor(trx, kept, ownerId);
+    // A login is in one household, so the new owner leaves any other.
+    if (ownerId !== undefined) {
+      await trx.deleteFrom('memberships').where('user_id', '=', ownerId).execute();
+    }
+    await trx
+      .insertInto('memberships')
+      .values(
+        next.map((m) => ({ household_id: SEED_HOUSEHOLD_ID, user_id: m.userId, role: m.role })),
+      )
+      .execute();
+    return next;
+  });
 
   const owner = await db
     .selectFrom('users')
