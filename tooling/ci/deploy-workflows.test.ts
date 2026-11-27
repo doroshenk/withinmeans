@@ -18,9 +18,12 @@ interface Step {
   if?: string;
   env?: Record<string, string>;
   with?: Record<string, unknown>;
+  'continue-on-error'?: unknown;
 }
 interface Job {
   uses?: string;
+  'continue-on-error'?: unknown;
+  'timeout-minutes'?: number;
   with?: Record<string, unknown>;
   secrets?: unknown;
   permissions?: Record<string, string>;
@@ -176,6 +179,41 @@ describe('P0-13: deploy.yml (shared by both stages)', () => {
     expect(smoke?.env?.['SMOKE_BASE_URL']).toBe('https://within.doroshenk.com');
     expect(smoke?.run).toContain('e2e/loads.spec.ts');
     expect(JSON.stringify(smoke)).not.toContain('SMOKE_PASSWORD');
+  });
+});
+
+describe('P2-12: a failed backup stops the prod deploy', () => {
+  const file = 'deploy.yml';
+
+  it('P2-12: Prod pipeline fails if the pre-migration backup job fails: the failure is not swallowed', () => {
+    const backup = steps(file)[at(file, 'scripts/backup-now.sh')];
+    // The script's exit code is the step's: nothing after it on the line, and no soft failure.
+    expect(backup?.run?.trim()).toBe('scripts/backup-now.sh prod');
+    for (const job of Object.values(load(file).jobs)) {
+      expect(job['continue-on-error']).toBeUndefined();
+    }
+    for (const step of steps(file)) expect(step['continue-on-error']).toBeUndefined();
+  });
+
+  it('P2-12: Prod pipeline fails if the pre-migration backup job fails: nothing later runs anyway', () => {
+    const after = steps(file).slice(at(file, 'scripts/backup-now.sh') + 1);
+    for (const step of after) expect(step.if ?? '').not.toMatch(/always|failure|cancelled/);
+    expect(steps(file)[at(file, 'pnpm migrate')]?.if).toBeUndefined();
+  });
+});
+
+describe('P2-12: the deploy job outlasts the backup wait', () => {
+  it('P2-12: a stuck backup fails by the script giving up, not by a cancelled run', () => {
+    const job = Object.values(load('deploy.yml').jobs)[0];
+    // The script waits 60 minutes; the job also installs, builds and deploys.
+    expect(job?.['timeout-minutes']).toBeGreaterThanOrEqual(90);
+  });
+});
+
+describe('P2-12: conformance.yml (the release waits for it to be green)', () => {
+  it('P2-12: gives the suite on real DSQL at least 45 minutes (it has outgrown 20)', () => {
+    const job = Object.values(load('conformance.yml').jobs)[0];
+    expect(job?.['timeout-minutes']).toBeGreaterThanOrEqual(45);
   });
 });
 
