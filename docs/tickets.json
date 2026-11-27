@@ -801,6 +801,26 @@
       "console": []
     },
     {
+      "id": "P2-13",
+      "phase": 2,
+      "title": "DSQL conformance finishes well inside its time limit",
+      "refs": "§12",
+      "goal": "The DSQL conformance run finishes well inside its time limit, so `v0.2.0` can be released on a green run. Each test reset the database one statement at a time over the network, and test files ran one after another.",
+      "tests": [
+        "The test reset and seed send their statements concurrently",
+        "The conformance run runs test files in parallel, at most four at once",
+        "Tests that create or sweep other schemas run on their own, after the parallel files"
+      ],
+      "done": [
+        "The whole suite passes against the real dev cluster, and the time is written in the PR",
+        "No test is skipped or weakened, and the same tests run on DSQL as before"
+      ],
+      "blocked": [
+        "P2-12"
+      ],
+      "console": []
+    },
+    {
       "id": "P3-01",
       "phase": 3,
       "title": "Holdings, prices and share trades",
