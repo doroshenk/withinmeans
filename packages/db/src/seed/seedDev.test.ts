@@ -290,10 +290,10 @@ describe('P2-11 signing in to the seeded household', () => {
 
     await run({ reset: true, ownerEmail: 'kit@dev.example.test', leaveHousehold: true });
 
+    // Two real people fill the household, so the made-up partner leaves.
     expect(await people()).toEqual([
       ['Jo', 'full'],
       ['Kit', 'owner'],
-      ['Sam', 'full'],
     ]);
   });
 });

@@ -95,12 +95,15 @@ describe('P2-11: pnpm seed:dev', () => {
   });
 
   it('does not repeat a real email address in its output', async () => {
+    const log = vi.fn();
     const { d } = deps({
+      log,
       seed: vi.fn().mockResolvedValue({ householdId: 'h', ownerEmail: 'me@real.test' }),
     });
 
     await runSeedCli(['--stage', 'dev', '--owner-email', 'me@real.test'], d);
 
-    expect(JSON.stringify(d.log.mock.calls)).not.toContain('me@real.test');
+    expect(log).toHaveBeenCalled();
+    expect(JSON.stringify(log.mock.calls)).not.toContain('me@real.test');
   });
 });

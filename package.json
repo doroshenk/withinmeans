@@ -14,7 +14,8 @@
     "typecheck": "pnpm -r --if-present typecheck && tsc -p tooling && tsc -p e2e",
     "e2e": "playwright test",
     "format": "prettier --write .",
-    "migrate": "pnpm --filter @withinmeans/db migrate"
+    "migrate": "pnpm --filter @withinmeans/db migrate",
+    "seed:dev": "pnpm --filter @withinmeans/db seed --stage dev"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

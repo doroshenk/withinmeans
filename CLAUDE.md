@@ -85,7 +85,8 @@ pnpm migrate --stage dev        # applies migrations to the dev DSQL cluster (pr
 pnpm e2e                        # Playwright smoke tests; needs SMOKE_BASE_URL (+ SMOKE_EMAIL, SMOKE_PASSWORD for sign-in); runs from the deploy workflow
 pnpm --filter @withinmeans/db conformance   # needs DSQL_ENDPOINT; runs the repo suite on real DSQL
 scripts/backup-now.sh dev|prod      # on-demand AWS Backup of the stage's cluster (prod deploy calls it)
-pnpm seed:dev                   # (later)
+pnpm seed:dev                   # loads the spec §10 data into dev (never prod); --reset rebuilds it,
+                                # --owner-email <dev login> --leave-household lets you sign in to it
 pnpm --filter @withinmeans/infra exec cdk diff --context stage=dev   # (P0-04+); cdk is a bin, so use exec
 ```
 

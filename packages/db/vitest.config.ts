@@ -13,7 +13,15 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/testing/**', 'src/index.ts', 'src/cli/migrate.ts'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/testing/**',
+        'src/index.ts',
+        'src/cli/migrate.ts',
+        // The command wiring: AWS calls only.
+        'src/cli/seed.ts',
+        'src/cli/lookupClusterEndpoint.ts',
+      ],
       thresholds: { lines: 95, statements: 95, functions: 95, branches: 90 },
     },
   },
