@@ -158,6 +158,10 @@ export const bills = {
       await assertCategory(trx, ctx, categoryId);
       const paid = bill.paid_at !== null;
       const oneTime = bill.kind === 'one_time';
+      // Only a recurring bill can come to $0 in a month.
+      if (oneTime && amountCents === 0) {
+        throw new InvalidInput('the amount must be more than zero');
+      }
       const keepsActual = paid || (!oneTime && amountCents !== bill.estimate_cents);
       await write(trx, ctx, id, {
         name,

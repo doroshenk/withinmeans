@@ -44,6 +44,8 @@ export function BillsPage({ client, onNavigate = () => {} }: BillsPageProps) {
   const asked = useRef<string | undefined>(undefined);
   /** Counts the page's reloads, so that only the latest one's answer is shown. */
   const latest = useRef(0);
+  /** The form open right now, for a save that ends after the user has moved on. */
+  const openForm = useRef<Editing>(null);
 
   const fetchMonth = useCallback(
     (ym: string | undefined) => client.billsPage.query(ym === undefined ? {} : { ym }),
@@ -79,7 +81,7 @@ export function BillsPage({ client, onNavigate = () => {} }: BillsPageProps) {
   /** Runs one change, then shows what the server now has. */
   const act = async (
     change: () => Promise<unknown>,
-    section: Section,
+    failed: (message: string) => void,
     done?: string,
   ): Promise<boolean> => {
     if (saving) return false;
@@ -89,7 +91,7 @@ export function BillsPage({ client, onNavigate = () => {} }: BillsPageProps) {
     try {
       await change();
     } catch (error) {
-      report(section)(apiErrorMessage(error));
+      failed(apiErrorMessage(error));
       setSaving(false);
       return false;
     }
@@ -127,10 +129,15 @@ export function BillsPage({ client, onNavigate = () => {} }: BillsPageProps) {
   // No cards until P2-07, and nothing moved to checking until Phase 3.
   const summary = billsMonthSummary({ ...data, cards: [] });
 
+  const setForm = (next: Editing) => {
+    openForm.current = next;
+    setEditing(next);
+  };
+
   const show = (next: Editing) => {
     setNotice(null);
     setProblem(null);
-    setEditing(next);
+    setForm(next);
   };
 
   const showMonth = async (ym: string) => {
@@ -144,27 +151,31 @@ export function BillsPage({ client, onNavigate = () => {} }: BillsPageProps) {
   };
 
   const openMonth = () =>
-    void act(() => client.openMonth.mutate({ ym: data.ym }), 'page', `${month} is open.`);
+    void act(() => client.openMonth.mutate({ ym: data.ym }), report('page'), `${month} is open.`);
 
   const edited = editing?.kind === 'edit' ? data.bills.find((b) => b.id === editing.id) : undefined;
 
   const save = async (fields: BillFields, paid: boolean) => {
-    const form = editing;
+    const form = openForm.current;
     const saved = await act(
       () =>
         edited?.id
           ? client.updateBill.mutate({ ...fields, id: edited.id })
           : client.addBill.mutate({ ...fields, paid }),
-      'form',
+      // The page says so if the form that was saved is no longer the one open.
+      (message) =>
+        openForm.current === form
+          ? report('form')(message)
+          : report('page')(`${fields.name} wasn’t saved. ${message}`),
       edited ? `Saved ${fields.name}.` : billAddedText(fields.name, fields.dueDate),
     );
     // Closes the form that was saved, unless another has been opened since.
-    if (saved) setEditing((current) => (current === form ? null : current));
+    if (saved && openForm.current === form) setForm(null);
   };
 
   const change = (bill: BillsPageRow, run: (id: string) => Promise<unknown>, done?: string) => {
     const { id } = bill;
-    if (id !== null) void act(() => run(id), 'bills', done);
+    if (id !== null) void act(() => run(id), report('bills'), done);
   };
 
   return (

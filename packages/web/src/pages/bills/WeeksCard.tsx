@@ -114,10 +114,10 @@ export function WeeksCard({
               <p className="help bill-week-empty">Nothing due this week</p>
             ) : (
               <ul className="bill-rows">
-                {w.bills.map((bill) => (
+                {w.bills.map((bill, position) => (
                   <BillRow
-                    // A preview row has no id; its name and date tell it apart.
-                    key={bill.id ?? `${bill.name} ${bill.dueDate}`}
+                    // A preview row has no id, and two may share a name and date.
+                    key={bill.id ?? `preview ${position}`}
                     bill={bill}
                     month={month}
                     {...rows}
@@ -154,14 +154,17 @@ function BillRow({
   return (
     <li className={bill.paid ? 'bill-row bill-row-paid' : 'bill-row'} aria-label={bill.name}>
       {editable ? (
-        <input
-          type="checkbox"
-          className="bill-check"
-          aria-label={`Paid: ${bill.name}`}
-          checked={bill.paid}
-          disabled={saving}
-          onChange={(e) => onPaid(bill, e.target.checked)}
-        />
+        // The label makes the whole 44px square the checkbox's touch target.
+        <label className="bill-check-target">
+          <input
+            type="checkbox"
+            className="bill-check"
+            aria-label={`Paid: ${bill.name}`}
+            checked={bill.paid}
+            disabled={saving}
+            onChange={(e) => onPaid(bill, e.target.checked)}
+          />
+        </label>
       ) : (
         <span className="bill-state">{bill.paid ? 'Paid' : 'Not paid'}</span>
       )}

@@ -1924,7 +1924,7 @@ button.category-swatch {
 }
 
 .link-button {
-  min-height: 32px;
+  min-height: 44px;
   padding: 0;
   border: 0;
   background: none;
@@ -2030,6 +2030,14 @@ button.category-swatch {
 .bill-row-paid .bill-what > strong {
   color: var(--color-muted);
   text-decoration: line-through;
+}
+
+.bill-check-target {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
 }
 
 .bill-check {
