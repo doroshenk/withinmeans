@@ -28,6 +28,12 @@ import {
   addOtherIncomeInput,
   otherIncomeInput,
   removeOtherIncomeInput,
+  addBillInput,
+  billsPageInput,
+  openMonthInput,
+  removeBillInput,
+  setBillPaidInput,
+  updateBillInput,
 } from '@withinmeans/domain';
 import { setupProgress } from '@withinmeans/db';
 import { z } from 'zod';
@@ -40,6 +46,14 @@ import {
   renameCategory,
   seedDefaultCategories,
 } from './categories.js';
+import {
+  addBill,
+  billsPage,
+  openBillsMonth,
+  removeBill,
+  setBillPaid,
+  updateBill,
+} from './bills.js';
 import type { Context } from './context.js';
 import { exportData } from './exportData.js';
 import { firstMonthOptions, startFirstMonth } from './firstMonth.js';
@@ -290,6 +304,32 @@ export const appRouter = t.router({
   removeOtherIncome: writeProcedure
     .input(removeOtherIncomeInput)
     .mutation(({ ctx, input }) => removeOtherIncome(ctx, input)),
+
+  /** Spec §6.2: a month's bills (this month when none is given), paychecks and income. */
+  billsPage: memberProcedure
+    .input(billsPageInput)
+    .query(({ ctx, input }) => billsPage(ctx, input.ym)),
+
+  /** Spec §5.11: the temporary "Open {month}" button on Bills, until the Start flow exists. */
+  openMonth: writeProcedure
+    .input(openMonthInput)
+    .mutation(({ ctx, input }) => openBillsMonth(ctx, input)),
+
+  /** Spec §6.2: a one-time bill, paid or still owed. */
+  addBill: writeProcedure.input(addBillInput).mutation(({ ctx, input }) => addBill(ctx, input)),
+
+  /** Changes one month's bill; the recurring bill stays as it is. */
+  updateBill: writeProcedure
+    .input(updateBillInput)
+    .mutation(({ ctx, input }) => updateBill(ctx, input)),
+
+  setBillPaid: writeProcedure
+    .input(setBillPaidInput)
+    .mutation(({ ctx, input }) => setBillPaid(ctx, input)),
+
+  removeBill: writeProcedure
+    .input(removeBillInput)
+    .mutation(({ ctx, input }) => removeBill(ctx, input)),
 
   /** Spec §8: the household's full JSON export. A read, so view-only members may call it. */
   exportData: memberProcedure.query(({ ctx }) => exportData(ctx)),

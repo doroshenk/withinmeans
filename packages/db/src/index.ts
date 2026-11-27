@@ -13,6 +13,7 @@ export { lintMigration, type Violation } from './lint/migrationLinter.js';
 export { migrate } from './migrate.js';
 export { accounts, type Account } from './repos/accounts.js';
 export { balanceSnapshots, type BalanceSnapshot } from './repos/balanceSnapshots.js';
+export { bills, type Bill, type BillChange, type ListedBill, type NewBill } from './repos/bills.js';
 export { categories, type Category } from './repos/categories.js';
 export { householdExport, type HouseholdTables } from './repos/householdExport.js';
 export { households } from './repos/households.js';

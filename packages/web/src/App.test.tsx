@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { accountsStub } from './pages/accountsStub';
+import { billsPageStub } from './pages/billsPageStub';
 import { categoriesStub } from './pages/categoriesStub';
 import { otherIncomeStub } from './pages/otherIncomeStub';
 import { paychecksPageStub } from './pages/paychecksPageStub';
@@ -55,6 +56,7 @@ function setup(token: string | undefined, location?: { pathname: string; search:
     ...categoriesStub,
     ...recurringBillsStub,
     ...otherIncomeStub,
+    ...billsPageStub,
     ...paychecksPageStub,
     ...paychecksStub,
     ...welcomeStub,
