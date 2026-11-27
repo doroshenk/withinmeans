@@ -1,4 +1,4 @@
-import { sql } from 'kysely';
+import { sql, type KyselyPlugin } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Conflict, InvalidInput, NotFound } from '../context.js';
 import { clearAll, seedHousehold, type Seeded } from '../testing/fixtures.js';
@@ -280,5 +280,54 @@ describe('P2-14 each statement has its own due date', () => {
   it('leaves a statement saved before this ticket without a date', async () => {
     // The seeded statement is written without one, as rows were before migration 0009.
     expect((await saved(A.ym))?.due_date).toBeNull();
+  });
+});
+
+// A deploy runs the new code before the migration that adds `due_date`, so saving a balance with
+// the date left as it was must not name that column.
+describe('P2-14 saving a balance on a database without the due date yet', () => {
+  /** The database, noting every insert and update that names `due_date`. */
+  function watched() {
+    const naming: string[] = [];
+    const plugin: KyselyPlugin = {
+      transformQuery({ node }) {
+        const writes = node.kind === 'InsertQueryNode' || node.kind === 'UpdateQueryNode';
+        if (writes && JSON.stringify(node).includes('due_date')) naming.push(node.kind);
+        return node;
+      },
+      async transformResult({ result }) {
+        return result;
+      },
+    };
+    return { db: t.db.withPlugin(plugin), naming };
+  }
+  /** The seeded card is due on the 22nd. */
+  const usualDate = '2026-12-22';
+
+  it('does not name the column when the date is the card’s own, new or edited', async () => {
+    const { db, naming } = watched();
+
+    await cardStatements.save(db, A.ctx(), entry({ dueDate: usualDate }), NOW);
+    await cardStatements.save(db, A.ctx(), entry({ dueDate: usualDate }), LATER);
+
+    expect(naming).toEqual([]);
+    expect((await saved())?.due_date).toBeNull();
+  });
+
+  it('writes a changed date', async () => {
+    const { db, naming } = watched();
+
+    await cardStatements.save(db, A.ctx(), entry({ dueDate: '2026-12-23' }), NOW);
+
+    expect(naming).toEqual(['InsertQueryNode']);
+    expect((await saved())?.due_date).toBe('2026-12-23');
+  });
+
+  it('writes the card’s own date over a changed one', async () => {
+    await cardStatements.save(t.db, A.ctx(), entry({ dueDate: '2026-12-23' }), NOW);
+
+    await cardStatements.save(t.db, A.ctx(), entry({ dueDate: usualDate }), LATER);
+
+    expect((await saved())?.due_date).toBe(usualDate);
   });
 });

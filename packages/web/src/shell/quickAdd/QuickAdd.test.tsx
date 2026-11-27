@@ -678,6 +678,19 @@ describe('P2-10 after saving, with an API that shows what was saved', () => {
     expect(screen.getAllByRole('listitem', { name: 'Gas card balance' })).toHaveLength(1);
   });
 
+  it('lists a card once when its payment date changes between saves', async () => {
+    const { user } = await openAdd(savingClient().client, /^Card balance/);
+    await fill.card(user, cardForm());
+    await waitFor(() => expect(field('Statement balance')).toHaveValue('142.36'));
+
+    await user.clear(field('Payment due'));
+    await user.type(field('Payment due'), '2026-11-19');
+    await user.click(within(cardForm()).getByRole('button', { name: 'Save balance' }));
+
+    await waitFor(() => expect(within(dialog()).getByRole('status')).toHaveTextContent('week 3'));
+    expect(screen.getAllByRole('listitem', { name: 'Gas card balance' })).toHaveLength(1);
+  });
+
   it('keeps the focus on the confirmation after a paycheck leaves the list', async () => {
     const { user } = await openAdd(savingClient().client, /^Paycheck received/);
 
@@ -795,5 +808,25 @@ describe('P2-14 the payment due date in Quick Add', () => {
     expect(await within(dialog()).findByRole('status')).toHaveTextContent(
       'Saved Gas card balance to Bills & cash flow, week 3 of November 2026.',
     );
+  });
+});
+
+describe('P2-14 the Quick Add preview after switching cards', () => {
+  it('shows the date the form holds, not one typed before switching away', async () => {
+    const cards = [
+      card({ cardId: 'gas', nickname: 'Gas card' }),
+      card({ cardId: 'travel', nickname: 'Travel card', dueDay: 26, dueDate: '2026-11-26' }),
+    ];
+    const { user } = await openAdd(fakeClient({ bills: { cards } }).client, /^Card balance/);
+    const form = () => within(screen.getByRole('form', { name: /balance$/ }));
+    await user.clear(form().getByLabelText('Payment due'));
+    await user.type(form().getByLabelText('Payment due'), '2026-11-05');
+    expect(dialog()).toHaveTextContent('Week 1');
+
+    await user.selectOptions(form().getByLabelText('Card'), 'travel');
+    await user.selectOptions(form().getByLabelText('Card'), 'gas');
+
+    expect(form().getByLabelText('Payment due')).toHaveValue('2026-11-27');
+    expect(dialog()).toHaveTextContent('Goes to Bills & cash flow · Week 4');
   });
 });
