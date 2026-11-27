@@ -89,7 +89,8 @@ function fakeClient(options: { data?: BillsData; fail?: boolean } = {}) {
         calls.save(input);
         await done();
         const { cardId, alreadyPaid } = input;
-        change(cardId, () => ({
+        change(cardId, (c) => ({
+          dueDate: input.dueDate ?? c.dueDate,
           statement: {
             statementCents: input.statementCents,
             minimumCents: input.minimumCents,
@@ -259,6 +260,7 @@ describe('P2-07 the card balance form', () => {
     expect(calls.save).toHaveBeenCalledWith({
       cardId: 'x',
       ym: '2026-11',
+      dueDate: '2026-11-22',
       statementCents: 14_236,
       minimumCents: 2_500,
       plannedPaymentCents: cents,
@@ -411,5 +413,77 @@ describe('P2-07 paying a card', () => {
 
     expect(within(cards()).queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /card/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('P2-14 the payment due date on Bills', () => {
+  type User = ReturnType<typeof userEvent.setup>;
+  const changeDate = async (user: User, date: string) => {
+    await user.clear(field('Payment due'));
+    if (date !== '') await user.type(field('Payment due'), date);
+  };
+  const fillAmounts = async (user: User) => {
+    await user.type(field('Statement balance'), '142.36');
+    await user.type(field('Minimum payment'), '25');
+    await user.type(field('Amount you plan to pay'), '100');
+  };
+
+  it('has a "Payment due" field, pre-filled and limited to the month', async () => {
+    const user = await open(fakeClient().client);
+
+    await enter(user, 'Gas card');
+
+    expect(field('Payment due')).toHaveAttribute('type', 'date');
+    expect(field('Payment due')).toHaveValue('2026-11-27');
+    expect(field('Payment due')).toHaveAttribute('min', '2026-11-01');
+    expect(field('Payment due')).toHaveAttribute('max', '2026-11-30');
+  });
+
+  it('saves a changed date, and the card row shows it', async () => {
+    const { client, calls } = fakeClient();
+    const user = await open(client);
+    await enter(user, 'Gas card');
+    await fillAmounts(user);
+
+    await changeDate(user, '2026-11-26');
+    await user.click(save());
+
+    expect(calls.save).toHaveBeenCalledWith(expect.objectContaining({ dueDate: '2026-11-26' }));
+    await waitFor(() => expect(cardRow('Gas card')).toHaveTextContent('Due Nov 26'));
+  });
+
+  it('shows the saved date when the statement is edited', async () => {
+    const data = november({
+      cards: [
+        row({ cardId: 'x', nickname: 'X card', dueDate: '2026-11-24', statement: amounts(5_000) }),
+      ],
+    });
+    const user = await open(fakeClient({ data }).client);
+
+    await user.click(screen.getByRole('button', { name: 'Edit X card balance' }));
+
+    expect(field('Payment due')).toHaveValue('2026-11-24');
+  });
+
+  it('shows the other card’s date after picking it', async () => {
+    const user = await open(fakeClient().client);
+    await enter(user, 'Gas card');
+
+    await user.selectOptions(field('Card'), 'cash');
+
+    expect(field('Payment due')).toHaveValue('2026-11-22');
+  });
+
+  it.each(['2026-12-02', ''])('rejects the date "%s" and saves nothing', async (date) => {
+    const { client, calls } = fakeClient();
+    const user = await open(client);
+    await enter(user, 'Gas card');
+    await fillAmounts(user);
+
+    await changeDate(user, date);
+    await user.click(save());
+
+    expect(within(form()).getByRole('alert')).toHaveTextContent('Pick a payment date in November.');
+    expect(calls.save).not.toHaveBeenCalled();
   });
 });

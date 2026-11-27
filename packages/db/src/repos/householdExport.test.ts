@@ -121,3 +121,19 @@ describe('P1-14: household export', () => {
     expect(contexts.every((c) => c.role === 'view')).toBe(true);
   });
 });
+
+describe('P2-14: the export and the statement’s due date', () => {
+  it('The JSON export includes the statement’s due date', async () => {
+    await t.db
+      .updateTable('card_statements')
+      .set({ due_date: `${A.ym}-26` })
+      .where('id', '=', A.statementId)
+      .execute();
+
+    const tables = await householdExport.read(t.db, A.ctx());
+
+    expect(tables['card_statements']).toEqual([
+      expect.objectContaining({ id: A.statementId, due_date: `${A.ym}-26` }),
+    ]);
+  });
+});

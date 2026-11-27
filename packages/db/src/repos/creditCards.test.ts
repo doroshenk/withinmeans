@@ -80,6 +80,7 @@ describe('P2-07 credit card schema', () => {
     expect(columns('card_statements')).toEqual([
       'card_id',
       'created_at',
+      'due_date',
       'household_id',
       'id',
       'minimum_cents',
@@ -237,5 +238,47 @@ describe('P2-07 card statements repository', () => {
     await closeMonth('2026-12');
 
     await expect(change()).rejects.toBeInstanceOf(Conflict);
+  });
+});
+
+describe('P2-14 each statement has its own due date', () => {
+  const cardDay = async () =>
+    (await creditCards.list(t.db, A.ctx())).find((c) => c.id === A.cardId)?.due_day;
+
+  it('A changed due date is saved with that month’s statement only', async () => {
+    const before = await cardDay();
+    await cardStatements.save(t.db, A.ctx(), entry({ ym: '2027-01' }), NOW);
+
+    await cardStatements.save(t.db, A.ctx(), entry({ dueDate: '2026-12-26' }), NOW);
+
+    expect((await saved())?.due_date).toBe('2026-12-26');
+    expect((await saved('2027-01'))?.due_date).toBeNull();
+    expect(await cardDay()).toBe(before);
+  });
+
+  it('saving again without a date keeps it, and a new date replaces it', async () => {
+    await cardStatements.save(t.db, A.ctx(), entry({ dueDate: '2026-12-26' }), NOW);
+
+    await cardStatements.save(t.db, A.ctx(), entry({ minimumCents: 4_000 }), LATER);
+    expect(await saved()).toMatchObject({ minimum_cents: 4_000, due_date: '2026-12-26' });
+
+    await cardStatements.save(t.db, A.ctx(), entry({ dueDate: '2026-12-24' }), LATER);
+    expect((await saved())?.due_date).toBe('2026-12-24');
+  });
+
+  it.each(['2027-01-02', '2026-11-30', '2026-12-32', ''])(
+    'A due date outside the statement’s month is rejected: "%s"',
+    async (dueDate) => {
+      await expect(
+        cardStatements.save(t.db, A.ctx(), entry({ dueDate }), NOW),
+      ).rejects.toBeInstanceOf(InvalidInput);
+
+      expect(await saved()).toBeUndefined();
+    },
+  );
+
+  it('leaves a statement saved before this ticket without a date', async () => {
+    // The seeded statement is written without one, as rows were before migration 0009.
+    expect((await saved(A.ym))?.due_date).toBeNull();
   });
 });

@@ -142,6 +142,11 @@ export function cardDueDate(ym: YearMonth, dueDay: number): string {
   return `${ym}-${String(day).padStart(2, '0')}`;
 }
 
+/** What is wrong with a statement's due date: it must be a day of the statement's month. */
+export function cardDueDateError(ym: YearMonth, date: string): string | undefined {
+  throw new Error(`not implemented: ${ym} ${date}`);
+}
+
 /**
  * The month's card rows, by due day then nickname: every card still in use, and a removed card in
  * a month that has its statement. `statements` holds this month's and last month's.

@@ -770,3 +770,30 @@ describe('P2-10 after saving, with an API that shows what was saved', () => {
     expect(field('Statement balance')).toHaveValue('142.36');
   });
 });
+
+describe('P2-14 the payment due date in Quick Add', () => {
+  const field = () => within(cardForm()).getByLabelText('Payment due');
+
+  it('has a "Payment due" field, pre-filled with the card’s date', async () => {
+    await openAdd(fakeClient().client, /^Card balance/);
+
+    expect(field()).toHaveValue('2026-11-27');
+  });
+
+  it('saves a changed date, and previews and confirms its week', async () => {
+    const { client, calls } = fakeClient();
+    const { user } = await openAdd(client, /^Card balance/);
+
+    await user.clear(field());
+    await user.type(field(), '2026-11-19');
+    expect(dialog()).toHaveTextContent('Goes to Bills & cash flow · Week 3');
+    await fill.card(user, cardForm());
+
+    expect(calls.statement).toHaveBeenCalledWith(
+      expect.objectContaining({ dueDate: '2026-11-19' }),
+    );
+    expect(await within(dialog()).findByRole('status')).toHaveTextContent(
+      'Saved Gas card balance to Bills & cash flow, week 3 of November 2026.',
+    );
+  });
+});
