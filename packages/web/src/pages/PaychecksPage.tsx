@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { GENERIC_ERROR, apiErrorMessage } from '../auth/errors';
 import { useCan } from '../permissions';
 import { MonthNavigator } from '../shell/MonthNavigator';
+import { useSavedByQuickAdd } from '../shell/quickAdd/context';
 import { OtherIncomeForm } from './income/OtherIncomeForm';
 import { OtherIncomeList } from './income/OtherIncomeList';
 import { EmptyPaychecks } from './paychecks/EmptyPaychecks';
@@ -62,7 +63,14 @@ type Section =
 type Editing = { kind: 'add' } | { kind: 'edit'; id: string } | null;
 
 /** Spec §6.4: a month's paychecks and one-time income, and the paycheck schedules. */
-export function PaychecksPage({ client }: { client: PaychecksPageClient }) {
+export function PaychecksPage({
+  client,
+  initialYm,
+}: {
+  client: PaychecksPageClient;
+  /** The month to open on ("YYYY-MM"); this month when not given. */
+  initialYm?: string;
+}) {
   const can = useCan();
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const [notice, setNotice] = useState<string | null>(null);
@@ -72,7 +80,7 @@ export function PaychecksPage({ client }: { client: PaychecksPageClient }) {
   const [saving, setSaving] = useState(false);
   const sourceRef = useRef<HTMLInputElement>(null);
   /** The month asked for; undefined means the household's current one. */
-  const asked = useRef<string | undefined>(undefined);
+  const asked = useRef(initialYm);
   /** Counts the page's reloads, so that only the latest one's answer is shown. */
   const latest = useRef(0);
 
@@ -90,14 +98,14 @@ export function PaychecksPage({ client }: { client: PaychecksPageClient }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetchAll(undefined).then(
+    fetchAll(initialYm).then(
       (result) => !cancelled && setLoad(result),
       () => !cancelled && setLoad({ kind: 'error' }),
     );
     return () => {
       cancelled = true;
     };
-  }, [fetchAll]);
+  }, [fetchAll, initialYm]);
 
   // The empty page's "Add one-time income" opens the form, ready to type.
   useEffect(() => {
@@ -151,6 +159,8 @@ export function PaychecksPage({ client }: { client: PaychecksPageClient }) {
     setSaving(false);
     return true;
   };
+
+  useSavedByQuickAdd(() => void reload(() => report('month')(RELOAD_ERROR)));
 
   if (load.kind !== 'ready') {
     return (

@@ -5,7 +5,7 @@ import {
   parseDollars,
   type OtherIncomeType,
 } from '@withinmeans/domain';
-import { useId, useState, type Ref } from 'react';
+import { useId, useState, type ReactNode, type Ref } from 'react';
 import type { OtherIncomeData, OtherIncomeInput } from '../PaychecksPage';
 
 export interface OtherIncomeFormProps {
@@ -20,6 +20,8 @@ export interface OtherIncomeFormProps {
   onProblem: (problem: string | null) => void;
   /** Resolves true once saved. */
   onSave: (input: OtherIncomeInput) => Promise<boolean>;
+  /** Quick Add's line saying where the entry will go. */
+  destination?: (date: string) => ReactNode;
 }
 
 /** Spec §6.4: the one-time income form. */
@@ -32,6 +34,7 @@ export function OtherIncomeForm({
   problem,
   onProblem,
   onSave,
+  destination,
 }: OtherIncomeFormProps) {
   const id = useId();
   const [source, setSource] = useState('');
@@ -177,6 +180,7 @@ export function OtherIncomeForm({
           {problem}
         </p>
       )}
+      {destination?.(date)}
       <button type="submit" className="button income-submit" disabled={saving}>
         Add income
       </button>

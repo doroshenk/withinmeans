@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AcceptInviteInput, InvitePartnerInput, SignUpInput } from '@withinmeans/domain';
 import type { AuthClient } from './auth/types';
 import { Accept, type InviteDetails } from './pages/Accept';
@@ -14,6 +14,7 @@ import { SignIn } from './pages/SignIn';
 import { SetupPage } from './pages/SetupPage';
 import type { SetupClient } from './pages/SetupWizard';
 import { SignUp, type PendingInvite } from './pages/SignUp';
+import { QuickAddProvider } from './shell/quickAdd/context';
 import type { Route } from './shell/Shell';
 
 export interface AppProps {
@@ -71,7 +72,26 @@ export function App({ auth, createClient, location = window.location }: AppProps
     void auth.getAccessToken().then((token) => setView(token ? 'hello' : 'sign-in'));
   }, [auth, token]);
 
-  const navigate = (route: Route) => setView((current) => PAGES[route] ?? current);
+  /** The month "View" in Quick Add asked for; `visit` remakes the page to show it. */
+  const [target, setTarget] = useState<{ ym: string | undefined; visit: number }>({
+    ym: undefined,
+    visit: 0,
+  });
+
+  const navigate = useCallback((route: Route) => {
+    // A page opened at a "View" month is remade, so it goes back to this month.
+    setTarget((now) => (now.ym === undefined ? now : { ym: undefined, visit: now.visit + 1 }));
+    setView((current) => PAGES[route] ?? current);
+  }, []);
+  const viewEntry = useCallback((route: Route, ym?: string) => {
+    setTarget((now) => ({ ym, visit: now.visit + 1 }));
+    setView((current) => PAGES[route] ?? current);
+  }, []);
+  const withQuickAdd = (screen: ReactNode) => (
+    <QuickAddProvider client={client} onView={viewEntry}>
+      {screen}
+    </QuickAddProvider>
+  );
 
   if (view === 'checking') return <p role="status">Loading…</p>;
   if (view === 'accept' && token !== undefined) {
@@ -100,12 +120,15 @@ export function App({ auth, createClient, location = window.location }: AppProps
   }
   if (view === 'setup') return <SetupPage client={client} onExit={() => setView('hello')} />;
   if (view === 'bills' || view === 'recurring' || view === 'paychecks') {
-    return (
+    const month = target.ym === undefined ? {} : { initialYm: target.ym };
+    return withQuickAdd(
       <MemberScreen client={client} route={view} onNavigate={navigate}>
-        {view === 'bills' && <BillsPage client={client} onNavigate={navigate} />}
+        {view === 'bills' && (
+          <BillsPage key={target.visit} client={client} onNavigate={navigate} {...month} />
+        )}
         {view === 'recurring' && <RecurringPage client={client} />}
-        {view === 'paychecks' && <PaychecksPage client={client} />}
-      </MemberScreen>
+        {view === 'paychecks' && <PaychecksPage key={target.visit} client={client} {...month} />}
+      </MemberScreen>,
     );
   }
   if (view === 'forgot') return <ForgotPassword auth={auth} onBack={() => setView('sign-in')} />;
@@ -119,7 +142,7 @@ export function App({ auth, createClient, location = window.location }: AppProps
       />
     );
   }
-  return (
+  return withQuickAdd(
     <Hello
       client={client}
       onNavigate={navigate}
@@ -128,6 +151,6 @@ export function App({ auth, createClient, location = window.location }: AppProps
         auth.signOut();
         setView('sign-in');
       }}
-    />
+    />,
   );
 }

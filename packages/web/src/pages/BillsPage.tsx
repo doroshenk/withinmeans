@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { GENERIC_ERROR, apiErrorMessage } from '../auth/errors';
 import { useCan } from '../permissions';
 import { MonthNavigator } from '../shell/MonthNavigator';
+import { useSavedByQuickAdd } from '../shell/quickAdd/context';
 import type { Route } from '../shell/Shell';
 import { BillTiles } from './bills/BillTiles';
 import { CardsCard } from './bills/CardsCard';
@@ -46,7 +47,7 @@ type Editing =
   | null;
 
 /** Spec §6.2: a month's bills week by week, with the paychecks and how the month adds up. */
-export function BillsPage({ client, onNavigate = () => {} }: BillsPageProps) {
+export function BillsPage({ client, onNavigate = () => {}, initialYm }: BillsPageProps) {
   const can = useCan();
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const [notice, setNotice] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export function BillsPage({ client, onNavigate = () => {} }: BillsPageProps) {
   const [editing, setEditing] = useState<Editing>(null);
   const [saving, setSaving] = useState(false);
   /** The month asked for; undefined means the household's current one. */
-  const asked = useRef<string | undefined>(undefined);
+  const asked = useRef(initialYm);
   /** Counts the page's reloads, so that only the latest one's answer is shown. */
   const latest = useRef(0);
   /** The form open right now, for a save that ends after the user has moved on. */
@@ -67,14 +68,14 @@ export function BillsPage({ client, onNavigate = () => {} }: BillsPageProps) {
 
   useEffect(() => {
     let cancelled = false;
-    fetchMonth(undefined).then(
+    fetchMonth(initialYm).then(
       (data) => !cancelled && setLoad({ kind: 'ready', data }),
       () => !cancelled && setLoad({ kind: 'error' }),
     );
     return () => {
       cancelled = true;
     };
-  }, [fetchMonth]);
+  }, [fetchMonth, initialYm]);
 
   const report = (section: Section) => (text: string | null) =>
     setProblem(text === null ? null : { section, text });
@@ -114,6 +115,8 @@ export function BillsPage({ client, onNavigate = () => {} }: BillsPageProps) {
     setSaving(false);
     return true;
   };
+
+  useSavedByQuickAdd(() => void reload(() => report('page')(RELOAD_ERROR)));
 
   if (load.kind !== 'ready') {
     return (
