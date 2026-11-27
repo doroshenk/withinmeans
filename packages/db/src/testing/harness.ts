@@ -4,7 +4,8 @@ import { sql } from 'kysely';
 import { createDb, type Database } from '../db.js';
 import { runDdl } from '../ddl.js';
 import { createDsqlDb } from '../dsql.js';
-import { migrate } from '../migrate.js';
+import { migrate, MIGRATIONS_DIR } from '../migrate.js';
+import { withRetry } from '../retry.js';
 import { testTarget } from './target.js';
 
 export interface TestDb {
@@ -36,6 +37,12 @@ async function opener(): Promise<(schema?: string) => Database> {
 
 const quoteIdent = (name: string): string => `"${name.replaceAll('"', '""')}"`;
 
+/** `runDdl` for the harness's own schema changes, which collide with other test files'. */
+export async function runTestDdl(db: Database, statement: string): Promise<void> {
+  // Each try here is itself runDdl's 12, with a longer pause between them.
+  await withRetry(() => runDdl(db, statement), { maxTries: 10, delayMs: 200 });
+}
+
 /**
  * Gives the caller a fresh schema with all migrations applied, and drops it afterwards. Runs on
  * Docker Postgres by default, or on the real DSQL cluster when DSQL_ENDPOINT is set (the
@@ -45,25 +52,32 @@ export async function createTestDb(): Promise<TestDb> {
   const open = await opener();
   const schema = `t_${randomUUID().replaceAll('-', '')}`;
   const admin = open();
-  await runDdl(admin, `CREATE SCHEMA ${quoteIdent(schema)}`);
+  await runTestDdl(admin, `CREATE SCHEMA ${quoteIdent(schema)}`);
   await admin.destroy();
 
   const db = open(schema);
-  await migrate(db);
-  return {
-    db,
-    schema,
-    async destroy() {
-      // DSQL allows one DDL statement per transaction, so drop tables one at a time, then the schema.
-      const tables = await sql<{
-        table_name: string;
-      }>`SELECT table_name FROM information_schema.tables
-        WHERE table_schema = ${schema}`.execute(db);
-      for (const { table_name } of tables.rows) {
-        await runDdl(db, `DROP TABLE ${quoteIdent(schema)}.${quoteIdent(table_name)}`);
-      }
-      await runDdl(db, `DROP SCHEMA ${quoteIdent(schema)}`);
-      await db.destroy();
-    },
+  const destroy = async (): Promise<void> => {
+    // DSQL allows one DDL statement per transaction, so drop tables one at a time, then the schema.
+    const tables = await withRetry(
+      () =>
+        sql<{
+          table_name: string;
+        }>`SELECT table_name FROM information_schema.tables
+          WHERE table_schema = ${schema}`.execute(db),
+      { maxTries: 12, delayMs: 25 },
+    );
+    for (const { table_name } of tables.rows) {
+      await runTestDdl(db, `DROP TABLE ${quoteIdent(schema)}.${quoteIdent(table_name)}`);
+    }
+    await runTestDdl(db, `DROP SCHEMA ${quoteIdent(schema)}`);
+    await db.destroy();
   };
+  try {
+    await migrate(db, MIGRATIONS_DIR, runTestDdl);
+  } catch (error) {
+    // The caller gets nothing to destroy. A schema that cannot be dropped now is swept later.
+    await destroy().catch(() => undefined);
+    throw error;
+  }
+  return { db, schema, destroy };
 }

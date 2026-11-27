@@ -14,7 +14,7 @@
     "typecheck": "tsc -p .",
     "migrate": "tsx src/cli/migrate.ts",
     "seed": "tsx src/cli/seed.ts",
-    "conformance": "vitest run --no-file-parallelism"
+    "conformance": "vitest run --maxWorkers=4 --exclude=\"src/testing/**\" && vitest run --no-file-parallelism src/testing"
   },
   "dependencies": {
     "@aws-sdk/client-cloudformation": "^3.1175.0",

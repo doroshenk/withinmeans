@@ -19,7 +19,7 @@ permissions:
 jobs:
   conformance:
     runs-on: ubuntu-latest
-    # Real DSQL is slow at schema changes, and the suite has outgrown 20 minutes.
+    # Real DSQL is slow over the network. Test files run in parallel to stay well inside this.
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4

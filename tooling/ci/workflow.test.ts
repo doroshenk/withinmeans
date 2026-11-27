@@ -171,9 +171,4 @@ describe('P0-07: conformance workflow', () => {
     expect(all).toMatch(/DataStack-dev/);
     expect(all).not.toMatch(/DataStack-prod/);
   });
-
-  it('P0-07: the conformance script runs test files one at a time (DSQL DDL conflicts)', () => {
-    const pkg = JSON.parse(read('packages/db/package.json')) as { scripts: Record<string, string> };
-    expect(pkg.scripts['conformance']).toContain('--no-file-parallelism');
-  });
 });

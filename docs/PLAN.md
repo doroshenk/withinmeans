@@ -158,7 +158,7 @@ Network Solutions changes can take a few hours to take effect. Don't touch the r
 |---|---|---|---|
 | Phase 0 — Walking skeleton | 13 | `v0.0.1` | A thin, deployed thread through every layer: repo and CI, AWS account, every CDK stack, Cognito sign-in, one API call that reads DSQL, the custom domain, backups. Ends deployed to dev **and** prod. |
 | Phase 1 — Foundation | 14 | `v0.1.0` | Sign-up (solo or partner), invites, sign-in, roles, the app shell, setup wizard steps 1, 2, 4, 5 and 9, and the JSON export. |
-| Phase 2 — Bills and paychecks | 12 | `v0.2.0` | The "within means" core: openMonth, bills, cards, paychecks, other income, money in/out. **Real use in prod starts here, alongside the Google Sheet for one month.** |
+| Phase 2 — Bills and paychecks | 13 | `v0.2.0` | The "within means" core: openMonth, bills, cards, paychecks, other income, money in/out. **Real use in prod starts here, alongside the Google Sheet for one month.** |
 | Phase 3 — Investments and money moves | 12 | `v0.3.0` | Holdings, options, dividends, splits, weekly money moves with carry-over, reinvest suggestions, bills covered. |
 | Phase 4 — Dashboard, accounts and months | 8 | `v0.4.0` | The dashboard with This week, the Accounts page with forecast and reconcile, the Start-a-new-month flow, locking and Unlock. |
 | Phase 5 — Year in review | 3 | `v0.5.0` | Year in review with projections, and the in-browser PDF. |
@@ -877,6 +877,25 @@ The "within means" core: openMonth, bills, cards, paychecks, other income, money
 - [ ] You complete setup in prod with your real data and start the side-by-side month
 
 
+#### P2-13 · DSQL conformance finishes well inside its time limit
+
+**Spec:** §12  
+**Blocked by:** P2-12
+
+**Goal.** The DSQL conformance run finishes well inside its time limit, so `v0.2.0` can be released on a green run. Each test reset the database one statement at a time over the network, and test files ran one after another.
+
+**Tests to write first (red):**
+
+- [ ] The test reset and seed send their statements concurrently
+- [ ] The conformance run runs test files in parallel, at most four at once
+- [ ] Tests that create or sweep other schemas run on their own, after the parallel files
+
+**Also done when:**
+
+- [ ] The whole suite passes against the real dev cluster, and the time is written in the PR
+- [ ] No test is skipped or weakened, and the same tests run on DSQL as before
+
+
 ### Phase 3 — Investments and money moves → `v0.3.0`
 
 Holdings, options, dividends, splits, weekly money moves with carry-over, reinvest suggestions, bills covered.
@@ -1357,7 +1376,7 @@ The phone-only flows, bottom sheets, remaining empty states and the accessibilit
 4. **Open the repo folder itself:** `File → Open Folder… → C:\dev\WithinMeans\withinmeans`. Open the repo, not its parent, so Claude Code loads the repo's `CLAUDE.md`, `.claude/settings.json` and the `/work-ticket` skill.
 5. **Start each conversation in plan mode:** VS Code settings (`Ctrl+,`) → Extensions → Claude Code → *Initial Permission Mode* → `plan`. Every new ticket then starts with a plan you approve before any file changes.
 6. **Install the repo's Claude Code tooling:** in a terminal at the repo root run `node scripts/install-tooling.mjs` whenever a `setup/` folder appears. It moves Claude Code settings, skills and agents (and GitHub templates) from `setup/` into `.claude/` and `.github/`. Then commit everything (`git add -A && git commit -m "docs: development plan, rules and tooling" && git push`).
-7. **Create the GitHub issues once:** in a terminal at the repo root run `node scripts/create-issues.mjs`. It uses your `gh` login to create the phase labels, the 7 milestones and the 69 issues, then links each *Blocked by* to real issue numbers. Safe to re-run: it skips tickets that already exist.
+7. **Create the GitHub issues once:** in a terminal at the repo root run `node scripts/create-issues.mjs`. It uses your `gh` login to create the phase labels, the 7 milestones and the 70 issues, then links each *Blocked by* to real issue numbers. Safe to re-run: it skips tickets that already exist.
 8. **Turn on the run-on-save test view:** in the Testing sidebar, run Vitest in watch mode. You'll see red turn green as Claude works.
 
 ### 10.2 The ticket loop

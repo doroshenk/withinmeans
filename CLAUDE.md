@@ -103,4 +103,5 @@ pnpm --filter @withinmeans/infra exec cdk diff --context stage=dev   # (P0-04+);
 - **Prettier ignores** `docs/`, `design/`, `scripts/`, `.github/`, `.claude/`, `README.md` and the fixtures.
 - **Placeholders for red tests:** to get a test that fails for the right reason, add a stub that `throw new Error('not implemented')` (never a missing import). Check the failure output is an assertion, not an import or syntax error.
 - **Setup:** use `npm install -g pnpm@10` if `corepack enable` fails with EPERM (it needs an admin shell). `gh` and `git` on this machine: if `git push`/`fetch` fail with "could not read Username", run `gh auth setup-git` once.
+- **DSQL conformance** runs db test files in parallel, four at once, each in its own schema, then `src/testing` on its own. A test that sweeps schemas or calls `createTestDb()` more than once goes in `packages/db/src/testing` (a test enforces it). Never run it by hand while a CI conformance run is active: its sweep drops the other run's schemas.
 - **Merging:** PRs are merged with a merge commit (so the `test:` then `feat:` commits stay visible).
