@@ -45,7 +45,7 @@ export function reinvestSuggestion(
   for (const { ticker, priceCents } of holdings) assertCents(priceCents, `${ticker} price`);
   const eligible = holdings
     .filter((h) => BUCKET_FREQUENCIES[bucket].includes(h.payFrequency) && h.priceCents > 0)
-    .sort((a, b) => a.priceCents - b.priceCents || a.ticker.localeCompare(b.ticker));
+    .sort((a, b) => a.priceCents - b.priceCents || a.ticker.localeCompare(b.ticker, 'en'));
 
   // Variety: one of each, cheapest first. Once one is too dear, so are the rest.
   const buys: ReinvestBuy[] = [];
